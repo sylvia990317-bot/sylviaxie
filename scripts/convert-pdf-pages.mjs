@@ -12,6 +12,8 @@
 //   node scripts/convert-pdf-pages.mjs                 run the JOBS table below
 //   node scripts/convert-pdf-pages.mjs --probe A-B     render report pages A..B small, to
 //                                                      scratch/, for picking which to keep
+//   node scripts/convert-pdf-pages.mjs --handbook      render the whole construction handbook
+//                                                      (report p.54-106) as a numbered page set
 import { createCanvas } from "@napi-rs/canvas";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import sharp from "sharp";
@@ -102,6 +104,36 @@ const JOBS = [
   [`${DECK}/Desktop - 14.pdf`, 1, "concept", "concept-tower", [760, 440], 88, 0, { left: 0.3815, width: 0.2434, ...SKETCH }],
   [`${DECK}/Desktop - 14.pdf`, 1, "concept", "concept-box", [760, 440], 88, 0, { left: 0.6825, width: 0.2333, ...SKETCH }],
 ];
+
+/**
+ * The construction handbook occupies the report's final appendix, p.54 to p.106 (the last
+ * page), 53 sheets of 842 x 595 pt landscape. Section 07's reader flips through all of them,
+ * so they are rendered as one numbered sequence rather than 53 hand-written JOBS rows.
+ * Numbering is the handbook's own, 1-based: report p.54 is handbook page 01.
+ */
+const HANDBOOK = { from: 54, to: 106, dir: "handbook/pages", widths: [1600, 900], quality: 86 };
+
+if (process.argv.includes("--handbook")) {
+  const outDir = path.join(OUT, HANDBOOK.dir);
+  await mkdir(outDir, { recursive: true });
+  const doc = await openDoc(REPORT);
+  let total = 0;
+  for (let p = HANDBOOK.from; p <= HANDBOOK.to; p++) {
+    const n = String(p - HANDBOOK.from + 1).padStart(2, "0");
+    for (const w of HANDBOOK.widths) {
+      const png = await renderPage(doc, p, w);
+      const outPath = path.join(outDir, `handbook-${n}-${w}.webp`);
+      const info = await sharp(png).webp({ quality: HANDBOOK.quality }).toFile(outPath);
+      total += info.size;
+      if (w === HANDBOOK.widths[0]) {
+        console.log(`${outPath.padEnd(52)} ${info.width}x${info.height}  ${(info.size / 1024).toFixed(0).padStart(4)} KB  (report p.${p})`);
+      }
+    }
+  }
+  console.log(`
+total: ${(total / 1024 / 1024).toFixed(2)} MB across ${HANDBOOK.to - HANDBOOK.from + 1} pages x ${HANDBOOK.widths.length} widths`);
+  process.exit(0);
+}
 
 const probe = process.argv.indexOf("--probe");
 if (probe !== -1) {

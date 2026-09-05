@@ -5,6 +5,81 @@ verified), moved out of `CLAUDE.md` to keep the auto-loaded project instructions
 This file is **not** auto-loaded into context — read it only when you need the historical
 rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
 
+### Post Harvest 02 locator map — water/land figure-ground inverted, so the lake read as a landmass (this session)
+- Sylvia: "这个图片是你做的吗，感觉湖水的部分太像陆地。让人看不懂"
+- She was right, and it was my drawing. `public/post-harvest/diagram/seme-locator.svg` (the
+  `.ph-v2-map` inline SVG in section 02) traces the Kenyan shore of Lake Victoria, and the single
+  filled path in it **is the water** — but it was filled `#e6ebf4` on a `#fbfbfa` background. Two
+  near-whites separated by one crisp outline: the eye takes the outlined shape as the figure and
+  the empty ground as background, i.e. exactly backwards. It looked like a country sitting on
+  blank paper.
+- **Fix is colour, not geometry** — the traced coastline `d` is untouched, so nothing about the
+  map's accuracy or the Seme pin position moved:
+  - background rect (the land) `#fbfbfa` -> `#f2f2f0` (the existing `--paper-sunk` value, so the
+    land stays on-palette — deliberately *not* a cartographic tan, per the palette note at the top
+    of `post-harvest.css`),
+  - water fill `#e6ebf4` -> `#a9c8e8`, coastline stroke `#9fb2d0` -> `#5f87b6`,
+  - hydronyms (Lake Victoria / Winam Gulf / Homa Bay) set in italic — the standard cartographic
+    signal for water — and darkened from `#9fb2d0` to `#375c8c` so they stay legible on the
+    stronger blue instead of dissolving into it.
+- **Two smaller corrections in the same pass.** "Home Bay" -> "Homa Bay" (misspelled). And the grey
+  dot next to "Siaya County" was removed: with no county boundary drawn anywhere on the map it
+  pointed at nothing, and read as a second location pin competing with Seme. It is now an
+  unadorned letterspaced area label, which is what it always actually was. `aria-label` updated to
+  say which tone is water and which is land.
+- Verified by rasterizing the SVG with the project's own `sharp` at 120 DPI and comparing before
+  and after.
+
+### Post Harvest 06 / 07 — the evaluation photo goes back to portrait, and 07's white band and unreadable handbook pages are fixed (this session)
+- Sylvia: "你为什么会选择让section6的所有照片做横屏，我明明觉得它们都适合做竖屏。section 7 的那个长图是什么意思，下面的字也看不清。"
+- **06 was landscape for a layout reason, not a photographic one — reverted.** The section's
+  dominant was `sketch-review-wide-1600.webp`, a purpose-cut 3:2 crop of the portrait original
+  `sketch-review-1600.webp` (1600x2400), made so the picture could run the full canvas as a band
+  through `.ph-dominant`'s `max-height:54vh; object-fit:cover`. That cropped it a *second* time:
+  measured live at 1368x409 from a 1126x751 source. The frame is vertical — the sheet, both hands
+  and the standing farmer only fit top-to-bottom — so the band amputated the top of the sketch and
+  the person holding it.
+- Now `.ph-06-lead`: a two-column lead at >=1100px (`4.4fr / 7.6fr`). The portrait photograph keeps
+  its own proportion on the left (484x725 at a 1536px viewport, `max-height:none`), and the whole
+  evaluation argument — the two rounds, the legend bar, the three-way comparison — stacks in the
+  column beside it. The conclusion moved *into* that column with `margin-top:auto` so it pins to
+  the photograph's bottom edge instead of leaving the column trailing into empty page; that needs
+  `align-self:stretch` on `.ph-06-col`, since the row's `align-items:start` would otherwise
+  shrink-wrap the column and leave no free space for the auto margin. Below 1100px it stacks, photo
+  capped at 440px.
+- `#concepts .ph-dominant-tall img` is id-scoped deliberately. `.ph-dominant-tall img` alone ties
+  on specificity with `.ph-dominant img`, so it was decided by source order — and in dev, with two
+  copies of the stylesheet injected, the 54vh cap won anyway (verified: computed `max-height` came
+  back `409.088px` while `object-fit` came back `contain` from the newer rule). `#challenge`
+  already overrides the same primitive the same way.
+- **07's "long image" was a white background, not an image.** The handbook cover carried
+  `width:100%` + `object-fit:contain` + `background:#fff` on a full-canvas box. The scan is 1.41:1
+  and the box was ~3.3:1, so the white filled every pixel the letterboxed scan did not: a
+  full-width empty white band with a small drawing adrift in the middle of it. `.ph-07-lead` now
+  sizes the figure to a 7fr column and lets the image set its own height, so the only white on the
+  page is the page (768x542 at 1536px).
+- **07's handbook pages were too small to read.** Both are dimensioned instruction spreads and both
+  sat in a third-width column capped at `max-height:22vh` — about 424x178px, where none of the step
+  text or the cut-list measurements resolve. `.ph-07-pages` makes them a two-up row across the
+  canvas (~660px each, cap removed) and the running text + annotations moved beside the cover into
+  `.ph-07-aside`. Verified by screenshot: "4x 825 mm (cut 45 deg in each end)" and "Angle iron
+  40x40x3 mm" are legible.
+- Asset side of this: `sketch-review-*.webp` had been deleted from the working tree as part of
+  Sylvia's own pass over `public/post-harvest/photo/` — she re-exported the photographs at higher
+  quality and pruned every size nothing referenced. The portrait sketch-review set was pruned
+  because, at that moment, only the wide crop was referenced. Restored `sketch-review-1600.webp`
+  from HEAD (06 has nothing else to point at), then deleted the four unused sizes
+  (600/800/1000/1400) and the now-orphaned `sketch-review-wide-1600.webp`, which matches her
+  convention of one file per photograph at the size actually in use.
+- **`sketch-review-1600.webp` is still the OLD export and should be redone.** It is 101KB for
+  1600x2400 = 0.03 B/px, against 0.16-0.39 B/px across her new batch (`field-walking-2400`,
+  `collector-handover-1600`, `road-to-seme-2000`...). It was tolerable as a 1368x409 band; shown
+  uncropped at 484x725 the compression is much more exposed. Flagged to her, not fixed — the raw
+  is hers.
+- Verified with `npx next build` (clean) and live screenshots of both sections at 1536px.
+- Flagged, not changed: `concept/concept-box-760.webp` has a dark vertical strip baked into its
+  right edge — an export artifact in the source asset, visible in the third comparison frame.
+
 ### Unreferenced HALOGRIP design source moved out of `public/media/` into a new `design-source/` (this session)
 - Sylvia: "现在项目里的文件好像有点乱，有些重复的文件和图片可以删掉，把所有halogrip项目相关的文件整理一下" —
   audited every `/media/...` path actually referenced by `app/work/halogrip/*` (page.tsx,

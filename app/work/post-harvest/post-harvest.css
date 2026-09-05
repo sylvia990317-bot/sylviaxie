@@ -761,7 +761,34 @@ figure { margin: 0; }
 .ph-v2 .ph-quote blockquote { font-size: clamp(20px, 1.9vw, 28px); }
 
 /* ---- 06: the evaluation photograph is the dominant. The enlarged repeat of the tower
-       sketch is gone; the tower is marked inside the comparison instead. ---- */
+       sketch is gone; the tower is marked inside the comparison instead.
+
+       The photograph is portrait (1600x2400) and is shown that way. The old landscape
+       band was a purpose-cut 3:2 crop of this same frame, run full-canvas through
+       `.ph-dominant`'s `max-height:54vh; object-fit:cover` — which cropped it a second
+       time and cut off the top of the sheet and the farmer holding it. A tall picture
+       run full-width would leave a dead column beside it, so the section is a two-column
+       lead: the photograph keeps its own proportion on the left and the whole evaluation
+       argument (rounds, legend, three-way comparison) stacks in the column beside it. ---- */
+.ph-06-lead { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--pair); }
+@media (min-width: 1100px) {
+  .ph-06-lead { grid-template-columns: minmax(0, 4.4fr) minmax(0, 7.6fr); gap: clamp(28px, 3.2vw, 56px); }
+}
+/* Id-scoped so it beats `.ph-dominant img`'s 54vh cap outright — same specificity would
+   leave it decided by source order, and `#challenge` already overrides the same way. */
+#concepts .ph-dominant-tall { margin-top: 0; }
+#concepts .ph-dominant-tall img { width: 100%; height: auto; max-height: none; object-fit: contain; }
+@media (max-width: 1099px) { #concepts .ph-dominant-tall { max-width: 440px; } }
+/* `align-self: stretch` is what gives `margin-top: auto` below something to work with:
+   with the row's `align-items: start` the column would shrink-wrap its own content and
+   there would be no free space to push the conclusion into. */
+.ph-06-col { min-width: 0; display: flex; flex-direction: column; align-self: stretch; }
+.ph-06-col .ph-rounds-v2 { margin-top: 0; }
+@media (min-width: 1100px) {
+  /* Pins the conclusion to the foot of the column, level with the photograph's bottom
+     edge. Below 1100px the column is not next to the picture, so it keeps its own beat. */
+  .ph-06-col .ph-conclusion { margin-top: auto; }
+}
 .ph-rounds-v2 { list-style: none; margin: var(--pair) 0 0; padding: 14px 0 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr; gap: clamp(14px, 1.6vw, 24px); }
 @media (min-width: 800px) { .ph-rounds-v2 { grid-template-columns: 1fr 1fr; } }
 .ph-rounds-v2 b { display: block; font-family: var(--ph-mono), ui-monospace, monospace; font-size: 11px; letter-spacing: 0.11em; text-transform: uppercase; color: var(--blue); margin-bottom: 5px; }
@@ -779,12 +806,30 @@ figure { margin: 0; }
 .ph-v2-blue .ph-v2-head .num, .ph-v2-blue .ph-v2-head h2 { color: var(--on-blue); }
 .ph-v2-blue .ph-v2-head .lede, .ph-v2-blue .ph-cap, .ph-v2-blue .ph-body { color: var(--on-blue-dim); }
 .ph-v2-blue .ph-lbl { color: var(--on-blue-dim); }
-.ph-handbook-dominant { margin-top: var(--pair); display: grid; gap: 14px; }
-.ph-handbook-dominant img { display: block; width: 100%; height: auto; max-height: 56vh; object-fit: contain; background: #fff; box-shadow: 0 18px 48px rgba(9, 24, 60, 0.34); }
-.ph-07-support { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--beat-y); }
-@media (min-width: 1000px) { .ph-07-support { grid-template-columns: 1fr 1fr 1fr; } }
-.ph-07-support .ph-support-plate { background: #fff; border: 0; }
-.ph-07-support .ph-support-plate img { max-height: 22vh; }
+/* The cover is a scanned page, so its box must be the page's own shape. It used to be
+   `width:100%` + `object-fit:contain` + `background:#fff` inside a full-canvas box: the
+   scan is 1.41:1, the box was ~3.3:1, and the white background filled every pixel the
+   letterboxed scan did not — a full-width empty white band with a small drawing adrift
+   in it. Sizing the figure to its column and letting the image set its own height means
+   the only white on the page is the page. */
+.ph-07-lead { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--pair); }
+@media (min-width: 1000px) {
+  .ph-07-lead { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(28px, 3.4vw, 60px); }
+}
+.ph-handbook-dominant { margin-top: 0; display: grid; gap: 14px; min-width: 0; }
+.ph-handbook-dominant img { display: block; width: 100%; height: auto; object-fit: contain; background: #fff; box-shadow: 0 18px 48px rgba(9, 24, 60, 0.34); }
+.ph-07-aside { min-width: 0; }
+.ph-07-aside .ph-body:first-child { margin-top: 0; }
+
+/* Two dimensioned instruction spreads. They were a third-width plate capped at 22vh
+   (~424 x 178px), where none of the step text or the cut-list measurements could be
+   read. Two-up across the canvas gives each about 660px, which is close to the scan's
+   own legible size. */
+.ph-07-pages { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--beat-y); }
+@media (min-width: 900px) { .ph-07-pages { grid-template-columns: 1fr 1fr; gap: clamp(20px, 2.4vw, 40px); } }
+.ph-07-pages .ph-support-plate-wrap { display: grid; gap: 10px; min-width: 0; }
+.ph-07-pages .ph-support-plate { background: #fff; border: 0; padding: clamp(10px, 1.1vw, 18px); }
+.ph-07-pages .ph-support-plate img { width: 100%; height: auto; max-width: 100%; max-height: none; object-fit: contain; }
 .ph-v2-blue .ph-annots { margin-top: 0; }
 .ph-v2-blue .ph-annot { border-top-color: var(--on-blue-line); }
 
@@ -894,3 +939,186 @@ figure { margin: 0; }
 #challenge .ph-strip-frame img { height: clamp(104px, 13vh, 146px); width: auto; max-width: 100%; object-fit: contain; }
 .ph-ghost-frame img { height: clamp(150px, 19vh, 228px); width: auto; max-width: 100%; object-fit: contain; }
 .ph-rail-box img { width: 100%; height: auto; object-fit: contain; }
+
+/* ================= SUPPORTING SCALE, CORRECTED =================
+   The one-dominant pass over-corrected: supporting evidence was pushed down to 13-22vh,
+   which is small enough that the line drawings and the handbook pages stop being
+   readable. "Supporting" has to mean subordinate, not illegible.
+
+   The scale now runs: dominant ~50vh, supporting ~30-34vh, evidence strips ~21-26vh.
+   That still leaves the dominant roughly two to three times the area of anything else in
+   its section, which is what carries the hierarchy, while every drawing stays large
+   enough to actually read. */
+
+/* evidence strips */
+#challenge .ph-strip-frame img { height: clamp(150px, 21vh, 212px); }
+#concepts .ph-strip-frame img  { height: clamp(196px, 26vh, 292px); }
+.ph-ghost-frame img            { height: clamp(190px, 25vh, 280px); }
+.ph-people-strip img           { max-height: clamp(150px, 19vh, 212px); }
+.ph-carry-figs img             { height: clamp(140px, 18vh, 196px); }
+#challenge .ph-weevil-inset .ph-rail-box { width: 152px; }
+
+/* supporting photographs and plates */
+.ph-support img                        { max-height: 34vh; }
+.ph-support-plate img                  { max-height: 32vh; }
+.ph-07-support .ph-support-plate img   { max-height: 30vh; }
+.ph-done-v2 img                        { max-height: 30vh; }
+.ph-mech-pair img                      { max-height: 42vh; }
+@media (min-width: 900px) {
+  .ph-v2-mosaic figure:not(.ph-mosaic-lead) img { height: clamp(160px, 21vh, 238px); }
+  .ph-mosaic-lead img { height: clamp(336px, 44vh, 490px); }
+}
+
+/* Diagrams: the locator and the legend were both small enough that their own labels
+   were the limiting factor, so they gain width rather than height. */
+.ph-locator { max-width: 400px; }
+.ph-eval-bar-v2 .ph-legend { flex: 0 1 420px; }
+
+/* ---- 04: the bag is named on the left and shown on the right, as one unit ---- */
+.ph-bags { margin-top: var(--pair); display: grid; grid-template-columns: 1fr; gap: var(--pair);
+  align-items: center; border-left: 2px solid var(--blue); padding-left: 18px; max-width: none; }
+.ph-bags figure { display: grid; gap: 10px; }
+.ph-bags img { display: block; width: 100%; height: auto; max-height: 30vh; object-fit: cover; }
+@media (min-width: 900px) { .ph-bags { grid-template-columns: 1fr 1fr; } }
+/* The band's own figure is a photograph now, not a placeholder. */
+.ph-done-v2 figure { display: grid; gap: 10px; }
+.ph-done-v2 .ph-cap { color: rgba(251, 251, 250, 0.66); }
+
+/* ---- 05: keep the photograph the largest thing in the section. Enlarging the
+   requirement list to make its rows readable pushed it past the chicken photograph, so
+   the photograph gains height and the list is capped just under it. Both stay inside the
+   60-68vh ceiling. ---- */
+#challenge .ph-dominant img { max-height: 58vh; }
+.ph-v2-checklist { max-width: 840px; }
+
+/* The weevil inset is the smallest drawing on the page and the most detailed, so it
+   needs more room than "inset" first suggested. Still clearly subordinate to the rail. */
+#challenge .ph-weevil-inset .ph-rail-box { width: 190px; }
+
+/* ---- 07: the handbook reader ----------------------------------------------------
+   The handbook is 53 sheets and it is the deliverable, so section 07 lets you read it
+   rather than only look at three plates of it. See handbook-reader.tsx for the two-tier
+   behaviour and handbook-pages.ts for the page data.
+
+   MOTION IS OFF here too (reveal.tsx). Nothing fades, slides or turns: the sheet swaps on
+   the frame the button is pressed. The only transitions below are on hover/focus states of
+   the controls, which are affordances, not motion. */
+
+.ph-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* An inline sheet that opens the reader. The button covers the image and carries the
+   accessible name, so the figure's own caption stays out of the button's label. */
+.ph-hb-plate { position: relative; display: block; width: 100%; min-width: 0; }
+.ph-hb-plate img { display: block; }
+.ph-hb-open {
+  position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: flex-end;
+  padding: 12px; margin: 0; border: 0; background: transparent; cursor: zoom-in;
+  -webkit-appearance: none; appearance: none;
+}
+.ph-hb-cta {
+  font-family: var(--ph-mono), ui-monospace, monospace; font-size: 10px; letter-spacing: 0.11em;
+  text-transform: uppercase; color: var(--on-blue); background: rgba(11, 23, 51, 0.88);
+  padding: 7px 11px; border: 1px solid rgba(244, 245, 248, 0.3);
+  transition: background 120ms linear, border-color 120ms linear;
+}
+.ph-hb-open:hover .ph-hb-cta,
+.ph-hb-open:focus-visible .ph-hb-cta { background: var(--ink); border-color: var(--on-blue); }
+.ph-hb-open:focus-visible { outline: 2px solid var(--on-blue); outline-offset: 3px; }
+/* On a light plate the pill needs the same contrast the blue field gives it for free. */
+.ph-support-plate .ph-hb-cta { background: rgba(20, 22, 26, 0.9); }
+
+/* ---- the overlay ---- */
+.ph-hb-overlay {
+  position: fixed; inset: 0; z-index: 90; display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(10px, 1.4vh, 18px); padding: clamp(12px, 2vh, 22px) clamp(12px, 2.4vw, 30px);
+  background: rgba(9, 18, 40, 0.97); color: var(--on-blue);
+}
+.ph-hb-overlay:focus { outline: none; }
+
+.ph-hb-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.ph-hb-title { margin: 0; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.ph-hb-title b {
+  font-family: var(--ph-serif), Georgia, serif; font-weight: 500; font-size: clamp(17px, 1.7vw, 23px);
+  letter-spacing: -0.015em;
+}
+.ph-hb-title span {
+  font-family: var(--ph-mono), ui-monospace, monospace; font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--on-blue-dim);
+}
+.ph-hb-close {
+  flex: none; font-family: var(--ph-mono), ui-monospace, monospace; font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--on-blue-dim);
+  background: transparent; border: 1px solid var(--on-blue-line); padding: 8px 13px;
+  cursor: pointer; transition: color 120ms linear, border-color 120ms linear;
+}
+.ph-hb-close:hover, .ph-hb-close:focus-visible { color: var(--on-blue); border-color: var(--on-blue); }
+
+/* ---- the sheet and its arrows ---- */
+.ph-hb-stage {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: clamp(8px, 1.4vw, 22px); min-height: 0;
+}
+.ph-hb-sheet { margin: 0; display: grid; place-items: center; min-width: 0; min-height: 0; height: 100%; }
+.ph-hb-sheet img {
+  display: block; width: auto; height: auto; max-width: 100%; max-height: 100%;
+  object-fit: contain; background: #fff; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+.ph-hb-arrow {
+  flex: none; width: clamp(40px, 4vw, 52px); height: clamp(52px, 6vw, 68px);
+  display: grid; place-items: center; font-size: 26px; line-height: 1;
+  color: var(--on-blue); background: transparent; border: 1px solid var(--on-blue-line);
+  cursor: pointer; transition: background 120ms linear, border-color 120ms linear, opacity 120ms linear;
+}
+.ph-hb-arrow:hover:not(:disabled), .ph-hb-arrow:focus-visible { background: rgba(244, 245, 248, 0.1); border-color: var(--on-blue); }
+.ph-hb-arrow:disabled { opacity: 0.24; cursor: default; }
+/* Fetched, not shown: keeps the neighbouring sheets warm without laying them out. */
+.ph-hb-preload { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+
+/* ---- the footer: counter, tier control, chapter jump ---- */
+.ph-hb-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: clamp(12px, 2vw, 28px);
+  flex-wrap: wrap; border-top: 1px solid var(--on-blue-line); padding-top: clamp(9px, 1.2vh, 14px);
+}
+.ph-hb-count { margin: 0; display: flex; align-items: baseline; gap: 7px; font-variant-numeric: tabular-nums; }
+.ph-hb-count b {
+  font-family: var(--ph-serif), Georgia, serif; font-weight: 500; font-size: clamp(22px, 2.2vw, 32px);
+  line-height: 1; letter-spacing: -0.025em;
+}
+.ph-hb-count span {
+  font-family: var(--ph-mono), ui-monospace, monospace; font-size: 11px; letter-spacing: 0.1em;
+  color: var(--on-blue-dim);
+}
+.ph-hb-tier { margin: 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.ph-hb-tier span {
+  font-family: var(--ph-mono), ui-monospace, monospace; font-size: 10px; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--on-blue-dim); max-width: 46ch;
+}
+.ph-hb-tier button, .ph-hb-jump button {
+  font-family: var(--ph-mono), ui-monospace, monospace; font-size: 10px; letter-spacing: 0.11em;
+  text-transform: uppercase; color: var(--on-blue); background: transparent;
+  border: 1px solid var(--on-blue-line); padding: 8px 13px; cursor: pointer;
+  transition: background 120ms linear, border-color 120ms linear, color 120ms linear;
+}
+.ph-hb-tier button { border-color: var(--on-blue); }
+.ph-hb-tier button:hover, .ph-hb-tier button:focus-visible { background: var(--on-blue); color: var(--blue); }
+.ph-hb-jump { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.ph-hb-jump button { color: var(--on-blue-dim); padding: 7px 10px; }
+.ph-hb-jump button:hover, .ph-hb-jump button:focus-visible { color: var(--on-blue); border-color: var(--on-blue); }
+.ph-hb-jump button.is-current { color: var(--blue); background: var(--on-blue); border-color: var(--on-blue); }
+
+/* Narrow screens: the arrows sit on top of the sheet's edges instead of stealing width
+   from it, and the chapter jump scrolls sideways rather than eating half the viewport. */
+@media (max-width: 767px) {
+  .ph-hb-stage { grid-template-columns: minmax(0, 1fr); }
+  .ph-hb-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 1; background: rgba(9, 18, 40, 0.72); }
+  .ph-hb-arrow.prev { left: 0; }
+  .ph-hb-arrow.next { right: 0; }
+  .ph-hb-foot { justify-content: flex-start; }
+  .ph-hb-jump { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; width: 100%; padding-bottom: 4px; }
+  .ph-hb-jump button { flex: none; }
+  .ph-hb-cta { font-size: 9px; padding: 6px 9px; }
+}

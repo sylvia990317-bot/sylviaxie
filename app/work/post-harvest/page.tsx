@@ -9,6 +9,8 @@ import {
   project, meta, context, field, participants, focus, challenge,
   concepts, finalConcept, mechanism, status, reflection,
 } from "./content";
+import HandbookReader, { HandbookPlate } from "./handbook-reader";
+import { HANDBOOK_PLATE_PAGE, HANDBOOK_TOTAL } from "./handbook-pages";
 
 /* Route-scoped fonts, same pattern HALOGRIP uses: none of these reach `/` or any other
    route. Geist carries readable text; Bodoni Moda carries display, section numerals and
@@ -134,9 +136,9 @@ export default function PostHarvestPage() {
             <div className="ph-v2-mosaic">
               <figure className="ph-mosaic-lead">
                 <Image
-                  src="/post-harvest/photo/road-to-seme-1600.webp"
-                  alt="A red earth road running through dense green vegetation near Seme, with two people and a motorbike in the distance"
-                  width={1600} height={1067} sizes="(max-width: 899px) 92vw, 46vw"
+                  src="/post-harvest/photo/road-to-seme-2000.webp"
+                  alt="A red earth road curving through dense green vegetation near Seme, with a person pushing a bicycle loaded with jerrycans"
+                  width={2000} height={1333} sizes="(max-width: 899px) 92vw, 46vw"
                 />
                 <figcaption className="ph-cap">{context.captions.road}</figcaption>
               </figure>
@@ -260,10 +262,20 @@ export default function PostHarvestPage() {
               before the diagram argues about them. No PICS bag photograph exists in the
               source package, so this is a stated fact rather than a shown one. */}
           <Reveal>
-            <aside className="ph-bags">
-              <p className="ph-lbl">{focus.bags.label}</p>
-              <p>{focus.bags.text}</p>
-            </aside>
+            <div className="ph-bags">
+              <div>
+                <p className="ph-lbl">{focus.bags.label}</p>
+                <p>{focus.bags.text}</p>
+              </div>
+              <figure>
+                <Image
+                  src="/post-harvest/photo/pics-bag-1400.webp"
+                  alt="Close up of a PICS bag in Seme, printed with Purdue Improved Crop Storage and a 100 kg capacity mark"
+                  width={1400} height={936} sizes="(max-width: 899px) 92vw, 40vw"
+                />
+                <figcaption className="ph-cap">{focus.bags.caption}</figcaption>
+              </figure>
+            </div>
           </Reveal>
 
           <Reveal>
@@ -391,7 +403,16 @@ export default function PostHarvestPage() {
 
           The enlarged repeat of the tower sketch is REMOVED. It showed the same drawing
           twice, the second time at four times the size, which gave the section two
-          competing focal points and said nothing the marked frame does not. */}
+          competing focal points and said nothing the marked frame does not.
+
+          The photograph is PORTRAIT and stays portrait. It was previously shown as a
+          purpose-made 3:2 crop (`sketch-review-wide`) so it could run the full canvas as
+          a landscape band — that was a layout convenience, not a reading of the picture.
+          The frame is vertical: the sheet, both hands and the standing farmer only fit
+          top-to-bottom, and the wide crop amputated the top of the sheet and the person
+          holding it. The section is now a two-column lead instead: the tall photograph on
+          the left, and the rounds / evaluation / comparison stacked beside it, so the
+          picture keeps its own proportion without leaving a column of dead space. */}
       <section className="ph-section ph-v2" id="concepts">
         <div className="ph-canvas">
           <Reveal>
@@ -403,46 +424,48 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
-            <figure className="ph-dominant">
-              <Image
-                src="/post-harvest/photo/sketch-review-wide-1600.webp"
-                alt="Two hands holding a hand-drawn sketch of the drying tower, one pointing at the shelves and its dimensions"
-                width={1600} height={900} sizes="(max-width: 899px) 92vw, 88vw"
-              />
-              <figcaption className="ph-cap">{concepts.captions.review}</figcaption>
-            </figure>
-          </Reveal>
+            <div className="ph-06-lead">
+              <figure className="ph-dominant ph-dominant-tall">
+                <Image
+                  src="/post-harvest/photo/sketch-review-1600.webp"
+                  alt="Two hands holding a hand-drawn sketch of the drying tower, one pointing at the shelves and its dimensions"
+                  width={1600} height={2400} sizes="(max-width: 1099px) 92vw, 34vw"
+                />
+                <figcaption className="ph-cap">{concepts.captions.review}</figcaption>
+              </figure>
 
-          <Reveal>
-            <ol className="ph-rounds-v2">
-              {concepts.rounds.map((r) => (
-                <li key={r.n}><b>{r.n}</b><span>{r.text}</span></li>
-              ))}
-            </ol>
-          </Reveal>
+              <div className="ph-06-col">
+                <ol className="ph-rounds-v2">
+                  {concepts.rounds.map((r) => (
+                    <li key={r.n}><b>{r.n}</b><span>{r.text}</span></li>
+                  ))}
+                </ol>
 
-          <Reveal>
-            <div>
-              <div className="ph-eval-bar-v2">
-                <p className="ph-lbl">{concepts.evaluationLabel}</p>
-                <InlineSvg name="sketch-legend" className="ph-legend" />
+                <div className="ph-eval-bar-v2">
+                  <p className="ph-lbl">{concepts.evaluationLabel}</p>
+                  <InlineSvg name="sketch-legend" className="ph-legend" />
+                </div>
+                <ul className="ph-strip ph-strip-3">
+                  {concepts.options.map((o) => (
+                    <li key={o.slug} data-picked={o.selected || undefined}>
+                      <div className="ph-strip-frame">
+                        <Image
+                          src={`/post-harvest/concept/concept-${o.slug}-760.webp`}
+                          alt={`Hand-drawn concept sketch: ${o.name}`}
+                          width={760} height={620} sizes="(max-width: 1099px) 88vw, 22vw"
+                        />
+                      </div>
+                      <h4>{o.name}</h4>
+                      {o.selected ? <p className="ph-picked-note">{concepts.selectedNote}</p> : null}
+                    </li>
+                  ))}
+                </ul>
+
+                {/* The outcome sits at the foot of the column it concludes, and pins to
+                    the photograph's bottom edge so the tall picture does not leave the
+                    right-hand column trailing off into empty page. */}
+                <p className="ph-conclusion">{concepts.conclusion}</p>
               </div>
-              <ul className="ph-strip ph-strip-3">
-                {concepts.options.map((o) => (
-                  <li key={o.slug} data-picked={o.selected || undefined}>
-                    <div className="ph-strip-frame">
-                      <Image
-                        src={`/post-harvest/concept/concept-${o.slug}-760.webp`}
-                        alt={`Hand-drawn concept sketch: ${o.name}`}
-                        width={760} height={620} sizes="(max-width: 767px) 88vw, 28vw"
-                      />
-                    </div>
-                    <h4>{o.name}</h4>
-                    {o.selected ? <p className="ph-picked-note">{concepts.selectedNote}</p> : null}
-                  </li>
-                ))}
-              </ul>
-              <p className="ph-conclusion">{concepts.conclusion}</p>
             </div>
           </Reveal>
         </div>
@@ -450,8 +473,26 @@ export default function PostHarvestPage() {
 
       {/* ============ 07 The Drying Tower ============
           DOMINANT: the construction handbook, which is the completed deliverable. The
-          tower drawing and the two handbook pages are supporting plates at a third of
-          its size, so nothing competes with it and nothing reads as a delivered tower. */}
+          tower drawing and the two handbook pages are supporting plates, so nothing
+          competes with it and nothing reads as a delivered tower.
+
+          FIXED: the cover used to be `width:100%` + `object-fit:contain` + `background:
+          #fff` on a full-canvas box. The scan is 1.41:1 and the box was 3.3:1, so the
+          white background bled the full width of the page and the drawing floated in the
+          middle of a huge empty white band — that band was the "long image". The figure
+          now sizes to the cover's own proportion inside its column, so there is no white
+          outside the page itself.
+
+          NOW READABLE END TO END: the three plates are the same three plates, but each one
+          opens the reader (handbook-reader.tsx) on the sheet it is showing. The handbook is
+          53 sheets and it is the deliverable, so the section shows it rather than three
+          samples of it. The reader opens on the 7-page overview; the 46 assembly sheets are
+          behind "View all 53 pages", per Sylvia, 2026-09-05.
+
+          FIXED: the two handbook pages were capped at `max-height: 22vh` in a third-width
+          column, i.e. about 424 x 178px. These are dimensioned instruction spreads; at
+          that size none of their text is readable. They are now a two-up row across the
+          canvas (~660px each), and the running text moved beside the cover. */}
       <section className="ph-v2 ph-v2-blue" id="final-concept">
         <div className="ph-canvas">
           <Reveal>
@@ -466,43 +507,21 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
-            <figure className="ph-handbook-dominant">
-              <Image
-                src="/post-harvest/handbook/handbook-cover-1600.webp"
-                alt="Cover of the construction handbook, titled Drying Tower, first version, listing a construction manual, materials needed, tools needed and how to use"
-                width={1600} height={1132} sizes="(max-width: 899px) 92vw, 78vw"
-              />
-              <figcaption className="ph-cap">
-                <b>{finalConcept.deliverable.title}.</b> {finalConcept.deliverable.text}
-              </figcaption>
-            </figure>
-          </Reveal>
-
-          <Reveal>
-            <div className="ph-07-support">
-              <figure className="ph-support-plate-wrap">
-                <div className="ph-support-plate">
-                  <Image
-                    src="/post-harvest/handbook/handbook-step-1600.webp"
-                    alt="A handbook page headed Step 1, showing how to weld four square tubes into a rectangular frame, with dimensioned sub-steps and the materials needed listed beneath"
-                    width={1600} height={1111} sizes="(max-width: 999px) 88vw, 28vw"
-                  />
-                </div>
-                <figcaption className="ph-cap">{finalConcept.captions.step}</figcaption>
+            <div className="ph-07-lead">
+              <figure className="ph-handbook-dominant">
+                <HandbookPlate
+                  page={HANDBOOK_PLATE_PAGE.cover}
+                  src="/post-harvest/handbook/handbook-cover-1600.webp"
+                  alt="Cover of the construction handbook, titled Drying Tower, first version, listing a construction manual, materials needed, tools needed and how to use"
+                  width={1600} height={1132} sizes="(max-width: 999px) 92vw, 54vw"
+                  cta={`Flip through all ${HANDBOOK_TOTAL} pages`}
+                />
+                <figcaption className="ph-cap">
+                  <b>{finalConcept.deliverable.title}.</b> {finalConcept.deliverable.text}
+                </figcaption>
               </figure>
 
-              <figure className="ph-support-plate-wrap">
-                <div className="ph-support-plate">
-                  <Image
-                    src="/post-harvest/handbook/handbook-cutlist-1600.webp"
-                    alt="A handbook page headed Cutlist of materials, showing measured steel sections including square tube, angle iron, flat iron, metal sheet and pipe"
-                    width={1600} height={1132} sizes="(max-width: 999px) 88vw, 28vw"
-                  />
-                </div>
-                <figcaption className="ph-cap">{finalConcept.captions.cutlist}</figcaption>
-              </figure>
-
-              <div>
+              <div className="ph-07-aside">
                 {finalConcept.body.map((t) => (
                   <p className="ph-body" key={t.slice(0, 20)}>{t}</p>
                 ))}
@@ -520,6 +539,36 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
+            <div className="ph-07-pages">
+              <figure className="ph-support-plate-wrap">
+                <div className="ph-support-plate">
+                  <HandbookPlate
+                    page={HANDBOOK_PLATE_PAGE.step}
+                    src="/post-harvest/handbook/handbook-step-1600.webp"
+                    alt="A handbook page headed Step 1, showing how to weld four square tubes into a rectangular frame, with dimensioned sub-steps and the materials needed listed beneath"
+                    width={1600} height={1111} sizes="(max-width: 899px) 92vw, 46vw"
+                    cta="Read this step in the handbook"
+                  />
+                </div>
+                <figcaption className="ph-cap">{finalConcept.captions.step}</figcaption>
+              </figure>
+
+              <figure className="ph-support-plate-wrap">
+                <div className="ph-support-plate">
+                  <HandbookPlate
+                    page={HANDBOOK_PLATE_PAGE.cutlist}
+                    src="/post-harvest/handbook/handbook-cutlist-1600.webp"
+                    alt="A handbook page headed Cutlist of materials, showing measured steel sections including square tube, angle iron, flat iron, metal sheet and pipe"
+                    width={1600} height={1132} sizes="(max-width: 899px) 92vw, 46vw"
+                    cta="Read the cut list in the handbook"
+                  />
+                </div>
+                <figcaption className="ph-cap">{finalConcept.captions.cutlist}</figcaption>
+              </figure>
+            </div>
+          </Reveal>
+
+          <Reveal>
             <div className="ph-07-close">
               <figure className="ph-handbook-quote">
                 <blockquote>{finalConcept.handbookQuote.text}</blockquote>
@@ -531,6 +580,10 @@ export default function PostHarvestPage() {
               </p>
             </div>
           </Reveal>
+
+          {/* Mounted once for the whole section: every plate above opens this same
+              overlay, on its own sheet. */}
+          <HandbookReader />
         </div>
       </section>
 
@@ -640,18 +693,14 @@ export default function PostHarvestPage() {
                   </ul>
                 </div>
                 <figure className="ph-done-figs">
-                  {/* Awaiting Sylvia's photograph of the built collector. Shown as a
-                      labelled placeholder, never a broken image or a silent gap. */}
-                  <div className="ph-placeholder" role="img"
-                       aria-label={status.collectorPhoto.caption + " Photograph not yet supplied."}>
-                    <span>{status.collectorPhoto.label}</span>
-                    <span className="cap">{status.collectorPhoto.caption}</span>
-                  </div>
+                  {/* The collector is the one part of the design that physically exists,
+                      so it is the evidence this band is built on. */}
                   <Image
-                    src="/post-harvest/handbook/handbook-tools-1200.webp"
-                    alt="A spread from the finished construction handbook headed Tools needed, listing tape measure, hammer, pliers, wrench, drill, drill bits, welding machine, angle grinder, paint brush and silicon gun"
-                    width={1200} height={850} sizes="(max-width: 899px) 88vw, 30vw"
+                    src="/post-harvest/photo/collector-built-1400.webp"
+                    alt="The metal solar collector the team built, a long corrugated panel resting on a log outdoors in Seme"
+                    width={1400} height={936} sizes="(max-width: 899px) 88vw, 30vw"
                   />
+                  <figcaption className="ph-cap">{status.collectorPhoto.built}</figcaption>
                 </figure>
               </div>
             </Reveal>

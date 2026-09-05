@@ -159,10 +159,11 @@ export const participants: {
 export const focus = {
   heading: "Finding the focus",
   lead: "We were assigned grain storage. The research pointed somewhere else.",
-  /** Named, because the finding depends on knowing what they are. */
+  /** Named AND shown: Sylvia photographed one of these bags in Seme. */
   bags: {
     label: "The storage product that already existed",
     text: "One Acre Fund supplies farmers in Seme with PICS bags, airtight sacks that protect grain without chemicals and last about three years if they are used as instructed.",
+    caption: "A PICS bag in Seme. The printing on it reads Purdue Improved Crop Storage, 100 kg.",
     page: 15,
   },
   body: [
@@ -356,9 +357,8 @@ export const status = {
      with the farmer. Until it arrives the page shows a labelled placeholder rather than
      a broken image or a silent gap. */
   collectorPhoto: {
-    pending: true,
-    label: "Photograph to come",
-    caption: "The metal solar collector, built and left with a farmer in Seme.",
+    built: "The metal solar collector the team built, the one part of the design that physically exists.",
+    handover: "Leaving the collector in Seme, May 2024.",
   },
   completed: {
     label: "Completed",

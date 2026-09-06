@@ -6,17 +6,26 @@ import {
   HANDBOOK_CHAPTERS,
   HANDBOOK_OVERVIEW,
   HANDBOOK_PAGES,
+  HANDBOOK_PLATE_PAGE,
   HANDBOOK_TOTAL,
 } from "./handbook-pages";
 
 /**
  * Section 07's handbook reader: the construction handbook, flippable in place.
  *
- * WHY A MODULE-LEVEL BUS. Three separate plates in section 07 open the reader, each on a
- * different sheet, and they sit in different parts of the server-rendered tree. One
- * `<HandbookReader />` mounts the overlay once; each `<HandbookPlate />` is a small client
- * island that calls `openHandbook(n)`. That is cheaper than threading context through the
- * server component and avoids three overlays fighting over `document.body`.
+ * WHY A MODULE-LEVEL BUS. The overlay is mounted once at the page root (it cannot live
+ * inside section 07 — see page.tsx), while the thing that opens it sits inside 07. One
+ * `<HandbookReader />` mounts the overlay; `<HandbookOpen />` is a small client island
+ * elsewhere in the tree that calls `openHandbook(n)`. That is cheaper than threading
+ * context through the server component and keeps the two free to move independently.
+ *
+ * ONE ENTRANCE, DELIBERATELY SECONDARY (Sylvia, 2026-09-06, revised 2026-09-07). The
+ * handbook spreads in 07 used to carry a pill each, so the page had four ways in and none
+ * of them looked like the main one. The spreads are plain, non-clickable images now — they
+ * are the primary reading path, understandable without opening anything — and this one
+ * outline button is the only control. The 53-page reader is an optional deep dive that
+ * interrupts the case-study flow, so the button reads as available, not as the section's
+ * focal point: readable label, modest size, no fill.
  *
  * MOTION IS OFF (see reveal.tsx — Sylvia's instruction, 2026-09-03). There is no page-turn
  * animation, no fade between sheets and no transform on open. Turning a page swaps the
@@ -37,39 +46,18 @@ function openHandbook(page: number) {
 }
 
 /**
- * A handbook sheet shown inline in the page, with an invisible full-bleed button over it.
- * The button carries the accessible name, so the surrounding `<figcaption>` is not swallowed
- * into it; the visible pill is decorative and hidden from the accessibility tree.
+ * The page's one way into the handbook: a small outline button, sized to its own content
+ * rather than the canvas width, so it cannot out-weigh the two previews above it. It is a
+ * `<button>` in its entirety rather than a link with a hit area, so there is no dead space
+ * inside it that looks clickable but is not. The arrow lives in the copy itself (`sub`, from
+ * content.ts), not as a separate element, since the two-line label is quoted verbatim.
  */
-export function HandbookPlate({
-  page,
-  src,
-  alt,
-  width,
-  height,
-  sizes,
-  cta,
-  priority = false,
-}: {
-  page: number;
-  src: string;
-  alt: string;
-  width: number;
-  height: number;
-  sizes: string;
-  cta: string;
-  priority?: boolean;
-}) {
+export function HandbookOpen({ title, sub }: { title: string; sub: string }) {
   return (
-    <div className="ph-hb-plate">
-      <Image src={src} alt={alt} width={width} height={height} sizes={sizes} priority={priority} />
-      <button type="button" className="ph-hb-open" onClick={() => openHandbook(page)}>
-        <span className="ph-hb-cta" aria-hidden="true">
-          {cta}
-        </span>
-        <span className="ph-sr-only">{`${cta}. Opens the construction handbook at page ${page} of ${HANDBOOK_TOTAL}.`}</span>
-      </button>
-    </div>
+    <button type="button" className="ph-hb-secondary" onClick={() => openHandbook(HANDBOOK_PLATE_PAGE.cover)}>
+      <span className="ph-hb-secondary-title">{title}</span>
+      <span className="ph-hb-secondary-sub">{sub}</span>
+    </button>
   );
 }
 
@@ -91,7 +79,13 @@ export default function HandbookReader() {
 
   const close = useCallback(() => {
     setOpen(false);
-    returnFocus.current?.focus();
+    // `preventScroll` matters here: the trigger sits mid-page, under the two previews, and
+    // a plain `.focus()` on an element the browser considers not-fully-visible scrolls it
+    // into view — which would move the visitor's scroll position on close even though
+    // nothing about the underlying page ever moved while the reader was open (the overlay
+    // is `position: fixed` and `overflow: hidden` on body only blocks scrolling, it does
+    // not change the stored offset). This is what "preserve scroll position" means here.
+    returnFocus.current?.focus({ preventScroll: true });
     returnFocus.current = null;
   }, []);
 

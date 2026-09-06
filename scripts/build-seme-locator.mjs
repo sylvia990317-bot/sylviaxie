@@ -91,16 +91,49 @@ function projector(extent, box) {
   ];
 }
 
-const toPath = (ring, project, tol) =>
-  simplify(ring, tol)
-    .map(project)
-    .map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1))
-    .join('') + 'Z';
+/** Sutherland-Hodgman clip of a ring to [lon0, lat0, lon1, lat1]. The whole file is inlined
+ *  into the page's HTML by inline-svg.tsx, so geometry outside the frame is pure page weight:
+ *  Lake Victoria alone is mostly Tanzanian and never visible here. */
+function clipRing(ring, boxExt) {
+  const [x0, y0, x1, y1] = boxExt;
+  const edges = [
+    [(p) => p[0] >= x0, (a, b) => [x0, a[1] + ((b[1] - a[1]) * (x0 - a[0])) / (b[0] - a[0])]],
+    [(p) => p[0] <= x1, (a, b) => [x1, a[1] + ((b[1] - a[1]) * (x1 - a[0])) / (b[0] - a[0])]],
+    [(p) => p[1] >= y0, (a, b) => [a[0] + ((b[0] - a[0]) * (y0 - a[1])) / (b[1] - a[1]), y0]],
+    [(p) => p[1] <= y1, (a, b) => [a[0] + ((b[0] - a[0]) * (y1 - a[1])) / (b[1] - a[1]), y1]],
+  ];
+  let out = ring;
+  for (const [inside, cross] of edges) {
+    const src = out;
+    out = [];
+    for (let i = 0; i < src.length; i++) {
+      const cur = src[i];
+      const prev = src[(i + src.length - 1) % src.length];
+      const curIn = inside(cur);
+      if (curIn !== inside(prev)) out.push(cross(prev, cur));
+      if (curIn) out.push(cur);
+    }
+    if (!out.length) return [];
+  }
+  return out;
+}
 
-const pathsOf = (geom, project, tol, minPts = 8) =>
+const toPath = (ring, project, tol, clip) => {
+  const r = clip ? clipRing(ring, clip) : ring;
+  if (r.length < 3) return '';
+  return (
+    simplify(r, tol)
+      .map(project)
+      .map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1))
+      .join('') + 'Z'
+  );
+};
+
+const pathsOf = (geom, project, tol, minPts = 8, clip) =>
   outerRings(geom)
     .filter((r) => r.length >= minPts)
-    .map((r) => toPath(r, project, tol))
+    .map((r) => toPath(r, project, tol, clip))
+    .filter(Boolean)
     .join(' ');
 
 function centroid(geom) {
@@ -119,22 +152,44 @@ const [countries, lakes, counties, subcounties] = await Promise.all(
 
 const kenya = countries.features.find((f) => f.properties.ADMIN === 'Kenya').geometry;
 const victoria = lakes.features.find((f) => /^Lake Victoria$/i.test(f.properties.name || '')).geometry;
-const siaya = counties.features.find((f) => f.properties.shapeName === 'Siaya').geometry;
 const seme = centroid(subcounties.features.find((f) => f.properties.shapeName === 'Seme').geometry);
 
-// Canvas. 1000 units wide; the figure renders at .ph-v2-map's 340px cap, so the smallest
-// label here is ~9px on screen. Anything that could not survive that is not drawn at all.
+// WHICH COUNTY. The booklet header says "Seme, Siaya County", and that is wrong. Grid-sampling
+// the Seme ADM2 polygon against every ADM1 county puts 99.7% of its area in KISUMU County (the
+// 0.3% in Siaya is boundary-sampling noise), and Seme is one of Kisumu's seven constituencies —
+// created in 2012, 268 sq km, pop. 121,667, which also matches content.ts's own "about 450 per
+// square kilometre". Siaya is the county next door, immediately west. Labels follow the data.
+const host = counties.features.find((f) => f.properties.shapeName === 'Kisumu').geometry;
+// The county's own centroid lands on the gulf shore, where the label would straddle water. This
+// anchor was picked by testing the label's whole width for "inside Kisumu and clear of the lake".
+const hostLabelAt = [35.0, -0.15];
+
+// Canvas. 1000 units wide; the figure renders at .ph-v2-map's 340px cap, so the smallest label
+// here is ~9px on screen. Anything that could not survive that is not drawn at all.
+//
+// LAYOUT: two panels, stacked and fully separated — no shared edge, no overlap, and no
+// projection lines between them. Reading order is carried by the two numbered titles and by one
+// small arrow standing in the gap.
 const W = 1000;
-const H = 1216;
-const INSET = { x: 24, y: 76, w: 214, h: 260 };   // Kenya, whole country
-const FRAME = { x: 24, y: 396, w: 952, h: 798 };  // the local map
+const P1 = { x: 335, y: 74, w: 330, h: 350 };  // panel 01 — the whole country
+const P2 = { x: 24, y: 634, w: 952, h: 660 };  // panel 02 — the local map
+// The arrow lives entirely in the gap, clear of panel 02's title — it is the only mark that
+// crosses between the panels, and it never touches either frame.
+const ARROW = { y: 468, top: 486, tip: 536 };
+const H = P2.y + P2.h + 26;
+
 const KENYA_EXTENT = [33.85, -4.78, 41.95, 5.06];
-const LOCAL_EXTENT = [33.02, -1.52, 35.62, 0.66]; // 2.60 x 2.18 deg — matches FRAME's aspect
+// 1.80 x 1.248 deg, matching P2's aspect. Wide enough east to hold all of Kisumu County, far
+// enough south and west that Lake Victoria fills the corner and reads as a lake, not a bay.
+const LOCAL_EXTENT = [33.55, -0.688, 35.35, 0.56];
+
+// Kenya sits centred in panel 01, at its true 0.823 aspect.
+const INSET = { x: P1.x + (P1.w - 239) / 2, y: P1.y + (P1.h - 290) / 2, w: 239, h: 290 };
 
 const pKenya = projector(KENYA_EXTENT, INSET);
-const pLocal = projector(LOCAL_EXTENT, FRAME);
+const pLocal = projector(LOCAL_EXTENT, P2);
 
-// The inset's blue box is exactly what the frame below shows — same extent, drawn twice.
+// The highlight in panel 01 is exactly what panel 02 shows — the same extent, drawn twice.
 const c0 = pKenya([LOCAL_EXTENT[0], LOCAL_EXTENT[3]]);
 const c1 = pKenya([LOCAL_EXTENT[2], LOCAL_EXTENT[1]]);
 const box = {
@@ -144,54 +199,83 @@ const box = {
   h: Math.abs(c1[1] - c0[1]),
 };
 
+// Everything in panel 02 is clipped to the extent (plus a hair, so the clip seam falls outside
+// the visible rect) before it is simplified. inline-svg.tsx injects this file into the page's
+// HTML, so geometry that is never drawn is pure page weight.
+const CLIP = [
+  LOCAL_EXTENT[0] - 0.02,
+  LOCAL_EXTENT[1] - 0.02,
+  LOCAL_EXTENT[2] + 0.02,
+  LOCAL_EXTENT[3] + 0.02,
+];
+
+// Kenya's landmass in panel 02 is the union of its 47 counties, not the 1:50m national outline:
+// at this scale the coarse national polygon leaves visible slivers of "not Kenya" along the lake
+// shore. Filled, never stroked — internal county lines would be noise here.
+const kenyaLocal = counties.features
+  .map((f) => pathsOf(f.geometry, pLocal, 0.004, 6, CLIP))
+  .filter(Boolean)
+  .join(' ');
+
+// Panel 01 keeps a clean country silhouette: the lake is clipped to Kenya, so the Ugandan and
+// Tanzanian two thirds of Lake Victoria do not trail off its west side as an unexplained blob.
+const kenyaInsetPath = pathsOf(kenya, pKenya, 0.045, 20);
+
 const semePt = pLocal(seme);
+const hostLabel = pLocal(hostLabelAt);
 
 const C = {
   paper: '#fbfbfa',
-  land: '#eceae6',     // land inside Kenya
-  landOut: '#f4f3f1',  // land outside Kenya — quietly answers "which side is Kenya"
-  region: '#dbd9d4',   // Siaya County
+  panel: '#ffffff',
+  land: '#e8e6e0',     // land inside Kenya
+  landOut: '#f5f4f2',  // land outside Kenya — quietly answers "which side is Kenya"
+  region: '#dbd9d4',   // the county the field site is in
   line: '#c6c4bf',
   water: '#b9c4d2',    // cooler AND darker than every land tone: never reads as land
   waterLine: '#98a6b8',
   ink: '#454b54',
   muted: '#787d85',
-  blue: '#17357a',     // reserved: the Seme marker and the inset -> detail cue
+  blue: '#17357a',     // reserved: the Seme marker, the panel-01 highlight, the ZOOM IN arrow
 };
 
 const n = (v) => v.toFixed(1);
+const mid = P1.x + P1.w / 2;
 
-const svg = `<svg font-family="Geist, system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" role="img" aria-label="Two part locator map. A small inset of the whole of Kenya boxes the study region in the far west of the country. The larger detail map below shows Lake Victoria as darker grey water, Siaya County on its north east shore, and the Seme field site marked in deep blue.">
+const svg = `<svg font-family="Geist, system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" role="img" aria-label="Locator in two stacked panels. Panel 01, western Kenya: the outline of the whole country with a deep blue box over its far west. An arrow labelled zoom in points down to panel 02, Seme field site: a local map in which Lake Victoria is darker grey water, Kisumu County is the pale grey region on its north east shore, and Seme is marked in deep blue at that county's western tip.">
 <rect width="${W}" height="${H}" fill="${C.paper}"/>
-<defs><clipPath id="loc-frame"><rect x="${FRAME.x}" y="${FRAME.y}" width="${FRAME.w}" height="${FRAME.h}"/></clipPath></defs>
+<defs>
+<clipPath id="loc-frame"><rect x="${P2.x}" y="${P2.y}" width="${P2.w}" height="${P2.h}"/></clipPath>
+<clipPath id="loc-kenya"><path d="${kenyaInsetPath}"/></clipPath>
+</defs>
 
-<!-- ===== 1 / inset: the whole of Kenya, so the reader starts from a shape they know ===== -->
-<text x="${INSET.x}" y="${INSET.y - 24}" class="m" font-size="27" letter-spacing="0.15em" fill="${C.muted}">KENYA</text>
-<path d="${pathsOf(kenya, pKenya, 0.045, 20)}" fill="${C.land}" stroke="${C.line}" stroke-width="1.6" stroke-linejoin="round"/>
-<path d="${toPath(biggest(victoria), pKenya, 0.05)}" fill="${C.water}"/>
-<rect x="${n(box.x)}" y="${n(box.y)}" width="${n(box.w)}" height="${n(box.h)}" fill="none" stroke="${C.blue}" stroke-width="3.2"/>
+<!-- ===== panel 01 — the whole country, so the reader starts from a shape they know ===== -->
+<text x="${P1.x}" y="${P1.y - 22}" class="m" font-size="28" letter-spacing="0.15em" fill="${C.muted}">01 / <tspan fill="${C.ink}">WESTERN KENYA</tspan></text>
+<rect x="${P1.x}" y="${P1.y}" width="${P1.w}" height="${P1.h}" fill="${C.landOut}" stroke="${C.line}" stroke-width="1.6"/>
+<path d="${kenyaInsetPath}" fill="${C.land}" stroke="${C.line}" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="${toPath(biggest(victoria), pKenya, 0.05)}" fill="${C.water}" clip-path="url(#loc-kenya)"/>
+<rect x="${n(box.x)}" y="${n(box.y)}" width="${n(box.w)}" height="${n(box.h)}" fill="${C.blue}" fill-opacity="0.14" stroke="${C.blue}" stroke-width="3.2"/>
 
-<!-- the connecting cue: the boxed region opens downward into the detail frame -->
-<path d="M${n(box.x)},${n(box.y + box.h)}L${FRAME.x},${FRAME.y} M${n(box.x + box.w)},${n(box.y + box.h)}L${FRAME.x + FRAME.w},${FRAME.y}" stroke="${C.blue}" stroke-width="1.6" opacity="0.4" fill="none"/>
+<!-- ===== the only thing joining the panels: one arrow, standing in the gap ===== -->
+<text x="${mid}" y="${ARROW.y}" text-anchor="middle" class="m" font-size="26" letter-spacing="0.19em" fill="${C.blue}">ZOOM IN</text>
+<path d="M${mid},${ARROW.top}L${mid},${ARROW.tip - 16}" stroke="${C.blue}" stroke-width="3"/>
+<path d="M${mid - 13},${ARROW.tip - 22}L${mid},${ARROW.tip}L${mid + 13},${ARROW.tip - 22}Z" fill="${C.blue}"/>
 
-<text x="${INSET.x + INSET.w + 48}" y="${INSET.y + 44}" class="s" font-size="42" font-weight="600" letter-spacing="-0.015em" fill="${C.ink}">Western Kenya</text>
-<text x="${INSET.x + INSET.w + 48}" y="${INSET.y + 96}" class="m" font-size="26" letter-spacing="0.13em" fill="${C.muted}">LAKE VICTORIA BASIN</text>
-
-<!-- ===== 2 / detail: Lake Victoria, Siaya County, Seme ===== -->
+<!-- ===== panel 02 — Lake Victoria, the county, and the field site ===== -->
+<text x="${P2.x}" y="${P2.y - 22}" class="m" font-size="28" letter-spacing="0.15em" fill="${C.muted}">02 / <tspan fill="${C.blue}">SEME — FIELD SITE</tspan></text>
 <g clip-path="url(#loc-frame)">
-  <rect x="${FRAME.x}" y="${FRAME.y}" width="${FRAME.w}" height="${FRAME.h}" fill="${C.landOut}"/>
-  <path d="${pathsOf(kenya, pLocal, 0.008, 20)}" fill="${C.land}" stroke="${C.line}" stroke-width="1.8" stroke-linejoin="round"/>
-  <path d="${pathsOf(siaya, pLocal, 0.005)}" fill="${C.region}" stroke="${C.line}" stroke-width="1.8" stroke-linejoin="round"/>
-  <path d="${toPath(biggest(victoria), pLocal, 0.006)}" fill="${C.water}" stroke="${C.waterLine}" stroke-width="1.8" stroke-linejoin="round"/>
+  <rect x="${P2.x}" y="${P2.y}" width="${P2.w}" height="${P2.h}" fill="${C.landOut}"/>
+  <path d="${kenyaLocal}" fill="${C.land}" stroke="${C.land}" stroke-width="2" stroke-linejoin="round"/>
+  <path d="${pathsOf(host, pLocal, 0.004, 8, CLIP)}" fill="${C.region}" stroke="${C.line}" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="${toPath(biggest(victoria), pLocal, 0.003, CLIP)}" fill="${C.water}" stroke="${C.waterLine}" stroke-width="1.8" stroke-linejoin="round"/>
 </g>
-<rect x="${FRAME.x}" y="${FRAME.y}" width="${FRAME.w}" height="${FRAME.h}" fill="none" stroke="${C.line}" stroke-width="1.6"/>
+<rect x="${P2.x}" y="${P2.y}" width="${P2.w}" height="${P2.h}" fill="none" stroke="${C.line}" stroke-width="1.6"/>
 
-<text x="${FRAME.x + 30}" y="${FRAME.y + FRAME.h - 36}" class="s" font-size="40" font-style="italic" fill="#3d4a5c">Lake Victoria</text>
-<text x="${FRAME.x + 26}" y="${FRAME.y + 58}" class="m" font-size="27" letter-spacing="0.14em" fill="${C.muted}">SIAYA COUNTY</text>
+<text x="${P2.x + 30}" y="${P2.y + P2.h - 34}" class="s" font-size="40" font-style="italic" fill="#3d4a5c">Lake Victoria</text>
+<text x="${n(hostLabel[0])}" y="${n(hostLabel[1])}" text-anchor="middle" class="m" font-size="27" letter-spacing="0.14em" fill="#56524b">KISUMU COUNTY</text>
 
+<text x="${n(semePt[0])}" y="${n(semePt[1] - 48)}" text-anchor="middle" class="s" font-size="36" font-weight="600" letter-spacing="0.02em" fill="${C.blue}">SEME</text>
 <circle cx="${n(semePt[0])}" cy="${n(semePt[1])}" r="31" fill="none" stroke="${C.blue}" stroke-width="2.6" opacity="0.5"/>
 <circle cx="${n(semePt[0])}" cy="${n(semePt[1])}" r="13" fill="${C.blue}"/>
-<text x="${n(semePt[0] + 48)}" y="${n(semePt[1] + 13)}" class="s" font-size="35" font-weight="600" letter-spacing="0.015em" fill="${C.blue}">SEME — FIELD SITE</text>
 </svg>
 `;
 

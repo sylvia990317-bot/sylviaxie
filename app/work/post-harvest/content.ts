@@ -16,6 +16,8 @@
  * qualification needs the words, it keeps them.
  */
 
+import { HANDBOOK_TOTAL } from "./handbook-pages";
+
 /** Evidence class for a factual claim. `validated` is intentionally never used. */
 export type Evidence =
   | "observation"
@@ -58,7 +60,7 @@ export const meta: [string, string][] = [
  */
 export const context = {
   heading: "Where this happened",
-  dateline: "Seme, Siaya County, Kenya. April to May 2024.",
+  dateline: "Seme, Kisumu County, Kenya. April to May 2024.",
   lead:
     "Seme is a rural farming sub-county in western Kenya, on the north east shore of Lake Victoria. Maize is the crop most households depend on, for food and for income.",
   stats: [
@@ -75,7 +77,7 @@ export const context = {
   ],
   /** Captions carry what the paragraphs used to say. */
   captions: {
-    locator: "Seme sits on the north east shore of the Winam Gulf, in Siaya County, western Kenya.",
+    locator: "Seme sits on the north east shore of the Winam Gulf, at the western tip of Kisumu County. Siaya County is its neighbour to the west.",
     road: "The road into Seme.",
     roof: "Drying on a roof. The existing method puts the crop wherever the sun reaches.",
     planting: "Planting by hand, the start of the same year's harvest.",
@@ -303,6 +305,17 @@ export const finalConcept = {
     built: "We prototyped the metal solar collector and left it with a farmer.",
     notBuilt: "The full tower was not constructed, and the handbook was not tested through an actual build.",
     page: 44,
+  },
+  /**
+   * The single entrance to the reader (Sylvia, 2026-09-06, revised 2026-09-07). The two
+   * spreads above this control are the primary reading path; the 53-page reader is an
+   * optional deep dive, so the control that opens it is deliberately secondary, not the
+   * section's focal point. The count comes from HANDBOOK_TOTAL so the promise cannot
+   * outlive the page set.
+   */
+  handbookCta: {
+    title: "Browse the full handbook",
+    sub: `${HANDBOOK_TOTAL} pages · Opens in full-screen reader →`,
   },
   captions: {
     step: "One assembly step. Every joint is drawn, with the tubes it needs listed beneath it.",

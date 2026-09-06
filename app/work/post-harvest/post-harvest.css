@@ -814,10 +814,15 @@ figure { margin: 0; }
    the only white on the page is the page. */
 .ph-07-lead { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--pair); }
 @media (min-width: 1000px) {
-  .ph-07-lead { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(28px, 3.4vw, 60px); }
+  /* The cover was the section's dominant when it was also the way in. It is neither now:
+     it identifies the publication beside the intro, and the two interior spreads below get
+     the space instead. Copy leads, cover follows at about 300px. */
+  .ph-07-lead { grid-template-columns: minmax(0, 3.4fr) minmax(0, 8.6fr); gap: clamp(28px, 3.4vw, 60px); }
 }
-.ph-handbook-dominant { margin-top: 0; display: grid; gap: 14px; min-width: 0; }
-.ph-handbook-dominant img { display: block; width: 100%; height: auto; object-fit: contain; background: #fff; box-shadow: 0 18px 48px rgba(9, 24, 60, 0.34); }
+.ph-07-ident { margin-top: 0; display: grid; gap: 12px; min-width: 0; max-width: 300px; }
+.ph-07-ident img { display: block; width: 100%; height: auto; object-fit: contain; background: #fff; box-shadow: 0 14px 36px rgba(9, 24, 60, 0.32); }
+.ph-07-ident .ph-cap { font-size: 13px; max-width: 34ch; }
+@media (max-width: 999px) { .ph-07-ident { max-width: 340px; } }
 .ph-07-aside { min-width: 0; }
 .ph-07-aside .ph-body:first-child { margin-top: 0; }
 
@@ -825,11 +830,22 @@ figure { margin: 0; }
    (~424 x 178px), where none of the step text or the cut-list measurements could be
    read. Two-up across the canvas gives each about 660px, which is close to the scan's
    own legible size. */
-.ph-07-pages { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--beat-y); }
-@media (min-width: 900px) { .ph-07-pages { grid-template-columns: 1fr 1fr; gap: clamp(20px, 2.4vw, 40px); } }
-.ph-07-pages .ph-support-plate-wrap { display: grid; gap: 10px; min-width: 0; }
-.ph-07-pages .ph-support-plate { background: #fff; border: 0; padding: clamp(10px, 1.1vw, 18px); }
-.ph-07-pages .ph-support-plate img { width: 100%; height: auto; max-width: 100%; max-height: none; object-fit: contain; }
+/* The two interior spreads: one construction step, one cut list, equal columns so neither
+   reads as the more important of the two. They are the largest thing in the section.
+
+   THE 58vh CAP IS EXPRESSED AS A WIDTH, AND IT HAS TO BE. The obvious spelling —
+   `max-height: 58vh` with `width: auto` — deadlocks: before the scan loads its intrinsic
+   size is 0 x 0, so the plate's grid row collapses to 0px, so the image never enters the
+   viewport, so lazy loading never fires and it stays 0 x 0 forever. Keeping `width: 100%`
+   lets next/image reserve the box from the width/height attributes it already emits. Both
+   sheets are about 1.42:1, so bounding the plate at `58vh * 1.42` bounds the height
+   without a `max-height` anywhere, and without the squash or the letterbox that
+   `max-height` on a full-width image would cause. */
+.ph-07-previews { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--beat-y); }
+@media (min-width: 900px) { .ph-07-previews { grid-template-columns: 1fr 1fr; gap: clamp(20px, 2.4vw, 40px); } }
+.ph-07-previews .ph-support-plate-wrap { display: grid; gap: 10px; min-width: 0; max-width: calc(58vh * 1.42); justify-self: center; width: 100%; }
+.ph-07-previews .ph-support-plate { background: #fff; border: 0; padding: clamp(10px, 1.1vw, 18px); }
+.ph-07-previews .ph-support-plate img { width: 100%; height: auto; max-width: 100%; max-height: none; object-fit: contain; }
 .ph-v2-blue .ph-annots { margin-top: 0; }
 .ph-v2-blue .ph-annot { border-top-color: var(--on-blue-line); }
 
@@ -1009,26 +1025,36 @@ figure { margin: 0; }
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
-/* An inline sheet that opens the reader. The button covers the image and carries the
-   accessible name, so the figure's own caption stays out of the button's label. */
-.ph-hb-plate { position: relative; display: block; width: 100%; min-width: 0; }
-.ph-hb-plate img { display: block; }
-.ph-hb-open {
-  position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: flex-end;
-  padding: 12px; margin: 0; border: 0; background: transparent; cursor: zoom-in;
+/* THE ENTRANCE, DELIBERATELY SECONDARY (Sylvia, 2026-09-07). The 53-page reader is an
+   optional deep dive, not the primary reading path — that is the two previews above this
+   button, which read on their own without opening anything. So this control is sized to
+   its own label, not the canvas: an outline on the blue field, easy to notice, but with
+   no fill and no stretch to full width, so it cannot outweigh the previews it sits under.
+
+   Target ~44-48px control height with a readable 14-16px title: measured live at 47px
+   (title 15px/1.2, sub 13px/1.25, 5px vertical padding, 1.5px border). Hover firms the
+   border and adds a faint tint rather than inverting — a strong invert reads as urgent,
+   which an optional path should not. */
+.ph-hb-secondary {
+  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  margin-top: var(--beat-y); text-align: left; cursor: pointer;
+  background: transparent; color: var(--on-blue); border: 1.5px solid var(--on-blue-line);
+  padding: 5px 22px;
   -webkit-appearance: none; appearance: none;
+  transition: border-color 150ms linear, background 150ms linear;
 }
-.ph-hb-cta {
-  font-family: var(--ph-mono), ui-monospace, monospace; font-size: 10px; letter-spacing: 0.11em;
-  text-transform: uppercase; color: var(--on-blue); background: rgba(11, 23, 51, 0.88);
-  padding: 7px 11px; border: 1px solid rgba(244, 245, 248, 0.3);
-  transition: background 120ms linear, border-color 120ms linear;
+.ph-hb-secondary-title {
+  font-family: var(--ph-sans), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500; font-size: 15px; line-height: 1.2;
 }
-.ph-hb-open:hover .ph-hb-cta,
-.ph-hb-open:focus-visible .ph-hb-cta { background: var(--ink); border-color: var(--on-blue); }
-.ph-hb-open:focus-visible { outline: 2px solid var(--on-blue); outline-offset: 3px; }
-/* On a light plate the pill needs the same contrast the blue field gives it for free. */
-.ph-support-plate .ph-hb-cta { background: rgba(20, 22, 26, 0.9); }
+.ph-hb-secondary-sub {
+  font-family: var(--ph-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px; line-height: 1.25; color: var(--on-blue-dim);
+}
+.ph-hb-secondary:hover, .ph-hb-secondary:focus-visible {
+  border-color: var(--on-blue); background: rgba(244, 245, 248, 0.08);
+}
+.ph-hb-secondary:focus-visible { outline: 2px solid var(--on-blue); outline-offset: 3px; }
 
 /* ---- the overlay ---- */
 .ph-hb-overlay {
@@ -1058,17 +1084,31 @@ figure { margin: 0; }
 .ph-hb-close:hover, .ph-hb-close:focus-visible { color: var(--on-blue); border-color: var(--on-blue); }
 
 /* ---- the sheet and its arrows ---- */
+/* Every row in the chain from the overlay down to the sheet is explicitly definite, and
+   that is the whole trick. A percentage `max-height` on a grid item resolves against its
+   grid area; if the row is content-sized the value is cyclic and the browser drops it, so
+   `max-height: 100%` on the sheet silently did nothing and a 1132px scan overflowed a
+   512px stage and ran under the footer. `minmax(0, 1fr)` on the row, `stretch` on the
+   item, then flex inside the figure gives the image a definite box to fit into. */
 .ph-hb-stage {
   position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center; gap: clamp(8px, 1.4vw, 22px); min-height: 0;
+  grid-template-rows: minmax(0, 1fr); align-items: stretch;
+  gap: clamp(8px, 1.4vw, 22px); min-height: 0;
 }
-.ph-hb-sheet { margin: 0; display: grid; place-items: center; min-width: 0; min-height: 0; height: 100%; }
-.ph-hb-sheet img {
+.ph-hb-overlay .ph-hb-sheet {
+  margin: 0; display: flex; align-items: center; justify-content: center;
+  min-width: 0; min-height: 0;
+}
+/* Two classes deep on purpose. The page's own image primitives are single-class
+   (`.ph-dominant img` caps at 54vh, `.ph-support-plate img` at 26vh), and a sheet that
+   letterboxes inside a cap is exactly the failure section 07 already had once. The
+   overlay also sits outside every section for the same reason (see page.tsx). */
+.ph-hb-overlay .ph-hb-sheet img {
   display: block; width: auto; height: auto; max-width: 100%; max-height: 100%;
-  object-fit: contain; background: #fff; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  object-fit: contain; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
 }
 .ph-hb-arrow {
-  flex: none; width: clamp(40px, 4vw, 52px); height: clamp(52px, 6vw, 68px);
+  flex: none; align-self: center; width: clamp(40px, 4vw, 52px); height: clamp(52px, 6vw, 68px);
   display: grid; place-items: center; font-size: 26px; line-height: 1;
   color: var(--on-blue); background: transparent; border: 1px solid var(--on-blue-line);
   cursor: pointer; transition: background 120ms linear, border-color 120ms linear, opacity 120ms linear;
@@ -1120,5 +1160,4 @@ figure { margin: 0; }
   .ph-hb-foot { justify-content: flex-start; }
   .ph-hb-jump { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; width: 100%; padding-bottom: 4px; }
   .ph-hb-jump button { flex: none; }
-  .ph-hb-cta { font-size: 9px; padding: 6px 9px; }
 }

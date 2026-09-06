@@ -23,3 +23,6 @@ design-source/
 
 # Probe renders from scripts/convert-pdf-pages.mjs --probe (regenerated on demand)
 scratch/
+
+# geodata cache for scripts/build-seme-locator.mjs (re-fetched on demand, ~9MB)
+scripts/.cache/

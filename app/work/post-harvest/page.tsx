@@ -9,8 +9,7 @@ import {
   project, meta, context, field, participants, focus, challenge,
   concepts, finalConcept, mechanism, status, reflection,
 } from "./content";
-import HandbookReader, { HandbookPlate } from "./handbook-reader";
-import { HANDBOOK_PLATE_PAGE, HANDBOOK_TOTAL } from "./handbook-pages";
+import HandbookReader, { HandbookOpen } from "./handbook-reader";
 
 /* Route-scoped fonts, same pattern HALOGRIP uses: none of these reach `/` or any other
    route. Geist carries readable text; Bodoni Moda carries display, section numerals and
@@ -483,16 +482,26 @@ export default function PostHarvestPage() {
           now sizes to the cover's own proportion inside its column, so there is no white
           outside the page itself.
 
-          NOW READABLE END TO END: the three plates are the same three plates, but each one
-          opens the reader (handbook-reader.tsx) on the sheet it is showing. The handbook is
-          53 sheets and it is the deliverable, so the section shows it rather than three
-          samples of it. The reader opens on the 7-page overview; the 46 assembly sheets are
-          behind "View all 53 pages", per Sylvia, 2026-09-05.
+          PREVIEWING IS NOT READING, AND READING IS OPTIONAL (Sylvia, 2026-09-06, revised
+          2026-09-07). The section says three things in order, and each has exactly one job:
+            1. the cover, small, beside the intro ...... the handbook as final deliverable
+            2. two large interior spreads .............. representative pages, understood
+                                                          without opening anything
+            3. one small outline button ................ optional access to all 53 pages
+          Every spread used to carry its own pill, which gave the page four entrances and no
+          main one. The spreads are plain, non-clickable images now — they ARE the primary
+          reading path, not bait for the reader. The 53-page reader is a deliberate deep dive
+          that interrupts the case-study flow, so its one entrance (HandbookOpen, in
+          handbook-reader.tsx) is sized and styled to be noticed without becoming the
+          section's focal point: an outline button under the previews, not a full-width band.
+
+          The two previews are the interior, deliberately: one construction step and one cut
+          list. The cover is not one of them, because it shows nothing about the contents.
 
           FIXED: the two handbook pages were capped at `max-height: 22vh` in a third-width
           column, i.e. about 424 x 178px. These are dimensioned instruction spreads; at
-          that size none of their text is readable. They are now a two-up row across the
-          canvas (~660px each), and the running text moved beside the cover. */}
+          that size none of their text is readable. They are a two-up row across the canvas
+          now, capped at 58vh so a short window cannot let them run past the fold. */}
       <section className="ph-v2 ph-v2-blue" id="final-concept">
         <div className="ph-canvas">
           <Reveal>
@@ -508,13 +517,11 @@ export default function PostHarvestPage() {
 
           <Reveal>
             <div className="ph-07-lead">
-              <figure className="ph-handbook-dominant">
-                <HandbookPlate
-                  page={HANDBOOK_PLATE_PAGE.cover}
+              <figure className="ph-07-ident">
+                <Image
                   src="/post-harvest/handbook/handbook-cover-1600.webp"
                   alt="Cover of the construction handbook, titled Drying Tower, first version, listing a construction manual, materials needed, tools needed and how to use"
-                  width={1600} height={1132} sizes="(max-width: 999px) 92vw, 54vw"
-                  cta={`Flip through all ${HANDBOOK_TOTAL} pages`}
+                  width={1600} height={1132} sizes="(max-width: 999px) 44vw, 300px"
                 />
                 <figcaption className="ph-cap">
                   <b>{finalConcept.deliverable.title}.</b> {finalConcept.deliverable.text}
@@ -539,15 +546,13 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
-            <div className="ph-07-pages">
+            <div className="ph-07-previews">
               <figure className="ph-support-plate-wrap">
                 <div className="ph-support-plate">
-                  <HandbookPlate
-                    page={HANDBOOK_PLATE_PAGE.step}
+                  <Image
                     src="/post-harvest/handbook/handbook-step-1600.webp"
                     alt="A handbook page headed Step 1, showing how to weld four square tubes into a rectangular frame, with dimensioned sub-steps and the materials needed listed beneath"
                     width={1600} height={1111} sizes="(max-width: 899px) 92vw, 46vw"
-                    cta="Read this step in the handbook"
                   />
                 </div>
                 <figcaption className="ph-cap">{finalConcept.captions.step}</figcaption>
@@ -555,17 +560,22 @@ export default function PostHarvestPage() {
 
               <figure className="ph-support-plate-wrap">
                 <div className="ph-support-plate">
-                  <HandbookPlate
-                    page={HANDBOOK_PLATE_PAGE.cutlist}
+                  <Image
                     src="/post-harvest/handbook/handbook-cutlist-1600.webp"
                     alt="A handbook page headed Cutlist of materials, showing measured steel sections including square tube, angle iron, flat iron, metal sheet and pipe"
                     width={1600} height={1132} sizes="(max-width: 899px) 92vw, 46vw"
-                    cta="Read the cut list in the handbook"
                   />
                 </div>
                 <figcaption className="ph-cap">{finalConcept.captions.cutlist}</figcaption>
               </figure>
             </div>
+          </Reveal>
+
+          <Reveal>
+            <HandbookOpen
+              title={finalConcept.handbookCta.title}
+              sub={finalConcept.handbookCta.sub}
+            />
           </Reveal>
 
           <Reveal>
@@ -580,10 +590,6 @@ export default function PostHarvestPage() {
               </p>
             </div>
           </Reveal>
-
-          {/* Mounted once for the whole section: every plate above opens this same
-              overlay, on its own sheet. */}
-          <HandbookReader />
         </div>
       </section>
 
@@ -788,6 +794,16 @@ export default function PostHarvestPage() {
         </div>
       </section>
 
+      {/* The handbook reader, mounted once for the whole page.
+
+          IT MUST LIVE HERE, NOT INSIDE SECTION 07. It is `position: fixed`, so it escapes
+          07's layout — but not 07's cascade. Mounted inside `#final-concept` it inherited
+          the section's own image rules (`.ph-dominant img`'s `max-height: 54vh` among
+          them) and the sheet was capped at 511px inside a 663px stage. As a direct child of
+          `.ph-root` it still gets the route's font variables and colour tokens, and nothing
+          section-scoped can reach it. Every plate in 07 opens it through the module bus in
+          handbook-reader.tsx, so its position in the tree does not matter to them. */}
+      <HandbookReader />
     </main>
   );
 }

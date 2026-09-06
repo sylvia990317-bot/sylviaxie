@@ -5,6 +5,89 @@ verified), moved out of `CLAUDE.md` to keep the auto-loaded project instructions
 This file is **not** auto-loaded into context — read it only when you need the historical
 rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
 
+### Post Harvest 02 locator: two separated panels, and the county was wrong (this session, follow-up)
+- Sylvia: "Remove the diagonal connector line completely—it looks like an accidental construction
+  line and does not communicate zooming. Rebuild the locator as two clearly separated sequential
+  panels [...] Connect the panels only with a small downward arrow or the words 'ZOOM IN'. Do not
+  overlap the maps and do not use cartographic projection lines. The reading order must be obvious
+  without the caption. Also verify whether the field site belongs to Kisumu County or Siaya County
+  before finalising the labels."
+- **The projection cone is gone.** The inset-plus-cone from the previous pass is replaced by two
+  framed panels, stacked, fully separated, sharing no edge: `01 / WESTERN KENYA` (a small centred
+  panel holding the whole country with the study region boxed in deep blue) and
+  `02 / SEME — FIELD SITE` (the full-width local map). The only mark crossing between them is a
+  centred "ZOOM IN" arrow standing in the gap, touching neither frame. Reading order now comes from
+  the numbered titles, not from geometry the reader has to decode.
+- **The field site is in KISUMU County, not Siaya — the booklet header is wrong.** Verified two
+  ways before the labels were finalised: (1) grid-sampling ~24,600 points inside the geoBoundaries
+  ADM2 "Seme" polygon and testing each against all 47 ADM1 counties puts **99.7% of its area in
+  Kisumu** (0.3% Siaya, 0.1% Vihiga — boundary-sampling noise); (2) Seme is one of Kisumu County's
+  seven constituencies, created in 2012, 268 sq km, pop. 121,667 — and 121,667/268 = 454, which is
+  exactly the "about 450 per square kilometre" already in `content.ts`. Siaya is the county
+  immediately west; the marker sits just across its boundary, which is why the earlier draft looked
+  odd with Siaya highlighted.
+  - Panel 02 now highlights and labels **KISUMU COUNTY**, and two strings in `content.ts` were
+    corrected: `context.dateline` ("Seme, Siaya County" -> "Seme, Kisumu County") and
+    `context.captions.locator`, which now also names Siaya as the neighbour so the booklet's own
+    wording still makes sense to anyone comparing the two. **Sylvia should confirm** — she was
+    there, and if the booklet's "Siaya" was deliberate (an older boundary, or a partner
+    organisation's framing) this is a one-line revert.
+- Other fixes in the same pass: Lake Victoria is clipped to Kenya in panel 01, so the Ugandan and
+  Tanzanian two thirds of the lake no longer trail off the country's west side as an unexplained
+  blob; the county label anchor is chosen by testing the label's *whole width* for "inside Kisumu
+  and clear of the lake" rather than by centroid, which had it straddling the shoreline; panel 01's
+  ground uses the same "outside Kenya" tone as panel 02, so the two panels read as one system.
+- Verified with `sharp` renders at review size and at the real 340px `.ph-v2-map` width (the
+  reading order and every label survive the small size), and with `npm run build`.
+
+### Post Harvest 02 locator map redrawn from real geodata as a two-level locator (this session, follow-up)
+- Sylvia, after the colour fix below: "Redesign the Section 02 map as a clear locator graphic, not
+  an extracted booklet diagram. The current image begins at an unfamiliar local scale, so readers
+  cannot identify Kenya, distinguish land from water, or understand the relationship between Siaya
+  County and Seme. [...] The map should communicate 'western Kenya, near Lake Victoria' within two
+  seconds. Do not enlarge the current map. Redraw and simplify its information hierarchy."
+- **The traced coastline is gone.** `public/post-harvest/diagram/seme-locator.svg` is now
+  *generated* by `scripts/build-seme-locator.mjs` from open geodata, so it is checkable and
+  re-runnable instead of being an eyeballed trace:
+  - Natural Earth 1:50m countries (public domain) — the Kenya silhouette in the inset,
+  - Natural Earth 1:10m lakes (public domain) — Lake Victoria's real shoreline,
+  - geoBoundaries gbOpen KEN ADM1 + ADM2 (public domain, RCMRD) — Siaya County, and the Seme
+    polygon whose centroid places the marker.
+  The script fetches once into `scripts/.cache/` (gitignored, ~9MB) and is the only thing that
+  should ever edit that SVG — hand-editing it will be overwritten on the next run.
+- **Two-level composition.** A small whole-of-Kenya inset at the top, the study region boxed in
+  deep blue, opening downward through a pale projection cone into the detail frame: Lake Victoria,
+  Siaya County, Seme. The reader starts from a country shape they can recognise, not from an
+  unlabelled shoreline. Header reads "Western Kenya / LAKE VICTORIA BASIN" so the two-second
+  message is carried by type as well as by geometry.
+- **Colour does one job each.** Deep blue `#17357a` is used *only* for the Seme marker, its label,
+  and the inset box + cone. Land is warm-neutral grey (`#e8e6e0` inside Kenya, `#f5f4f2` outside,
+  so the national border reads without being drawn or labelled), Siaya is one step darker
+  (`#dbd9d4`), and water is `#b9c4d2` — cooler *and* darker than every land tone, which is the
+  thing the previous version got backwards.
+- **Everything too small to read was cut.** "Winam Gulf", "Homa Bay" and the county dot are gone;
+  four labels remain (KENYA / Western Kenya / SIAYA COUNTY / Lake Victoria) plus "SEME — FIELD
+  SITE". Label positions are computed, not hand-placed: Siaya's is set from the county's
+  area-weighted centroid lifted into its northern half (its true centroid sits at almost exactly
+  Seme's latitude and would have collided with the marker), and the local extent is deliberately
+  off-centre east so the Seme label has room to run without being clipped.
+- **Two implementation notes.** (1) Kenya's landmass in the detail frame is the union of the 47
+  county polygons, not the 1:50m national outline — at this scale the coarse national polygon
+  leaves visible slivers of "not Kenya" along the lake shore; the counties are filled and never
+  stroked, plus a 2-unit stroke in the fill colour to close antialiasing seams between neighbours.
+  (2) `inline-svg.tsx` injects this file into the page's HTML, so off-screen geometry is pure page
+  weight: every ring is Sutherland-Hodgman clipped to the extent before simplification, which took
+  the output from 107KB to 18KB with no visible change.
+- **One thing to check, not a bug in the drawing.** geoBoundaries puts the Seme sub-county polygon
+  inside **Kisumu County**, not Siaya — its centroid (34.532, -0.071) resolves to Kisumu, and Seme
+  is one of Kisumu's sub-counties alongside Kisumu East/West/Central, Muhoroni, Nyando and Nyakach.
+  The marker is drawn at its true position, which puts it just across Siaya's eastern boundary. The
+  site copy still says Siaya in three places (`content.ts`: `dateline`, `captions.locator`, and the
+  booklet's own page header). Left alone pending Sylvia's call — she was there and the booklet may
+  be using an older or informal boundary.
+- Verified by rasterising the SVG with the project's own `sharp` at both review size and the real
+  340px `.ph-v2-map` display width, and with `npm run build`.
+
 ### Post Harvest 02 locator map — water/land figure-ground inverted, so the lake read as a landmass (this session)
 - Sylvia: "这个图片是你做的吗，感觉湖水的部分太像陆地。让人看不懂"
 - She was right, and it was my drawing. `public/post-harvest/diagram/seme-locator.svg` (the
@@ -29,6 +112,149 @@ rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
   say which tone is water and which is land.
 - Verified by rasterizing the SVG with the project's own `sharp` at 120 DPI and comparing before
   and after.
+
+### Post Harvest 07 — the entrance to the reader demoted from a dominant band to a secondary button (this session)
+- Sylvia: the 53-page reader is an optional deep dive, not the primary reading path, and opening it
+  interrupts the case-study flow — so the entry should be clear but visually secondary. Keep the two
+  large interior previews. Replace the image-embedded entrances (there were none left to embed by
+  this point; read as confirming the full-width band from the previous session had also become too
+  dominant) with one secondary outline button: "Browse the full handbook" / "53 pages · Opens in
+  full-screen reader ->", placed beneath the previews, 14-16px label, ~44-48px control height,
+  clearly bordered, pointer cursor, obvious hover, opens the reader at the cover. Do not make the
+  preview images clickable. Preserve scroll position on close. Hierarchy: (1) handbook as final
+  deliverable, (2) two representative previews, (3) optional access to all 53 pages.
+- **The full-width "paper on blue" band from the previous session was itself the problem now.** It
+  was built to solve "the page has four entrances and none look primary" — correct at the time — but
+  at full canvas width with a 21-32px serif title it became the section's dominant element, which is
+  wrong once the reader is reclassified as optional rather than the natural next step. Demoted to
+  \`.ph-hb-secondary\`: sized to its own content (\`inline-flex\`, not \`width: 100%\`), outline instead
+  of a solid fill, sans-serif label at 15px/13px instead of a 21-32px serif headline, hover firms the
+  border and adds a faint tint instead of inverting paper-to-ink. Measured live at 290 x 47px, inside
+  the requested ~44-48px band.
+- **The arrow moved from the title to the subtitle**, because the requested copy puts it there
+  ("... Opens in full-screen reader ->") rather than after the title as the previous band did. Copy
+  stays in \`finalConcept.handbookCta\` (content.ts), page count still interpolated from
+  \`HANDBOOK_TOTAL\` so the button's promise cannot drift from the reader's actual page count.
+- **Scroll preservation: one line, \`{ preventScroll: true }\` on the returned focus.** The button
+  sits mid-page, under the two previews, so a plain \`.focus()\` on close scrolls the trigger into view
+  if the browser considers it not fully visible — the classic modal-close scroll-jump. Nothing else
+  needed fixing: the overlay is \`position: fixed\` and \`overflow: hidden\` on body only blocks
+  scrolling, it does not move the stored offset, so the underlying page never actually scrolled while
+  the reader was open. Verified live, scrollY before vs. after across all three close paths (Escape,
+  the Close button, a backdrop click): delta 0 in every case.
+- Preview images were already non-clickable plain \`<Image>\`s from the previous session (that
+  session's own "one entrance" pass had already pulled the pills off the spreads and onto the band) —
+  confirmed live rather than assumed: zero clickable elements inside \`.ph-07-previews\`.
+- Verified with \`npx next build\` (clean) and, live: the button's rect (290 x 47px), its two-line
+  text matches the requested copy exactly, \`cursor: pointer\`, the hover tint is visible on a zoomed
+  screenshot, clicking it opens the reader on 01/07, and the full 53-page walk (open -> end of
+  overview -> cross the tier -> End -> Home -> Escape) reproduces the same counts and disabled states
+  as every previous pass.
+
+### Post Harvest 07 — previewing and reading split into separate affordances (this session)
+- Sylvia, after the reader shipped: keep two large interior previews (one construction-step spread,
+  one materials/cut-list spread) side by side at equal weight, capped near 55-60vh, with short
+  captions; strip the small buttons out of the images and give each preview no reader entrance of
+  its own; add one unmistakable full-width CTA ("OPEN THE COMPLETE HANDBOOK ->" / "Browse all 53
+  pages . Jump between chapters . Full-screen reader"), the whole band clickable with a clear
+  border or paper background, pointer cursor and an obvious hover state, opening the reader at the
+  cover; keep the cover itself as a smaller publication identifier near the intro; preserve the
+  53-page reader exactly.
+- **The section now says three things, each with exactly one job.** The cover (small, beside the
+  intro copy) says what the publication IS. The two interior spreads (large, equal columns) say
+  what is INSIDE it — a construction step and the Drying Tower cut list, chosen because they show
+  actual content rather than the cover, which shows nothing about the interior. The CTA band is the
+  only thing that OPENS anything. Previously every one of the three plates carried its own pill, so
+  the page had four entrances and none of them read as the main one.
+- `HandbookPlate` (a sheet plus an absolutely-positioned button pill) is gone from
+  handbook-reader.tsx. In its place, `HandbookOpen` renders one `<button>` end to end — title,
+  arrow and subtitle all inside the hit area, not a link with a separate clickable region inside
+  it. It calls the same `openHandbook()` bus the old pills used, landing on `HANDBOOK_PLATE_PAGE
+  .cover`, so the reader itself did not change at all.
+- **Copy lives in content.ts, not hand-typed in the CTA.** `finalConcept.handbookCta` builds its
+  subtitle from `HANDBOOK_TOTAL` (imported from handbook-pages.ts) rather than a literal "53", so
+  the promise on the button cannot drift from the reader's actual page count if pages are ever
+  added or removed.
+- **The cover shrunk from the section's dominant to an identifier.** `.ph-07-lead" flipped from a
+  7fr/5fr split (cover leading) to 3.4fr/8.6fr (copy leading, cover capped at 300px) because it is
+  no longer the way in — it does not need the visual weight that implied.
+- **The 55-60vh cap on the previews had to be spelled as a width, not a height, or it deadlocks.**
+  The obvious rule, `width: auto; max-height: 58vh`, means the image has 0x0 intrinsic size before
+  it loads, so the grid row it sits in collapses to 0px, so the image never scrolls into view, so
+  `next/image`'s lazy loading never fires and it never loads at all — confirmed live, both preview
+  images stuck at `naturalWidth/Height: 0` and the wrapping grid measured 86px tall instead of
+  roughly 350-400px. Fixed by keeping `width: 100%` (so next/image can reserve the box from the
+  width/height attributes it already emits) and capping the wrapper's `max-width` at
+  `calc(58vh * 1.42)`, the scans' own aspect ratio, which bounds the height without a
+  `max-height` anywhere. Verified after the fix: both images loaded (706x490 and 706x499 natural)
+  at 342-349px tall in a 639px-tall viewport, about 54-55vh.
+- Verified with `npx next build` (clean, twice — once before finding the deadlock, once after)
+  and, live: both preview images decode and size correctly; the CTA band is a `<button>` with
+  `cursor: pointer`, inverts paper-to-ink on hover, and opens the reader on 01/07; the full
+  53-page walk (band -> end of overview -> cross the tier -> End -> Home -> Escape) reproduces the
+  same counts and disabled states as the previous session's pass; zero elements matching the old
+  `.ph-hb-plate`, `.ph-hb-open` or `.ph-hb-cta` classes remain anywhere in the section.
+- Not verified by eye: a narrow-viewport screenshot. The browser bridge's window resize did not
+  take effect this session (still reported 1536x639 after a resize call asked for 390x844) — the
+  same flakiness noted in the previous entry. Did not fight it a second time; instead confirmed the
+  mobile rule directly in the stylesheet (`.ph-07-previews` is mobile-first `1fr`, only becoming
+  `1fr 1fr` at `min-width: 900px`, and `.ph-hb-band` is unconditionally `width: 100%`), which is
+  the same code path the verified desktop screenshot already exercised. **Worth one human look on
+  an actual narrow window.**
+
+### Post Harvest 07 — the construction handbook is readable end to end, not three plates of it (this session)
+- Sylvia: "你说能把那个handbook变成就是可翻阅的，会不会花很多token" then "好，就放section07", and on scope,
+  "分两层".
+- **Corrected mid-task: the handbook is 53 sheets, not 7.** The first estimate came off the seven
+  probe renders already sitting in `scratch/handbook-probe/` (p054-p060), which were only the
+  slice a previous session cut the cover and cut-list plates from. Scanned the report PDF page by
+  page instead: the handbook is the final appendix, PDF p.54 to p.106, and it does not stop at the
+  cut lists. Chapter starts were read off the section title pages that still carry live text —
+  "Black Box" (p.61), "Drying Tower" (p.76), "Metal shelves" (p.102), "How to use" (p.104).
+- **Rendering: a mode, not 53 JOBS rows.** `scripts/convert-pdf-pages.mjs --handbook` renders
+  p.54-106 to `public/post-harvest/handbook/pages/handbook-NN-{1600,900}.webp`, numbered by the
+  handbook's own 1-based count. 106 files, 6.4 MB, all 53 pages uniform at 842 x 595 pt. Verified
+  live: every one of the 106 files returns 200.
+- **Two tiers, per Sylvia.** The reader opens on the 7-page overview (cover, what it is, the
+  principle, tools, raw materials, both cut lists). "View all 53 pages" reveals the 46 assembly
+  sheets, and Next on sheet 07 does the same thing rather than dead-ending on a disabled button.
+  Opening on a plate past the overview (the Step 1 spread is sheet 24) implies the full set.
+- **Section 07's three plates are unchanged as pictures; each is now an entry point.** Which sheet
+  each one shows was matched against the rendered sequence pixel by pixel rather than guessed:
+  cover -> 01, tools -> 04 and cut list -> 07 are exact, and the two plates cropped for the page
+  (`handbook-step`, `handbook-howto`, both 1.440 against the sheets' 1.413) matched 24 and 52.
+- **The overlay is mounted at `.ph-root` level, NOT inside `#final-concept`, and that is
+  load-bearing.** `position: fixed` escapes 07's layout but not 07's cascade: mounted inside the
+  section it picked up the page's single-class image primitives and the sheet was capped at 511px
+  (54vh) inside a 663px stage. Outside every section it still gets the route's font variables and
+  colour tokens. Its plates reach it through a module-level bus in `handbook-reader.tsx`, so where
+  it sits in the tree does not matter to them. The sheet rules are two classes deep as well.
+- **The sheet then overflowed the stage anyway, for a second and unrelated reason.** A percentage
+  `max-height` on a grid item resolves against its grid area; when the row is content-sized the
+  value is cyclic and the browser drops it silently, so `max-height: 100%` did nothing and a
+  1132px scan ran under the footer. Fixed by making every row in the chain definite:
+  `minmax(0, 1fr)` on the stage row, `align-items: stretch`, flex inside the figure. Measured
+  after: sheet 663px in a 663px stage, bottom edge 11px clear of the footer.
+- `background: #fff` came off the sheet image. The rendered pages are white to the edge already
+  (the rasteriser fills white before drawing), so it was redundant, and without it the drop shadow
+  hugs the paper instead of a letterbox.
+- MOTION IS OFF still holds (reveal.tsx): no page-turn, no fade between sheets, no transform on
+  open. A sheet swaps on the frame the button is pressed. The only transitions are hover/focus
+  states on the controls.
+- Verified with `npx next build` (clean) and, in the live page, every control driven through the
+  DOM: the overview stops at 07/07 with Next relabelled "Show the assembly sheets"; crossing lands
+  on 08/53 and reveals the chapter nav; ArrowLeft/Right, Home and End all move; the chapter jump
+  lands on 51 with "How to use" marked current; Next is disabled at 53 and Prev at 01; the scroll
+  lock sets and releases; Escape, the close button and a backdrop click all close. All three plates
+  open on their own sheet.
+- Screenshot evidence is thinner than usual: the browser bridge started capturing a different
+  window from the one it was reporting viewport metrics for (1536x639 against 1920x799) and
+  several captures came back blank while the DOM was demonstrably fine. One good capture shows the
+  reader's chrome and the fitted sheet box. The image itself was confirmed decoding by
+  `naturalWidth` (1180 x 834 served for the cover), not by eye. **Worth one human look.**
+- Flagged, not changed: `handbook-tools-{1200,700}.webp` and `handbook-howto-{1600,900}.webp` are
+  referenced by nothing. They predate this session; the reader covers both sheets now (04 and 52),
+  so they can go whenever Sylvia wants them gone.
 
 ### Post Harvest 06 / 07 — the evaluation photo goes back to portrait, and 07's white band and unreadable handbook pages are fixed (this session)
 - Sylvia: "你为什么会选择让section6的所有照片做横屏，我明明觉得它们都适合做竖屏。section 7 的那个长图是什么意思，下面的字也看不清。"

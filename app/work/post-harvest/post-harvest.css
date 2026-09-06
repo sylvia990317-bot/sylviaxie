@@ -64,7 +64,14 @@
      with the container. Nothing about the type scale changes on wide screens. */
   --gutter: clamp(20px, 5vw, 88px);
   --shell: 1960px;
-  --shell-wide: 2320px;
+  /* Was 2320px. The hero is the only section still on `--shell-wide`; every v2 section
+     caps at `--canvas` (1480px), so at 1920px they already gain roughly 220px of margin
+     per side instead of stretching. 2320px let the hero alone keep growing past that,
+     so a 1920px viewport ran the hero content nearly edge to edge while every other
+     section had margins. 1800px brings it into the same family: still wider than the
+     reading canvas (this is the one deliberately image-led, full-width moment), but no
+     longer unbounded. */
+  --shell-wide: 1800px;
   --edge: calc(max(0px, (100vw - var(--shell)) / 2) + var(--gutter));
   --edge-wide: calc(max(0px, (100vw - var(--shell-wide)) / 2) + var(--gutter));
   --maxw: var(--shell); /* kept for older rules */
@@ -212,7 +219,13 @@ figure { margin: 0; }
 .ph-beat-head .ph-lbl { margin-left: auto; }
 
 /* Images never grow just because the viewport did. */
-.ph-v2 figure img, .ph-v2 .ph-svg-body svg { max-height: 64vh; }
+/* :where() zeroes this selector's own specificity down to `.ph-v2 img` (0,1,1), so it is
+   a true fallback ceiling rather than a silent winner. Before this fix, `.ph-v2 figure
+   img` at (0,1,2) beat every per-component cap written as `.foo img` at (0,1,1) --
+   .ph-dominant img's 54vh, .ph-bags img's 30vh -- regardless of source order, so several
+   images (the field walk-in, the chicken/tarp photo, the PICS bag, the reflection dusk
+   photo) were silently rendering at 64vh instead of their intended, smaller cap. */
+.ph-v2 :where(figure) img, .ph-v2 .ph-svg-body svg { max-height: 64vh; }
 
 /* ================= 02 CONTEXT (v2) =================
    One composition: heading, dateline, lead and both statistics on the left, the locator
@@ -221,10 +234,16 @@ figure { margin: 0; }
    single height so they read as one strip rather than three posters. */
 
 .ph-v2-ctx { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; }
+/* Ranked, not a two-up of equals (2026-09-07 audit): the loss figure is the section's
+   argument and gets display scale; the population figure is context for the place and is
+   held at roughly the old size. Stacked rather than side by side, so the lead statistic
+   gets the full column width to be large in. */
 .ph-v2-stats { display: grid; grid-template-columns: 1fr; gap: clamp(16px, 1.8vw, 26px); margin-top: clamp(22px, 2.4vw, 34px); }
 .ph-v2-stat { border-left: 2px solid var(--blue); padding-left: 16px; }
-.ph-v2-stat b { display: block; font-family: var(--ph-serif), Georgia, serif; font-size: clamp(28px, 2.9vw, 40px); line-height: 1; letter-spacing: -0.025em; font-weight: 500; font-variant-numeric: tabular-nums; }
+.ph-v2-stat b { display: block; font-family: var(--ph-serif), Georgia, serif; font-size: clamp(24px, 2.2vw, 31px); line-height: 1; letter-spacing: -0.025em; font-weight: 500; font-variant-numeric: tabular-nums; }
 .ph-v2-stat span { display: block; margin-top: 7px; font-size: 13.5px; line-height: 1.45; color: var(--ink-soft); max-width: 34ch; }
+.ph-v2-stat-lead b { font-size: clamp(38px, 4.4vw, 62px); }
+.ph-v2-stat-lead span { font-size: 15px; max-width: 38ch; }
 .ph-v2-map { max-width: 340px; }
 .ph-v2-map .ph-svg-body { padding: 12px; }
 .ph-v2-map .ph-cap { margin-top: 10px; }
@@ -237,7 +256,9 @@ figure { margin: 0; }
 
 @media (min-width: 900px) {
   .ph-v2-ctx { grid-template-columns: minmax(0, 1fr) 340px; column-gap: clamp(40px, 4vw, 72px); }
-  .ph-v2-stats { grid-template-columns: 1fr 1fr; column-gap: clamp(20px, 2.2vw, 32px); }
+  /* Was `1fr 1fr`. The two statistics are no longer equals, so they no longer share a
+     row: the lead figure needs the full column width to be set large in, and pairing them
+     side by side is what made them read as a matched set in the first place. */
   .ph-v2-mosaic { grid-template-columns: 1.55fr 1fr 1fr; }
 }
 
@@ -395,8 +416,12 @@ figure { margin: 0; }
 .ph-outcome-cap { margin-top: 14px; display: grid; gap: 5px; max-width: 40ch; }
 .ph-outcome-cap strong { font-size: var(--fs-small); font-weight: 600; color: var(--on-blue); }
 .ph-outcome-cap span { font-size: var(--fs-small); line-height: 1.5; color: var(--on-blue-dim); }
-.ph-handbook-contents { list-style: none; display: flex; flex-wrap: wrap; gap: 7px 16px; margin: 14px 0 0; padding: 0; }
-.ph-handbook-contents li { font-family: var(--ph-mono), ui-monospace, monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-blue-dim); }
+/* Spread across the copy column rather than bunched at its left (2026-09-07): with the
+   four entries spaced out, this row reaches the column's right edge, which is what lines the
+   intro area up with spread 2's right edge below it. Bumped from 10px to 12px as part of
+   "increase to a clearly readable size". */
+.ph-handbook-contents { list-style: none; display: flex; flex-wrap: wrap; gap: 10px clamp(20px, 3.4vw, 52px); margin: 0; padding: 0; }
+.ph-handbook-contents li { font-family: var(--ph-mono), ui-monospace, monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-blue-dim); }
 
 .ph-handbook-quote { margin: 0; max-width: 30ch; }
 .ph-handbook-quote blockquote { margin: 0; font-family: var(--ph-serif), Georgia, serif; font-size: clamp(19px, 1.9vw, 26px); line-height: 1.25; letter-spacing: -0.015em; color: var(--on-blue); text-wrap: pretty; }
@@ -763,8 +788,37 @@ figure { margin: 0; }
 .ph-people-strip img { mix-blend-mode: multiply; max-height: clamp(120px, 15vh, 168px); }
 .ph-people-strip h4 { font-size: 13.5px; }
 .ph-people-strip p { font-size: 12.5px; }
-.ph-03-foot { display: grid; grid-template-columns: 1fr; gap: var(--pair); margin-top: var(--beat-y); align-items: start; }
-@media (min-width: 1000px) { .ph-03-foot { grid-template-columns: 3fr 2fr; } }
+/* ---- 03 restructured (2026-09-07): two beats, one dominant each. See page.tsx. ----
+   Beat A is the five farmers at full canvas width -- they are the section's dominant
+   visual now, not the walk-in photograph -- with Theresa's quote directly beneath them,
+   since it is one of these five speaking. Beat B is the method: two field photographs at
+   supporting scale, then the timeline and the field note. */
+.ph-03-people { margin-top: var(--beat-y); }
+/* `aspect-ratio: auto` is the important one. `.ph-people-strip .ph-strip-frame` fixes the
+   frame at 4/5, which at a fifth of the canvas is a ~320px-tall box; the portraits are
+   bottom-aligned inside it, so at their old ~168px they sat under ~150px of empty frame.
+   As a support strip that was invisible. Scaled up as this beat's dominant visual it read
+   as a band of blank page above the people. The frame now hugs the portrait instead. */
+.ph-people-strip.ph-people-lead .ph-strip-frame { aspect-ratio: auto; }
+/* Written as a two-class selector, not `.ph-people-lead img`, because
+   `.ph-people-strip img` caps them at 15vh/168px and a LATER `@media (min-width: 1600px)`
+   block raises that to 19vh/212px -- both single-class, so a single-class selector here
+   would lose the wide-screen case on source order. */
+.ph-people-strip.ph-people-lead img { max-height: clamp(190px, 27vh, 280px); }
+/* Held below `--fs-quote` (up to 38px) on purpose: the portraits above are this beat's
+   dominant visual, and at display scale this ran to five lines directly beneath them and
+   competed for the same slot. At ~26px on a wider measure it reads as one of those five
+   people speaking, which is its job. */
+.ph-03-quote { margin-top: var(--beat-y); max-width: 46ch; }
+.ph-03-quote blockquote { font-size: clamp(19px, 1.9vw, 26px); line-height: 1.2; }
+/* The two field photographs, deliberately a pair at equal weight and well below the
+   portraits above: neither is a poster. */
+.ph-03-method-figs { display: grid; grid-template-columns: 1fr; gap: var(--pair); margin-top: 0; }
+.ph-03-method-figs figure { display: grid; gap: 10px; min-width: 0; }
+.ph-03-method-figs img { display: block; width: 100%; height: auto; max-height: 34vh; object-fit: cover; }
+.ph-03-method-foot { display: grid; grid-template-columns: 1fr; gap: var(--pair); margin-top: var(--beat-y); align-items: start; }
+@media (min-width: 800px) { .ph-03-method-figs { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1000px) { .ph-03-method-foot { grid-template-columns: 3fr 2fr; } }
 .ph-v2 .ph-quote blockquote { font-size: clamp(20px, 1.9vw, 28px); }
 
 /* ---- 06: the evaluation photograph is the dominant. The enlarged repeat of the tower
@@ -822,50 +876,98 @@ figure { margin: 0; }
    shared grid (every other section still renders it unmodified, label below the heading) —
    see the comment above section 07's markup in page.tsx. */
 .ph-07-eyebrow { margin: 0 0 10px; }
-/* The cover is a scanned page, so its box must be the page's own shape. It used to be
-   `width:100%` + `object-fit:contain` + `background:#fff` inside a full-canvas box: the
-   scan is 1.41:1, the box was ~3.3:1, and the white background filled every pixel the
-   letterboxed scan did not — a full-width empty white band with a small drawing adrift
-   in it. Sizing the figure to its column and letting the image set its own height means
-   the only white on the page is the page. */
+/* The tower image and its explanation are one row (2026-09-07, second pass): the body
+   paragraph and the three annotations describe this picture specifically, so they sit
+   beside it. 5.5fr/6.5fr gives the image a little less than half, since the annotation
+   list needs real width for three number-label-source rows. */
 .ph-07-lead { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: clamp(16px, 1.6vw, 24px); }
 @media (min-width: 1000px) {
-  /* Third ratio for this row. 7fr/5fr (cover dominant, when it was also the way in) gave
-     way to 3.4fr/8.6fr (copy leading, cover a small identifier) when the reader moved to
-     its own band. That went too far the other way: at 3.4fr the aside's full-width divider
-     lines read heavier than the cover beside them. 4.4fr/7.6fr — the same split already
-     used by `.ph-06-lead` — gives the now-larger cover a wider track to sit in without
-     forcing the aside's short annotation values to wrap (they are well inside `--measure`
-     regardless of column width, so the aside's rendered height does not change). */
-  .ph-07-lead { grid-template-columns: minmax(0, 4.4fr) minmax(0, 7.6fr); gap: clamp(28px, 3.4vw, 60px); }
+  .ph-07-lead { grid-template-columns: minmax(0, 5.5fr) minmax(0, 6.5fr); gap: clamp(24px, 2.8vw, 48px); }
 }
-/* ~30% larger (300px -> 390px, Sylvia, 2026-09-07): the cover reads as the completed
-   deliverable and was undersized next to the spec column it sits beside. */
 .ph-07-ident { margin-top: 0; display: grid; gap: 12px; min-width: 0; max-width: 390px; }
 .ph-07-ident img { display: block; width: 100%; height: auto; object-fit: contain; background: #fff; box-shadow: 0 14px 36px rgba(9, 24, 60, 0.32); }
 .ph-07-ident .ph-cap { font-size: 13px; max-width: 34ch; }
 @media (max-width: 999px) { .ph-07-ident { max-width: 440px; } }
+/* The tower render sizes to its grid column instead of the 390px fixed identifier width
+   above: it is the dominant image of the row, not a small plate beside a wide aside. */
+.ph-07-ident.ph-07-tower { max-width: none; }
 .ph-07-aside { min-width: 0; }
 .ph-07-aside .ph-body:first-child { margin-top: 0; }
-/* Annotation rows tightened slightly as part of the same compression pass: three rows at
-   the old gap plus the list's own top margin were the single biggest contributor to the
-   aside column's height, which (being the taller of the two columns even after the cover
-   grew) sets `.ph-07-lead`'s overall height. */
 .ph-07-aside .ph-annots { gap: clamp(8px, 1.2vw, 14px); }
 
-/* The previews' own frame: a header row (a label plus the reader's one text-link entrance)
-   over a rule, with the two spreads directly beneath. This replaces two earlier attempts at
-   the reader's entrance — a full-width band, then a small floating box — both of which read
-   as a third composition competing with the previews. Folding the entrance into this row
-   means "optional access to all 53 pages" costs no vertical space of its own. Margin-top
-   trimmed with the rest of the intro's compression: this is the last gap before the
-   previews, so it is also the most direct way to make them "appear sooner." */
-.ph-07-inside { margin-top: clamp(20px, 2.2vw, 30px); }
-.ph-07-inside-head {
-  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap;
-  gap: 10px 24px; padding-bottom: 13px; border-bottom: 1px solid var(--on-blue-line);
+/* ---- 07 / the handbook, as one numbered sequence (2026-09-07, Sylvia's layout ref) ----
+   "01 / Cover & purpose" and "02 / Selected pages" are two steps of one thing, so they
+   share ONE grid: `--hb-col` is the cover's track, and both the intro row and the spreads
+   row start at the canvas's left edge and end at its right edge. That is what makes the
+   cover's left edge land on spread 1's left edge, and the copy column's right edge land on
+   spread 2's right edge. */
+.ph-07-hb { --hb-col: clamp(240px, 22vw, 300px); margin-top: var(--beat-y); }
+
+.ph-07-hb-head { display: grid; gap: 10px; padding-bottom: clamp(14px, 1.4vw, 20px); border-bottom: 1px solid var(--on-blue-line); }
+.ph-07-hb-head .ph-lbl { margin: 0; }
+/* Held at the section's own h3 scale. The reference sets this very large; at that size it
+   competes with the section heading two rows above it. */
+.ph-07-hb-head h3 {
+  margin: 0; font-family: var(--ph-serif), Georgia, serif;
+  font-size: clamp(22px, 2.1vw, 31px); font-weight: 500; line-height: 1.06;
+  letter-spacing: -0.02em; color: var(--on-blue);
 }
-.ph-07-inside-head .ph-lbl { margin: 0; }
+
+.ph-07-hb-intro { display: grid; grid-template-columns: 1fr; gap: clamp(26px, 3vw, 52px); align-items: start; margin-top: clamp(26px, 2.8vw, 44px); }
+@media (min-width: 900px) { .ph-07-hb-intro { grid-template-columns: var(--hb-col) minmax(0, 1fr); } }
+
+.ph-07-hb-copy { min-width: 0; display: grid; gap: clamp(22px, 2.4vw, 34px); align-content: start; }
+/* Serif, and larger than body copy: this is the statement that justifies the whole
+   deliverable, not a paragraph of explanation. Same register as `.ph-takeaway` and
+   `.ph-open-claim` elsewhere on the page. */
+.ph-07-rationale {
+  margin: 0; font-family: var(--ph-serif), Georgia, serif;
+  font-size: clamp(20px, 1.9vw, 30px); font-weight: 400; line-height: 1.28;
+  letter-spacing: -0.01em; color: var(--on-blue); max-width: 42ch; text-wrap: pretty;
+}
+.ph-07-hb-contents { display: grid; gap: 12px; }
+.ph-07-hb-contents .ph-lbl { margin: 0; }
+
+/* The cover, and two faint offset page edges behind it so it reads as a bound document
+   rather than one sheet. Opacity over the blue field, not a shadow: the brief rules out
+   drop shadows, and these are pages, not lighting.
+
+   CROPPED TO THE LEFT PAGE. `handbook-cover-1600.webp` is not a cover, it is a two-page
+   SPREAD scan at 1600x1132 (1.41:1 landscape): the cover artwork is on the left page and
+   the right page is blank. Shown whole it rendered as a book cover wider than tall with a
+   large panel of empty white beside it. The box is set to the left page's proportion
+   (800 x 1132) and the image covers it from the left, so the blank page is cropped away.
+   Done in CSS so the original scan stays intact and the crop stays adjustable. */
+.ph-07-cover { max-width: var(--hb-col); display: grid; gap: 14px; margin: 0; justify-self: start; }
+.ph-07-cover-stack { position: relative; }
+.ph-07-cover-stack::before,
+.ph-07-cover-stack::after {
+  content: ""; position: absolute; top: 7px; bottom: 7px; left: 0; right: 0;
+  background: var(--on-blue); z-index: 0;
+}
+.ph-07-cover-stack::after { transform: translateX(7px); opacity: 0.5; }
+.ph-07-cover-stack::before { transform: translateX(14px); opacity: 0.28; }
+.ph-07-cover img {
+  position: relative; z-index: 1;
+  display: block; width: 100%; height: auto;
+  aspect-ratio: 800 / 1132; object-fit: cover; object-position: left center;
+  background: #fff;
+}
+.ph-07-cover figcaption { margin: 0; }
+
+/* 64-80px to the pages block: close enough that the two halves read as one sequence. */
+.ph-07-hb-pages-head {
+  display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap;
+  gap: 10px 24px; margin-top: clamp(64px, 6vw, 80px);
+  padding-bottom: clamp(12px, 1.2vw, 16px); border-bottom: 1px solid var(--on-blue-line);
+}
+.ph-07-hb-pages-head .ph-lbl { margin: 0 0 6px; }
+.ph-07-hb-sub { margin: 0; font-size: clamp(14px, 1.05vw, 15.5px); line-height: 1.4; color: var(--on-blue-dim); }
+
+/* `.ph-07-inside` / `.ph-07-inside-head` removed (2026-09-07): the previews' old header row
+   ("Inside the handbook" + the reader link) is now `.ph-07-hb-pages-head`, which carries the
+   "02 / Selected pages" label, its subtitle and the same reader link, inside the shared
+   handbook grid. */
 
 /* Two dimensioned instruction spreads. They were a third-width plate capped at 22vh
    (~424 x 178px), where none of the step text or the cut-list measurements could be
@@ -888,11 +990,39 @@ figure { margin: 0; }
    beat." */
 .ph-07-previews { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: clamp(22px, 2.2vw, 30px); }
 @media (min-width: 900px) { .ph-07-previews { grid-template-columns: 1fr 1fr; gap: clamp(20px, 2.4vw, 40px); } }
-.ph-07-previews .ph-support-plate-wrap { display: grid; gap: 10px; min-width: 0; max-width: calc(58vh * 1.42); justify-self: center; width: 100%; }
+/* `justify-self: stretch`, not `center`, and no max-width (2026-09-07): the spreads used to
+   be capped at `58vh * 1.42` and centred in their tracks, which floated them inward and made
+   it impossible for spread 1's left edge to line up with the cover above it or spread 2's
+   right edge to line up with the copy column. They now fill their tracks, so the whole
+   handbook block sits on one grid. The 58vh height guard is gone with the cap; these are
+   two-up across the canvas, so their height is already bounded by the track width. */
+.ph-07-previews .ph-support-plate-wrap { display: grid; gap: 10px; min-width: 0; width: 100%; }
 .ph-07-previews .ph-support-plate { background: #fff; border: 0; padding: clamp(10px, 1.1vw, 18px); }
 .ph-07-previews .ph-support-plate img { width: 100%; height: auto; max-width: 100%; max-height: none; object-fit: contain; }
 .ph-v2-blue .ph-annots { margin-top: 0; }
 .ph-v2-blue .ph-annot { border-top-color: var(--on-blue-line); }
+/* Two beats on the blue field (2026-09-07): the same `.ph-beat` device sections 03 and 05
+   use, so "the concept is the tower, the deliverable is the handbook" is carried by the
+   structure. `.ph-beat-head` is authored for the paper ground -- a `--ink` rule and an
+   ink-coloured h3 -- so both need the on-blue treatment here, the same way `.ph-annot`
+   above does. */
+/* `.ph-07-beat` removed: the handbook divider it styled was replaced by `.ph-07-hb-head`,
+   which carries the "01 / Cover & purpose" label above the title. */
+/* The heading names two things now ("The Drying Tower, and a handbook to build it") and at
+   the shared 16ch it broke to three lines. Widened here only; the other eight sections keep
+   `.ph-v2-head h2`'s own measure untouched. */
+.ph-v2-blue .ph-v2-head h2 { max-width: 24ch; }
+/* 07's tower image: one unannotated render (not the mechanism pair, which stays
+   exclusive to 08 -- see the comment at its call site in page.tsx). A line drawing reads
+   as a document, not a photograph, so it gets a white plate and `object-fit: contain`
+   rather than `.ph-dominant`'s default `object-fit: cover`, which would crop the chimney
+   or base to fill a photo-shaped box. Its column width comes from `.ph-07-lead`'s grid
+   track (see `.ph-07-ident.ph-07-tower` above), not a fixed max-width here. */
+.ph-07-tower img {
+  width: 100%; height: auto; max-height: none; object-fit: contain;
+  background: #fff; border: 1px solid var(--line);
+  padding: clamp(16px, 2vw, 28px); box-sizing: border-box;
+}
 
 /* ---- 08: the two-state drawing is one dominant unit, the ghosted frames are small ---- */
 .ph-mech-pair { display: grid; grid-template-columns: 1fr; gap: clamp(14px, 1.5vw, 22px); margin-top: var(--pair); max-width: 1120px; }
@@ -924,19 +1054,52 @@ figure { margin: 0; }
    top of this one, stacking two beats of near-empty canvas around a small button. With the
    CTA gone the request still asks for a specific, smaller gap here, so it is explicit
    rather than borrowed from --beat-y. */
-.ph-07-close { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: clamp(64px, 6vw, 80px); }
-/* The status paragraph carried a divider (border-top + padding-top) and its own top margin
-   for when `.ph-status-line` stood alone elsewhere. Paired here against the quote in a
-   two-column row, that pushed its text below the quote's top edge. Neither column needs a
-   rule above it here — the row itself is the divider from the previews above. */
-.ph-07-close .ph-status-line { margin-top: 0; padding-top: 0; border-top: 0; }
+/* Single column since 2026-09-07: the status paragraph that used to sit beside the quote
+   moved to section 09 (see the note on `finalConcept.status` in content.ts). The quote can
+   now take a comfortable measure instead of being squeezed into a 318px column beside a
+   two-line block, which is what produced the 156px height mismatch between the two. */
+/* 160-200px, deliberately much larger than the 64-80px inside the handbook block above:
+   that gap holds "01 / cover" and "02 / pages" together as one sequence, this one separates
+   the sequence from what follows it. */
+.ph-07-close { margin-top: clamp(160px, 13vw, 200px); }
+.ph-07-close .ph-handbook-quote { max-width: 42ch; }
 .ph-v2 .ph-takeaway { margin-top: var(--beat-y); }
 .ph-v2 .ph-foot { margin-top: var(--pair); }
 .ph-v2 .ph-insights { margin-top: var(--beat-y); }
+/* 10's closing field (2026-09-07, fourth pass -- see the section comment in page.tsx for
+   the earlier passes this replaces). The four insights, the takeaway and the caption sit
+   over the dusk photograph as one passage, in white. `.ph-10-photo` is a direct child of
+   the `<section>`, not wrapped in `.ph-canvas` like the heading above and the footer
+   below it, so it bleeds to the section's own full width for free -- no negative-margin
+   `--edge` trick needed, unlike `.ph-done` in section 09. `.ph-10-photo-content` then
+   re-applies `.ph-canvas` (see page.tsx) so its text still lines up with the heading and
+   footer on either side of it. */
+.ph-10-photo { position: relative; margin-top: var(--beat-y); overflow: hidden; }
+.ph-10-photo-media { position: absolute; inset: 0; z-index: 0; }
+/* `max-height: none` is required, not cosmetic: `.ph-dominant img` and the generic
+   `.ph-v2 :where(figure) img` fallback both set a `max-height` sized for `width:100% /
+   height:auto` photos. next/image's `fill` mode here has no property of its own to beat
+   that with -- its inline style sets `height:100%`, but there is no inline `max-height`
+   to out-rank the stylesheet's, so the image would silently clamp to a fraction of this
+   container's height while the media wrapper (sized to match the text beside it) did
+   not, leaving bare scrim below the photo. This bit us once already building `.ph-10-close`. */
+.ph-10-photo-media img { max-height: none; object-fit: cover; object-position: center 55%; }
+/* A uniform tint, not a bottom-anchored gradient: the earlier pass only needed contrast
+   under one line of text pinned to the bottom edge. This passage is the four insights
+   plus the takeaway, spread through the whole frame, so the whole frame needs contrast. */
+.ph-10-photo-scrim { position: absolute; inset: 0; z-index: 1; background: rgba(10, 14, 20, 0.64); }
+.ph-10-photo-content { position: relative; z-index: 2; padding-block: clamp(40px, 5.5vw, 72px); }
+.ph-10-photo .ph-insight { border-top-color: rgba(255, 255, 255, 0.3); }
+.ph-10-photo .ph-insight h3 { color: #fff; }
+.ph-10-photo .ph-insight .ph-body { color: rgba(255, 255, 255, 0.82); }
+.ph-10-photo .ph-insight-n { color: rgba(255, 255, 255, 0.7); }
+.ph-10-photo .ph-insight .next { color: #fff; border-left-color: rgba(255, 255, 255, 0.55); }
+.ph-10-photo .ph-takeaway { color: #fff; }
+.ph-10-photo .ph-cap { color: rgba(255, 255, 255, 0.75); margin-top: 12px; }
 @media (min-width: 1000px) {
   .ph-04-foot { grid-template-columns: 3fr 2fr; }
   .ph-08-foot { grid-template-columns: 3fr 2fr; }
-  .ph-07-close { grid-template-columns: 2fr 3fr; }
+  /* `.ph-07-close` had a two-column rule here; it is a single column now. */
 }
 
 /* ---- 02: one lead photograph, two small ones. Three equal frames read as three
@@ -1045,11 +1208,16 @@ figure { margin: 0; }
 .ph-locator { max-width: 400px; }
 .ph-eval-bar-v2 .ph-legend { flex: 0 1 420px; }
 
-/* ---- 04: the bag is named on the left and shown on the right, as one unit ---- */
+/* ---- 04: the bag is named on the left and shown on the right, as one unit ----
+   The photo is a close-up of printed text, so it is a document, not a scene: a white
+   plate with `object-fit: contain` at 46vh keeps the whole "PICS / Purdue Improved Crop
+   Storage / 100kg" label legible. It was `object-fit: cover` at max-height 30vh (2026-09-07,
+   second pass), which cropped and shrank it past the point the print could be read. */
 .ph-bags { margin-top: var(--pair); display: grid; grid-template-columns: 1fr; gap: var(--pair);
   align-items: center; border-left: 2px solid var(--blue); padding-left: 18px; max-width: none; }
 .ph-bags figure { display: grid; gap: 10px; }
-.ph-bags img { display: block; width: 100%; height: auto; max-height: 30vh; object-fit: cover; }
+.ph-bags-plate { background: #fff; border: 1px solid var(--line); padding: clamp(12px, 1.6vw, 20px); display: grid; place-items: center; }
+.ph-bags-plate img { display: block; width: 100%; height: auto; max-height: 46vh; object-fit: contain; }
 @media (min-width: 900px) { .ph-bags { grid-template-columns: 1fr 1fr; } }
 /* The band's own figure is a photograph now, not a placeholder. */
 .ph-done-v2 figure { display: grid; gap: 10px; }

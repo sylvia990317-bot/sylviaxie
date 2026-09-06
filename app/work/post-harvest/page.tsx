@@ -117,9 +117,13 @@ export default function PostHarvestPage() {
                   </div>
                 </div>
 
+                {/* One lead statistic, one supporting. See the note on `context.stats`. */}
                 <div className="ph-v2-stats">
                   {context.stats.map((s) => (
-                    <div className="ph-v2-stat" key={s.value}>
+                    <div
+                      className={`ph-v2-stat${s.lead ? " ph-v2-stat-lead" : ""}`}
+                      key={s.value}
+                    >
                       <b>{s.value}</b>
                       <span>{s.label}. {s.cite}.</span>
                     </div>
@@ -132,22 +136,28 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
+            {/* The roof photograph leads, not the road (Sylvia, 2026-09-07, audit). Only
+                one of these three is evidence: it shows the existing drying method, which
+                is the problem the whole project is about. The road and the planting are
+                atmosphere. The largest cell used to hold the road, so the mosaic's biggest
+                picture was its least relevant one. Both are kept, at supporting size --
+                cutting them is Sylvia's call, not a layout decision. */}
             <div className="ph-v2-mosaic">
               <figure className="ph-mosaic-lead">
                 <Image
-                  src="/post-harvest/photo/road-to-seme-2000.webp"
-                  alt="A red earth road curving through dense green vegetation near Seme, with a person pushing a bicycle loaded with jerrycans"
-                  width={2000} height={1333} sizes="(max-width: 899px) 92vw, 46vw"
+                  src="/post-harvest/photo/field-roof-drying-1600.webp"
+                  alt="Greens laid out to dry along the ridge of a corrugated tin roof on a mud-walled building in Seme"
+                  width={1600} height={1067} sizes="(max-width: 899px) 92vw, 46vw"
                 />
-                <figcaption className="ph-cap">{context.captions.road}</figcaption>
+                <figcaption className="ph-cap">{context.captions.roof}</figcaption>
               </figure>
               <figure>
                 <Image
-                  src="/post-harvest/photo/field-roof-drying-1600.webp"
-                  alt="Greens laid out to dry along the ridge of a corrugated tin roof on a mud-walled building in Seme"
-                  width={1600} height={1067} sizes="(max-width: 899px) 92vw, 26vw"
+                  src="/post-harvest/photo/road-to-seme-2000.webp"
+                  alt="A red earth road curving through dense green vegetation near Seme, with a person pushing a bicycle loaded with jerrycans"
+                  width={2000} height={1333} sizes="(max-width: 899px) 92vw, 26vw"
                 />
-                <figcaption className="ph-cap">{context.captions.roof}</figcaption>
+                <figcaption className="ph-cap">{context.captions.road}</figcaption>
               </figure>
               <figure>
                 <Image
@@ -163,9 +173,22 @@ export default function PostHarvestPage() {
       </section>
 
       {/* ============ 03 Learning in the field ============
-          DOMINANT: the walk-in photograph. Everything else is evidence at supporting
-          scale — the seated interview and the timeline share one subordinate row, and
-          the five portraits are a small strip rather than five plates. */}
+          RESTRUCTURED (Sylvia, 2026-09-07, visual-hierarchy audit). This section had six
+          blocks at roughly equal weight — walk-in photograph, seated interview, timeline,
+          five portraits, quote, field note — and the largest of them was the walk-in
+          photograph, which carries the least information in the set. It is a picture of
+          people walking; it does not show a method or a finding.
+
+          Now two beats with one dominant each:
+            A / WHO ..... the five farmers, at full width. They ARE the research, and
+                          Theresa's quote sits directly under them because it is one of
+                          these five speaking, not a floating pull-quote in a side column.
+            B / HOW ..... the two field photographs at supporting scale, then the timeline
+                          and the field note. The walk-in photograph is kept, but as
+                          evidence of the visit rather than as the section's poster.
+
+          The walk-in photograph was a candidate for deletion in the audit. It is demoted
+          rather than cut, because that is Sylvia's call to make, not a layout decision. */}
       <section className="ph-section ph-v2" id="field">
         <div className="ph-canvas">
           <Reveal>
@@ -176,64 +199,71 @@ export default function PostHarvestPage() {
             </div>
           </Reveal>
 
+          {/* --- beat A / who ------------------------------------------------- */}
           <Reveal>
-            <figure className="ph-dominant">
-              <Image
-                src="/post-harvest/photo/field-walking-2400.webp"
-                alt="Three team members and a guide walking across a grass clearing towards a homestead with a corrugated roof, seen from behind"
-                width={2400} height={1600} sizes="(max-width: 899px) 92vw, 88vw"
-              />
-              <figcaption className="ph-cap">{field.captions.walking}</figcaption>
-            </figure>
-          </Reveal>
+            <div className="ph-03-people">
+              <div className="ph-beat-head">
+                <h3>{field.beats.people}</h3>
+              </div>
 
-          <Reveal>
-            <div className="ph-support ph-support-2-3">
-              <figure>
-                <Image
-                  src="/post-harvest/photo/field-team-1600.webp"
-                  alt="Three team members seated on plastic chairs under a tree, talking with farmers during an interview"
-                  width={1600} height={1067} sizes="(max-width: 899px) 92vw, 34vw"
-                />
-                <figcaption className="ph-cap">{field.captions.team}</figcaption>
+              <ul className="ph-strip ph-strip-5 ph-people-strip ph-people-lead">
+                {["Christine", "Theresa", "Jakob", "Philister", "Magarite"].map((n) => {
+                  const p = byName(n);
+                  return (
+                    <li key={p.slug}>
+                      <div className="ph-strip-frame">
+                        <Image
+                          src={`/post-harvest/portrait/portrait-${p.slug}-400.webp`}
+                          alt={`${p.name}, a farmer who took part in the study. Portrait traced and blurred, as in the original project.`}
+                          width={400} height={500} sizes="(max-width: 767px) 44vw, 18vw"
+                        />
+                      </div>
+                      <h4>{p.name}</h4>
+                      <p>{p.note}</p>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <figure className="ph-quote ph-03-quote">
+                <blockquote>{field.quote.text}</blockquote>
+                <figcaption>
+                  <span className="who">{field.quote.attribution}</span>
+                  <span className="ph-cap">Interview, Seme, 2024</span>
+                </figcaption>
               </figure>
-              <InlineSvg name="field-timeline" caption={field.captions.timeline} />
             </div>
           </Reveal>
 
+          {/* --- beat B / how -------------------------------------------------- */}
           <Reveal>
-            <div className="ph-03-foot">
-              <div>
-                <p className="ph-lbl">{field.captions.portraits}</p>
-                <ul className="ph-strip ph-strip-5 ph-people-strip">
-                  {["Christine", "Theresa", "Jakob", "Philister", "Magarite"].map((n) => {
-                    const p = byName(n);
-                    return (
-                      <li key={p.slug}>
-                        <div className="ph-strip-frame">
-                          <Image
-                            src={`/post-harvest/portrait/portrait-${p.slug}-400.webp`}
-                            alt={`${p.name}, a farmer who took part in the study. Portrait traced and blurred, as in the original project.`}
-                            width={400} height={500} sizes="(max-width: 767px) 44vw, 15vw"
-                          />
-                        </div>
-                        <h4>{p.name}</h4>
-                        <p>{p.note}</p>
-                      </li>
-                    );
-                  })}
-                </ul>
+            <div className="ph-beat">
+              <div className="ph-beat-head">
+                <h3>{field.beats.method}</h3>
               </div>
 
-              <div>
-                <figure className="ph-quote">
-                  <blockquote>{field.quote.text}</blockquote>
-                  <figcaption>
-                    <span className="who">{field.quote.attribution}</span>
-                    <span className="ph-cap">Interview, Seme, 2024</span>
-                  </figcaption>
+              <div className="ph-03-method-figs">
+                <figure>
+                  <Image
+                    src="/post-harvest/photo/field-walking-2400.webp"
+                    alt="Three team members and a guide walking across a grass clearing towards a homestead with a corrugated roof, seen from behind"
+                    width={2400} height={1600} sizes="(max-width: 899px) 92vw, 42vw"
+                  />
+                  <figcaption className="ph-cap">{field.captions.walking}</figcaption>
                 </figure>
-                <div className="ph-fieldnote" style={{ marginTop: 26 }}>
+                <figure>
+                  <Image
+                    src="/post-harvest/photo/field-team-1600.webp"
+                    alt="Three team members seated on plastic chairs under a tree, talking with farmers during an interview"
+                    width={1600} height={1067} sizes="(max-width: 899px) 92vw, 42vw"
+                  />
+                  <figcaption className="ph-cap">{field.captions.team}</figcaption>
+                </figure>
+              </div>
+
+              <div className="ph-03-method-foot">
+                <InlineSvg name="field-timeline" caption={field.captions.timeline} />
+                <div className="ph-fieldnote">
                   <p>{field.documentation}</p>
                   {/* TODO(sylvia): open question B, confirm this attribution before publishing. */}
                   <p><strong>{field.contribution}</strong></p>
@@ -258,8 +288,12 @@ export default function PostHarvestPage() {
           </Reveal>
 
           {/* The finding depends on knowing what the bags are, so they are named here,
-              before the diagram argues about them. No PICS bag photograph exists in the
-              source package, so this is a stated fact rather than a shown one. */}
+              before the diagram argues about them. The photo is a close-up of printed
+              text (the "PICS / Purdue Improved Crop Storage / 100kg" markings), so it is
+              treated as a document rather than a scene: a white plate with
+              `object-fit: contain` at a legible size, not a cropped `object-fit: cover`
+              photo band. Cover-cropped at a shrunk height it went unreadable (2026-09-07,
+              third pass); contain at 46vh keeps the whole label in frame. */}
           <Reveal>
             <div className="ph-bags">
               <div>
@@ -267,11 +301,13 @@ export default function PostHarvestPage() {
                 <p>{focus.bags.text}</p>
               </div>
               <figure>
-                <Image
-                  src="/post-harvest/photo/pics-bag-1400.webp"
-                  alt="Close up of a PICS bag in Seme, printed with Purdue Improved Crop Storage and a 100 kg capacity mark"
-                  width={1400} height={936} sizes="(max-width: 899px) 92vw, 40vw"
-                />
+                <div className="ph-bags-plate">
+                  <Image
+                    src="/post-harvest/photo/pics-bag-1400.webp"
+                    alt="Close up of a PICS bag in Seme, printed with Purdue Improved Crop Storage and a 100 kg capacity mark"
+                    width={1400} height={936} sizes="(max-width: 899px) 92vw, 40vw"
+                  />
+                </div>
                 <figcaption className="ph-cap">{focus.bags.caption}</figcaption>
               </figure>
             </div>
@@ -471,9 +507,20 @@ export default function PostHarvestPage() {
       </section>
 
       {/* ============ 07 The Drying Tower ============
-          DOMINANT: the construction handbook, which is the completed deliverable. The
-          tower drawing and the two handbook pages are supporting plates, so nothing
-          competes with it and nothing reads as a delivered tower.
+          REVERSED (Sylvia, 2026-09-07, visual-hierarchy audit): the handbook cover was
+          the section's dominant visual, on the reasoning that the handbook is the actual
+          delivered artifact and the tower itself was never built. In practice this meant
+          the climax section of the case study never showed the reader what the design
+          IS: a document cover, three stats and two page spreads, with no image of the
+          tower's own mechanism anywhere before section 08. The mechanism pair (the same
+          two diagrams section 08 uses to explain airflow) is now the dominant visual
+          here, captioned so it cannot be mistaken for a photograph of a built object --
+          `finalConcept.captions.tower` already carried "It was never constructed" and had
+          been unused. The handbook cover drops to a supporting plate beside the
+          deliverable text, where it still reads clearly as the completed artifact.
+
+          DOMINANT: the tower mechanism pair. The handbook cover and the two handbook
+          pages are supporting plates.
 
           FIXED: the cover used to be `width:100%` + `object-fit:contain` + `background:
           #fff` on a full-canvas box. The scan is 1.41:1 and the box was 3.3:1, so the
@@ -537,17 +584,30 @@ export default function PostHarvestPage() {
             </div>
           </Reveal>
 
+          {/* --- beat A / the tower -------------------------------------------
+              Deliberately UNLABELLED. A "The Drying Tower" divider here sat two lines under
+              a heading that already opens "The Drying Tower, and a handbook to build it",
+              so it repeated the heading's own first half and cost about 100px to do it.
+              Only the turn to the second subject is marked, which is what the divider is
+              for; the first subject is introduced by the section heading itself. */}
           <Reveal>
+            {/* The tower image and the copy that explains it are one reading unit
+                (Sylvia, 2026-09-07, second pass): the body paragraph ("a black box
+                collector heats air...") and the three measured annotations describe THIS
+                picture, so they sit beside it rather than one screen further down next to
+                the handbook cover, where they used to read as unrelated to the image
+                above them.
+
+                A single, unannotated isometric of the whole tower, not the mechanism
+                pair: section 08 owns mechanism-sun/mechanism-airflow (the sun-ray and
+                airflow annotations) exclusively, to explain how it works; this section
+                only needs to show what it is, so it uses the plain tower-door render. */}
             <div className="ph-07-lead">
-              <figure className="ph-07-ident">
-                <Image
-                  src="/post-harvest/handbook/handbook-cover-1600.webp"
-                  alt="Cover of the construction handbook, titled Drying Tower, first version, listing a construction manual, materials needed, tools needed and how to use"
-                  width={1600} height={1132} sizes="(max-width: 999px) 57vw, 390px"
-                />
-                <figcaption className="ph-cap">
-                  <b>{finalConcept.deliverable.title}.</b> {finalConcept.deliverable.text}
-                </figcaption>
+              <figure className="ph-07-ident ph-07-tower">
+                <Image src="/post-harvest/diagram/tower-door-1200.webp"
+                  alt="Isometric line drawing of the complete Drying Tower: the shelved cabinet with its door open, the chimney above and the solar collector attached at its base"
+                  width={1200} height={846} sizes="(max-width: 999px) 92vw, 55vw" />
+                <figcaption className="ph-cap">{finalConcept.captions.tower}</figcaption>
               </figure>
 
               <div className="ph-07-aside">
@@ -567,10 +627,60 @@ export default function PostHarvestPage() {
             </div>
           </Reveal>
 
+          {/* --- beat B / the handbook ----------------------------------------
+              Rebuilt to Sylvia's layout reference (2026-09-07). The cover and the two
+              interior spreads used to be two unrelated compositions; they are one numbered
+              sequence now -- "01 / Cover & purpose" then "02 / Selected pages" -- sharing a
+              single grid so the cover's left edge lands on spread 1's left edge and the copy
+              column ends on spread 2's right edge.
+
+              Deliberately NOT in the reference: no arrows, cards, rounded corners,
+              gradients, icons or drop shadows. The only new device is two faint offset page
+              edges behind the cover, which say "this is a bound document, not one sheet".
+              The reference also sets the title very large; it is held at the section's own
+              h3 scale here so it does not compete with the section heading above it. */}
           <Reveal>
-            <div className="ph-07-inside">
-              <div className="ph-07-inside-head">
-                <p className="ph-lbl">{finalConcept.previewsLabel}</p>
+            <div className="ph-07-hb">
+              <div className="ph-07-hb-head">
+                <p className="ph-lbl">{finalConcept.beats.coverLabel}</p>
+                <h3>{finalConcept.beats.handbook}</h3>
+              </div>
+
+              <div className="ph-07-hb-intro">
+                <figure className="ph-07-cover">
+                  {/* The stack's two offset edges are drawn in CSS on this wrapper, so the
+                      image itself stays a plain image. */}
+                  <div className="ph-07-cover-stack">
+                    <Image
+                      src="/post-harvest/handbook/handbook-cover-1600.webp"
+                      alt="Cover of the construction handbook, titled Drying Tower, first version, listing a construction manual, materials needed, tools needed and how to use"
+                      width={1600} height={1132} sizes="(max-width: 899px) 60vw, 300px"
+                    />
+                  </div>
+                  <figcaption className="ph-lbl">{finalConcept.beats.coverCaption}</figcaption>
+                </figure>
+
+                <div className="ph-07-hb-copy">
+                  {/* Why a document rather than a machine. Without this the handbook reads
+                      as a fallback for the tower that was never built, instead of as the
+                      answer to section 04's finding. */}
+                  <p className="ph-07-rationale">{finalConcept.deliverable.rationale}</p>
+                  <div className="ph-07-hb-contents">
+                    <p className="ph-lbl">Contents</p>
+                    <ul className="ph-handbook-contents">
+                      {finalConcept.deliverable.contents.map((c) => (
+                        <li key={c}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ph-07-hb-pages-head">
+                <div>
+                  <p className="ph-lbl">{finalConcept.beats.pagesLabel}</p>
+                  <p className="ph-07-hb-sub">{finalConcept.beats.pagesSub}</p>
+                </div>
                 <HandbookOpen label={finalConcept.handbookCta.label} />
               </div>
 
@@ -601,15 +711,21 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
+            {/* The section closes on the handbook's own words, and nothing else
+                (Sylvia, 2026-09-07, fourth pass). `finalConcept.status` used to render
+                beside this quote; it said what section 09 already says, almost verbatim
+                ("...through an actual build" vs 09's "...through a real build"), which made
+                three consecutive statements of "not built, not tested" in one section and
+                ended the project's climax on its third hedge. 09 is now the single full
+                account; the one limitation stated here is the tower caption's "It was never
+                constructed", attached to the image so the render cannot be misread as a
+                photograph of a built object. Removing the second column also fixed a 156px
+                height mismatch: the quote ran six lines against a two-line status block. */}
             <div className="ph-07-close">
               <figure className="ph-handbook-quote">
                 <blockquote>{finalConcept.handbookQuote.text}</blockquote>
                 <figcaption>{finalConcept.handbookQuote.attribution}</figcaption>
               </figure>
-              <p className="ph-status-line">
-                <span>{finalConcept.status.built}</span>
-                <strong>{finalConcept.status.notBuilt}</strong>
-              </p>
             </div>
           </Reveal>
         </div>
@@ -770,8 +886,19 @@ export default function PostHarvestPage() {
       </section>
 
       {/* ============ 10 Reflection ============
-          DOMINANT: the dusk photograph. Prose-led by decision, so there are no
-          explanatory icons or diagrams; the four learnings sit under the image as text. */}
+          REORDERED (Sylvia, 2026-09-07): the dusk photograph used to sit right under the
+          heading, as the section's dominant visual, with the four learnings as text
+          underneath it. But this section is prose-led by decision (there are no
+          explanatory icons or diagrams for a set of judgements about a collaboration),
+          so leading with a mood photograph before any of that prose put the section's
+          real content second.
+
+          FOURTH PASS, same date: not just the takeaway but the whole closing passage --
+          the four insights, the takeaway and the caption -- now sits over the photograph
+          as one field, in white. The heading and lead stay on the plain page above it:
+          they introduce the section rather than belonging to what the photograph closes.
+          The utility footer (credit line, back link) comes after, also on the plain
+          page. */}
       <section className="ph-section ph-v2" id="reflection">
         <div className="ph-canvas">
           <Reveal>
@@ -781,33 +908,50 @@ export default function PostHarvestPage() {
               <p className="lede">{reflection.lead}</p>
             </div>
           </Reveal>
+        </div>
 
-          <Reveal>
-            <figure className="ph-dominant">
-              <Image
-                src="/post-harvest/photo/homestead-dusk-1600.webp"
-                alt="Cattle grazing at dusk beside a homestead in Seme, Kenya"
-                width={1600} height={1067} sizes="(max-width: 899px) 92vw, 88vw"
-              />
-              <figcaption className="ph-cap">{reflection.closingCaption}</figcaption>
-            </figure>
-          </Reveal>
+        {/* The four insights, the takeaway and the closing photo as one field (Sylvia,
+            2026-09-07, fourth pass): all of it -- not just the takeaway -- reads as the
+            section's real closing passage, set in white over the dusk photograph rather
+            than as plain text with a small photo appended after. Bleeds to the viewport
+            edge the same way `.ph-done` does in section 09 (negative `--edge` margin,
+            `--edge` padding to bring the content back to the canvas edge), so it reads as
+            a deliberate field rather than a boxed inset. The heading and lead above stay
+            on the plain page: they introduce the section, they are not part of what the
+            photograph is closing. */}
+        <div className="ph-10-photo">
+          <div className="ph-10-photo-media">
+            <Image
+              src="/post-harvest/photo/homestead-dusk-1600.webp"
+              alt="Cattle grazing at dusk beside a homestead in Seme, Kenya"
+              fill sizes="100vw"
+            />
+          </div>
+          <div className="ph-10-photo-scrim" />
 
-          <Reveal>
-            <ol className="ph-insights">
-              {reflection.insights.map((ins, i) => (
-                <li className="ph-insight" key={ins.what}>
-                  <span className="ph-insight-n">{String(i + 1).padStart(2, "0")}</span>
-                  <h3>{ins.what}</h3>
-                  <p className="ph-body">{ins.detail}</p>
-                  <p className="next">{ins.next}</p>
-                </li>
-              ))}
-            </ol>
-          </Reveal>
+          <div className="ph-canvas ph-10-photo-content">
+            <Reveal>
+              <ol className="ph-insights">
+                {reflection.insights.map((ins, i) => (
+                  <li className="ph-insight" key={ins.what}>
+                    <span className="ph-insight-n">{String(i + 1).padStart(2, "0")}</span>
+                    <h3>{ins.what}</h3>
+                    <p className="ph-body">{ins.detail}</p>
+                    <p className="next">{ins.next}</p>
+                  </li>
+                ))}
+              </ol>
+            </Reveal>
 
+            <Reveal>
+              <p className="ph-takeaway">{reflection.takeaway}</p>
+              <p className="ph-cap">{reflection.closingCaption}</p>
+            </Reveal>
+          </div>
+        </div>
+
+        <div className="ph-canvas">
           <Reveal>
-            <p className="ph-takeaway">{reflection.takeaway}</p>
             <div className="ph-foot">
               <span className="ph-cap">{project.title}, Reality Studio, Chalmers, 2024</span>
               <Link href="/" className="ph-cap" style={{ textDecoration: "underline" }}>Back to all work</Link>

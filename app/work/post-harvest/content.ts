@@ -63,18 +63,27 @@ export const context = {
   dateline: "Seme, Kisumu County, Kenya. April to May 2024.",
   lead:
     "Seme is a rural farming sub-county in western Kenya, on the north east shore of Lake Victoria. Maize is the crop most households depend on, for food and for income.",
+  /**
+   * Reordered and ranked (Sylvia, 2026-09-07, visual-hierarchy audit). The loss figure is
+   * the reason this project exists, and it was set at the same weight as the population
+   * count and placed second, so the section's actual argument was the smaller half of a
+   * two-up row while the locator map took the visual lead. `lead: true` marks the one
+   * statistic allowed to be large; the population figure stays, as scale for the place,
+   * but at supporting size.
+   */
   stats: [
+    {
+      value: "up to 30%",
+      label: "of Kenya's key cereals lost within six months of harvest",
+      cite: "World Bank et al., 2011",
+      lead: true,
+    },
     {
       value: "122,000",
       label: "people in Seme sub-county, about 450 per square kilometre",
       cite: "City Population, 2019",
     },
-    {
-      value: "up to 30%",
-      label: "of Kenya's key cereals lost within six months of harvest",
-      cite: "World Bank et al., 2011",
-    },
-  ],
+  ] as { value: string; label: string; cite: string; lead?: boolean }[],
   /** Captions carry what the paragraphs used to say. */
   captions: {
     locator: "Seme sits on the north east shore of the Winam Gulf, at the western tip of Kisumu County. Siaya County is its neighbour to the west.",
@@ -102,11 +111,21 @@ export const field = {
   /** One short human observation, used as narrative rather than method description. */
   documentation:
     "We once set the camera directly in front of a farmer. Her body language told us to move it back.",
+  /**
+   * Two beats (2026-09-07): the five farmers, then how the fieldwork ran. `portraits`
+   * below heads the first beat, so only the second needs a new string. Same device
+   * section 05 already uses for its two beats.
+   */
+  beats: {
+    /* No full stop on either: these are headings now, not the sentence-case caption
+       `captions.portraits` used to be when it labelled a small support strip. */
+    people: "The five farmers who took part",
+    method: "How the fieldwork ran",
+  },
   captions: {
     walking: "Walking in to a homestead in Seme with Apollo.",
     team: "Sitting with farmers. Interviews began structured, then loosened as we learned what to ask.",
     timeline: "Six dates from the booklet. The blue band is the field period.",
-    portraits: "The five farmers who took part.",
   },
   quote: {
     text:
@@ -148,15 +167,15 @@ export const participants: {
  * Purdue Improved Crop Storage bags, non-chemical, up to three years if handled
  * properly, and farmers wrongly believed they lost potency after a season or two) and
  * p.28 (Theresa followed the instructions and was the only one of the five without a
- * weevil problem). There is no photograph of a PICS bag anywhere in the package, so this
- * is carried in words rather than promised as an image.
+ * weevil problem). A photograph of a PICS bag in Seme was found and is now shown
+ * (pics-bag-1400.webp); this stale note previously said none existed.
  *
  * The storage concept taken into the first evaluation is real (report p.24: "We still
  * decided to provide one of the concepts for storage in idea evaluation with the
  * farmers, and the thought was confirmed") but no sketch of it survives either, so it is
  * phrased as a method check and never as something the reader is about to see.
- * TODO(sylvia): if a round-one storage sketch or a photo of a PICS bag exists, both
- * would turn this section from told into shown.
+ * TODO(sylvia): if a round-one storage sketch survives, it would turn that method check
+ * from told into shown.
  */
 export const focus = {
   heading: "Finding the focus",
@@ -277,22 +296,73 @@ export const finalConcept = {
   /** Rendered as an eyebrow above the heading, not beside or beneath it (Sylvia, 2026-09-07). */
   label: "Final Concept",
   /**
-   * Renamed from "The Drying Tower" (Sylvia, 2026-09-07): the concept's name alone read as
-   * a product name, not as "we delivered a handbook." Naming the handbook directly in the
-   * heading makes the completed deliverable legible in one second, matching the deliverable
-   * hierarchy documented above — the concept is still called "The Drying Tower" throughout
-   * the section's body copy and captions, only the heading changed.
+   * Third name for this section (Sylvia, 2026-09-07). It was "The Drying Tower", which read
+   * as a product name and never said a handbook was delivered. It was then "The Drying Tower
+   * Handbook", which over-corrected: read under the "Final Concept" eyebrow, that says the
+   * final concept IS a handbook, and the tower — the actual designed object — went unnamed
+   * in every heading and sentence, surviving only as a picture and three measurements.
+   * Naming both, in order, is the only version that carries the real relationship: the
+   * concept is the tower, the deliverable is the means to build it.
    */
-  heading: "The Drying Tower Handbook",
-  /** Approved lead, used verbatim. */
+  heading: "The Drying Tower, and a handbook to build it",
+  /**
+   * Approved lead, used verbatim. It is also the section's ONLY statement that the handbook
+   * was made for farmers to build from locally.
+   *
+   * INTENT, NOT A RECORDED HANDOVER (Sylvia, 2026-09-07). "designed to help farmers build
+   * ... locally" is a statement of purpose, which the booklet supports. Whether the handbook
+   * physically reached the farmers is NOT confirmed: Sylvia was not the person responsible
+   * for delivering it and believes it probably was, which is an assumption, not a source.
+   * TODO(sylvia): confirm with the teammate who handled it. If it was delivered, that becomes
+   * a statable fact and belongs in section 09 beside `status.completed.items`, which is where
+   * the collector's handover ("Prototyped, and left with a farmer") already lives. Do not turn
+   * this lead into a delivery claim until then.
+   *
+   * A second line saying the same thing (`deliverable.madeFor`, "Written to be left in Seme
+   * and built from with locally available materials and tools") was removed on 2026-09-07:
+   * with the heading now naming both the tower and the handbook, three separate strings were
+   * making the same point.
+   */
   lead:
     "The project's final deliverable was a construction handbook designed to help farmers build the Drying Tower locally.",
   body: [
     "A black box collector heats air in the sun; a pipe carries it into a shelved tower. The door locks, so the crop can stay outside while the farmer is away.",
   ],
+  /**
+   * The handbook half of the section, numbered as two steps of one sequence (Sylvia's
+   * layout reference, 2026-09-07): the cover and why it exists, then the pages themselves.
+   * The tower half above is not numbered -- the section heading already opens
+   * "The Drying Tower, ...", so only the turn to the handbook is marked.
+   *
+   * `pagesSub` takes its count from HANDBOOK_TOTAL so the promise cannot outlive the page
+   * set. It also frees the reader link from carrying the number, which is why that label is
+   * now "Browse the full handbook" rather than "Browse all 53 pages".
+   */
+  beats: {
+    handbook: "The construction handbook",
+    coverLabel: "01 / Cover & purpose",
+    coverCaption: "Handbook cover",
+    pagesLabel: "02 / Selected pages",
+    pagesSub: `Two examples from the ${HANDBOOK_TOTAL}-page construction handbook`,
+  },
   deliverable: {
+    /**
+     * The caption is the title alone now. It used to continue "A construction manual, the
+     * materials needed, the tools needed, and how to use it." -- which is the prose form of
+     * the four `contents` entries rendered right beside it, so the handbook's own table of
+     * contents appeared twice in one row.
+     */
     title: "The construction handbook",
-    text: "A construction manual, the materials needed, the tools needed, and how to use it.",
+    /**
+     * Why the deliverable is a document and not a machine. This is section 04's own finding
+     * ("The gap was knowledge, not hardware", focus.body) carried forward to the point where
+     * it explains a decision — without it the handbook reads as a consolation prize for the
+     * tower nobody built, rather than as the answer to what the research actually found.
+     * Cross-referencing a section by number is established voice here (see
+     * challenge.captions.checklist, which points forward to 09).
+     */
+    rationale:
+      "Section 04 found the gap was knowledge, not hardware. Instructions answer that; one finished prototype would not.",
     /** The handbook's own contents page, report p.54. */
     contents: ["Construction", "Materials", "Tools", "How to use"],
     evidence: "prototype" as Evidence,
@@ -308,24 +378,42 @@ export const finalConcept = {
     attribution: "From the construction handbook",
     page: 55,
   },
-  /** Short status here. Section 09 carries the full account. */
+  /**
+   * NOT RENDERED IN SECTION 07 ANY MORE (Sylvia, 2026-09-07). Kept as data, not dead code:
+   * these are the cited p.44 statements, and section 09 is where they now belong.
+   *
+   * Why it left 07: `notBuilt` had drifted into saying exactly what `status.notValidated.text`
+   * says in section 09 -- the two differed only by "an actual build" / "a real build" -- so
+   * the page stated the same limitation twice in near-identical words. With the tower
+   * caption ("It was never constructed.") and the handbook's own quote already in 07, this
+   * made three consecutive hedges and ended the project's climax on its third apology.
+   * `built` was covered too: 09's `claimSolid` and `completed.items` both carry the collector
+   * and its handover. 07 now closes on the handbook's own quote, and 09 is the single full
+   * account of what was and was not finished.
+   */
   status: {
     built: "We prototyped the metal solar collector and left it with a farmer.",
     notBuilt: "The full tower was not constructed, and the handbook was not tested through an actual build.",
     page: 44,
   },
-  /** Heads the two-preview group. Uppercased by `.ph-lbl`, not written that way here. */
+  /**
+   * SUPERSEDED by `beats.pagesLabel` / `beats.pagesSub` (2026-09-07). Kept so nothing that
+   * still imports it breaks; the "02 / Selected pages" header row replaced it.
+   */
   previewsLabel: "Inside the handbook",
   /**
-   * The single entrance to the reader (Sylvia, 2026-09-06, revised 2026-09-07 and again
-   * 2026-09-07). It lives in the previews' own header row now, beside `previewsLabel`, as
-   * a plain text link rather than a boxed control of any size — the two spreads are the
-   * primary reading path and read on their own, so the 53-page reader stays a one-line,
-   * optional "also available" rather than a second composition of its own. The count comes
-   * from HANDBOOK_TOTAL so the promise cannot outlive the page set.
+   * The single entrance to the reader (Sylvia, 2026-09-06, revised repeatedly through
+   * 2026-09-07). It sits on the right of the "02 / Selected pages" header row as a plain
+   * text link rather than a boxed control of any size — the two spreads are the primary
+   * reading path and read on their own, so the full reader stays a one-line, optional
+   * "also available" rather than a second composition of its own.
+   *
+   * The page count moved OUT of this label and into `beats.pagesSub` ("Two examples from
+   * the 53-page construction handbook"), which is where a reader now meets the number.
+   * Both come from HANDBOOK_TOTAL, so neither promise can outlive the page set.
    */
   handbookCta: {
-    label: `Browse all ${HANDBOOK_TOTAL} pages →`,
+    label: "Browse the full handbook →",
   },
   captions: {
     step: "One assembly step. Every joint is drawn, with the tubes it needs listed beneath it.",

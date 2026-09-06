@@ -5,6 +5,74 @@ verified), moved out of `CLAUDE.md` to keep the auto-loaded project instructions
 This file is **not** auto-loaded into context — read it only when you need the historical
 rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
 
+### Post Harvest 04, and a diagram legibility floor that was silently broken everywhere (this session)
+
+**Section 04 was four bands on four different grids.** Sylvia: "感觉这个section 4 的排版信息不是
+很集中，这次的plan有改进这个排版的计划吗" — and the plan did not: it listed only "add the chapter
+label, emphasise the latent-need bubbles" for 04. Measured, the section ran 1368 / 651+651 indented
+20px / 1040 / 793+529, so nothing but x=0 was shared and one band sat 20px in from every other.
+Worse, the PICS-bag argument was split in half: the two paragraphs explaining why the farmers had
+stopped trusting the bags sat *below* the needs map, separated from the bag photo by the largest
+figure in the section.
+
+Rebuilt as three beats on one axis, moving copy rather than rewriting it:
+1. **The brief** — `.ph-bags` now carries the label, the bag text and both stranded paragraphs
+   beside the photo. The blue accent moved from a left border to a top rule, which is what removes
+   the 20px indent while keeping the colour.
+2. **The finding** — the needs map alone, full canvas width, nothing competing.
+3. **The redirect** — the maize year, full canvas width.
+
+All four blocks now measure L56 / R56 / w1368, with even 55px gaps.
+
+**The bigger find: `max-height` was making every diagram smaller, not smaller-boxed.**
+`.ph-v2 .ph-svg-body svg { max-height: 64vh }` does not shrink a replaced element with a viewBox
+— the drawing letterboxes inside the capped box. So a tall diagram rendered *smaller* while still
+occupying the full height, with dead margins either side. Measured on the needs map: a 1326px box
+containing a drawing scaled to 0.639, its in-bubble labels at **6.1px**, with ~340px of empty space
+on each flank. The 09 checklist was doing the same at 0.895 instead of 1.124. This is very likely
+the source of the "好多奇怪的留白" reported in earlier passes. SVGs are now excluded from the cap;
+width alone bounds them. Every drawing measures `slack=0` afterwards.
+
+**The 12px floor did not hold below 1536px.** The per-drawing minimum widths lived inside
+`@media (max-width: 767px)`, so between 768px and the design width there was no floor at all —
+measured at 1024px, five of seven drawings rendered their smallest labels at 8.1–11.2px. Four of
+the six selectors in that block (`.ph-needs`, `.ph-timeline`, `.ph-cycle`, `.ph-locator`) also
+matched nothing and never had. Rewritten onto the classes actually in use, unconditional, each
+value derived as `12px ÷ smallest declared label × viewBox width`.
+
+That change then exposed a second bug: a child `min-width` against a grid item's default
+`min-width: auto` pushed the box wider than the screen instead of scrolling inside it — at 430px
+the 03 timeline box was 780px and the 05 checklist 820px. Fixed with `min-width: 0; max-width: 100%`
+on `.ph-svg`.
+
+**Drawings re-typeset** so their smallest label clears 12px at the width they are actually shown:
+`sketch-legend` redrawn from an 800×66 strip (squeezed into a 420px flex slot, rendering 5.8px)
+to 600×76 at scale 1.0; `field-timeline` re-spaced and enlarged; `seme-locator`, `maize-lifecycle`
+and both requirement checklists rescaled. `needs-map` was left alone on purpose — its 9.5px labels
+are inside bubbles and already hand-hyphenated (`transport-/ation`, `INDEPEN-/DENCE`), so enlarging
+them would overflow the circles; widening the figure to the full canvas lifted them to 12.6px
+instead. The 09 checklist also had a pre-existing collision (`NOT EVALUATED` overlapping the longest
+row by 22px at its old size); its viewBox widened 888 → 960 to give the status tags their own gutter.
+
+**`inline-svg.tsx` now only caches in production.** The module-level `Map` survived file edits for
+the life of the dev server, so SVG changes did not appear until the module happened to recompile.
+
+**Verified.** `tsc --noEmit` clean. At 1536/1024/768/430: every drawing ≥12px, no DOM text under
+12px, no overflow or collisions inside any drawing, and the page never scrolls sideways at any width
+(only the diagram boxes do). Fail-open: server HTML carries 32 `ph-reveal` and zero `ph-reveal-armed`
+/ `is-visible` with no inline `opacity: 0`; from a top-of-page load all 32 arm, nothing is hidden
+above the fold at first paint, and a single jump to the bottom leaves nothing hidden. With
+`IntersectionObserver` stubbed to a no-op, all 32 blocks still resolved via the 1200ms failsafe.
+Anchor landings on `#status`, `#reflection` and `#final-concept` show their targets immediately.
+Headings: only 07 and 09 wrap to two lines now, 09 down from three.
+
+**One incident worth recording.** A `String.indexOf` anchor in a scripted edit returned `-1`, so a
+`slice(start, -1)` swallowed sections 05–10 of `page.tsx` (975 lines → 373). Recovered by pulling
+the complete pre-truncation source out of a Next dev sourcemap
+(`.next/dev/server/chunks/ssr/[root-of-the-server]__*.js.map`, `sections[].map.sourcesContent`),
+splicing the tail back on and re-applying the chapter-label and stagger edits. Guard every scripted
+replacement with an occurrence count before writing.
+
 ### Post Harvest 02 locator: two separated panels, and the county was wrong (this session, follow-up)
 - Sylvia: "Remove the diagonal connector line completely—it looks like an accidental construction
   line and does not communicate zooming. Rebuild the locator as two clearly separated sequential

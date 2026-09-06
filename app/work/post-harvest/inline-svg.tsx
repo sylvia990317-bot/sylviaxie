@@ -15,14 +15,16 @@ import path from "node:path";
  * there is no runtime fetch. The files are plain generated markup committed to
  * `public/post-harvest/diagram/`, never user input, so the innerHTML is safe.
  */
-const cache = new Map<string, string>();
+/* Dev reads from disk every time: the cache is module-scoped, so it otherwise survives
+   a file edit for the life of the server process and SVG changes never appear. */
+const cache = process.env.NODE_ENV === "production" ? new Map<string, string>() : null;
 
 function load(name: string): string {
-  const hit = cache.get(name);
+  const hit = cache?.get(name);
   if (hit !== undefined) return hit;
   const file = path.join(process.cwd(), "public", "post-harvest", "diagram", `${name}.svg`);
   const svg = fs.readFileSync(file, "utf8");
-  cache.set(name, svg);
+  cache?.set(name, svg);
   return svg;
 }
 

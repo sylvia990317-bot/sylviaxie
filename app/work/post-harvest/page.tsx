@@ -7,7 +7,7 @@ import Reveal from "./reveal";
 import InlineSvg from "./inline-svg";
 import {
   project, meta, context, field, participants, focus, challenge,
-  concepts, finalConcept, mechanism, status, reflection,
+  concepts, finalConcept, mechanism, status, reflection, chapterLabel,
 } from "./content";
 import HandbookReader, { HandbookCoverOpen } from "./handbook-reader";
 
@@ -61,39 +61,70 @@ export default function PostHarvestPage() {
       <Link href="/" className="ph-back">Close project</Link>
 
       {/* ============ 01 Hero ============
-          Approved: the hero photograph stays _DYR7834 (the held cob). Not replaced. */}
-      <header className="ph-section ph-hero" id="hero">
-        <div className="ph-shell ph-shell-wide">
-          <div className="ph-hero-grid">
-            <div className="ph-hero-copy">
-              <div className="ph-hero-rule" />
-              <p className="ph-mono" style={{ margin: "0 0 18px" }}>{project.title}</p>
-              {/* Explicit break so the headline is two deliberate lines, never three. */}
-              <h1 className="ph-display">
-                <span>Rethinking maize drying</span>
-                <em>with farmers in Seme</em>
-              </h1>
-              <p className="ph-hero-sub">{project.subtitle}</p>
-              <dl className="ph-meta">
-                {meta.map(([k, v]) => (
-                  <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
-                ))}
-              </dl>
-            </div>
+          REBUILT 2026-09-07 to share HALOGRIP's hero storytelling system.
 
-            <figure className="ph-hero-figure">
-              <div className="ph-frame">
-                <Image
-                  src="/post-harvest/photo/maize-weevils-1600.webp"
-                  alt="A farmer's hands holding a dried maize cob, Seme, Kenya"
-                  fill priority sizes="(max-width: 767px) 100vw, 50vw"
-                />
-              </div>
-              <figcaption className="ph-caption">
-                Stored maize in Seme. Loss after harvest was the starting point for this project.
-              </figcaption>
-            </figure>
+          The previous hero was a 50/50 split -- copy column left, tall 4:5 photograph
+          bleeding off the right edge -- locked to `min-height: 100dvh` with its content
+          vertically centred. Comparing it against HALOGRIP's actual hero
+          (`scroll-intro.tsx`, not the unused `.hero-heading` CSS) showed the two shared no
+          structural decision: HALOGRIP runs vertically, leads with the PROJECT NAME as its
+          h1, carries place and year as an eyebrow opposite it, sets metadata as a
+          horizontal `[ LABEL ] / value` grid, and puts one wide photograph underneath with
+          its caption inside the image.
+
+          Those roles are adopted here; the composition is not copied. The type stays Bodoni
+          at Post Harvest's own scale rather than a 167px condensed sans, the accent stays
+          blue, and the dominant visual is documentary field photography.
+
+          What moved:
+            - h1 is now the project name. The sentence that used to be the h1 ("Rethinking
+              maize drying with farmers in Seme") is the descriptor beneath it, which is the
+              job it was always doing.
+            - Place and year left the Context metadata sentence and became their own eyebrow
+              and their own columns.
+            - The photograph is one wide band at canvas width, caption set inside it.
+            - `min-height: 100dvh` is gone. The hero is as tall as its content (~950px), so
+              the photograph is cut by the fold on a laptop. That crop is the invitation to
+              scroll, which is why there is no arrow: the hero already carries four text
+              groups and a fifth element would overload it. */}
+      <header className="ph-section ph-v2 ph-hero" id="hero">
+        <div className="ph-canvas ph-hero-inner">
+          <div className="ph-hero-eyebrows">
+            <p className="ph-chapter-label">{project.heroEyebrow}</p>
+            <p className="ph-chapter-label">{project.heroPlaceYear}</p>
           </div>
+
+          <h1 className="ph-display">{project.title}</h1>
+
+          <p className="ph-hero-descriptor">{project.headline}.</p>
+
+          {/* `--i` drives the entrance stagger from the CSS cascade, so the five columns
+              arrive in order without any JavaScript. */}
+          <dl className="ph-meta">
+            {meta.map(([k, v], i) => (
+              <div key={k} style={{ "--i": i } as React.CSSProperties}>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <figure className="ph-hero-figure">
+            <div className="ph-frame">
+              <Image
+                src="/post-harvest/photo/maize-weevils-1600.webp"
+                alt="A farmer's hands holding a dried maize cob, Seme, Kenya"
+                fill priority sizes="(max-width: 767px) 100vw, 1480px"
+              />
+            </div>
+            <figcaption className="ph-hero-caption">
+              <span>Stored maize in Seme</span>
+              <span>Sylvia Xie</span>
+            </figcaption>
+          </figure>
+
+          {/* Closes the chapter and hands off to 02, which opens with its own label. */}
+          <div className="ph-hero-rule" />
         </div>
       </header>
 
@@ -109,7 +140,7 @@ export default function PostHarvestPage() {
             <div className="ph-v2-ctx">
               <div>
                 <div className="ph-v2-head">
-                  <p className="num">02</p>
+                  <p className="ph-chapter-label">{chapterLabel("context")}</p>
                   <h2>{context.heading}</h2>
                   <div className="lede">
                     <p className="ph-lbl">{context.dateline}</p>
@@ -201,7 +232,7 @@ export default function PostHarvestPage() {
         <div className="ph-canvas">
           <Reveal>
             <div className="ph-v2-head">
-              <p className="num">03</p>
+              <p className="ph-chapter-label">{chapterLabel("field")}</p>
               <h2>{field.heading}</h2>
               <p className="lede">{field.lead}</p>
             </div>
@@ -289,31 +320,41 @@ export default function PostHarvestPage() {
         <div className="ph-canvas">
           <Reveal>
             <div className="ph-v2-head">
-              <p className="num">04</p>
+              <p className="ph-chapter-label">{chapterLabel("focus")}</p>
               <h2>{focus.heading}</h2>
               <p className="lede">{focus.lead}</p>
             </div>
           </Reveal>
 
-          {/* The finding depends on knowing what the bags are, so they are named here,
-              before the diagram argues about them. The photo is a close-up of printed
-              text (the "PICS / Purdue Improved Crop Storage / 100kg" markings), so it is
-              treated as a document rather than a scene: a white plate with
-              `object-fit: contain` at a legible size, not a cropped `object-fit: cover`
-              photo band. Cover-cropped at a shrunk height it went unreadable (2026-09-07,
-              third pass); contain at 46vh keeps the whole label in frame. */}
+          {/* Three beats on one axis, not four bands (2026-09-07, Sylvia: "信息不是很集中").
+              Beat one is the whole PICS-bag argument: what the bags are, and the two
+              paragraphs on why the farmers had stopped trusting them -- those used to sit
+              below the needs map, so the claim and its evidence were separated by the
+              largest figure in the section. Beat two is the needs map alone, at full canvas
+              width so nothing competes with the finding. Beat three is the maize year, the
+              redirect the section is arguing for. Every beat spans the same column.
+
+              The photo is a close-up of printed text (the "PICS / Purdue Improved Crop
+              Storage / 100kg" markings), so it is treated as a document rather than a
+              scene: a white plate with `object-fit: contain` at a legible size, not a
+              cropped `object-fit: cover` photo band. Cover-cropped at a shrunk height it
+              went unreadable (2026-09-07, third pass); contain at 46vh keeps the label in
+              frame. */}
           <Reveal>
             <div className="ph-bags">
-              <div>
+              <div className="ph-bags-copy">
                 <p className="ph-lbl">{focus.bags.label}</p>
                 <p>{focus.bags.text}</p>
+                {focus.body.map((t) => (
+                  <p key={t.slice(0, 20)}>{t}</p>
+                ))}
               </div>
               <figure>
                 <div className="ph-bags-plate">
                   <Image
                     src="/post-harvest/photo/pics-bag-1400.webp"
                     alt="Close up of a PICS bag in Seme, printed with Purdue Improved Crop Storage and a 100 kg capacity mark"
-                    width={1400} height={936} sizes="(max-width: 899px) 92vw, 40vw"
+                    width={1400} height={936} sizes="(max-width: 899px) 92vw, 46vw"
                   />
                 </div>
                 <figcaption className="ph-cap">{focus.bags.caption}</figcaption>
@@ -322,18 +363,11 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
-            <InlineSvg name="needs-map" className="ph-fig-primary" caption={focus.captions.needs} />
+            <InlineSvg name="needs-map" className="ph-fig-primary ph-04-finding" caption={focus.captions.needs} />
           </Reveal>
 
           <Reveal>
-            <div className="ph-04-foot">
-              <InlineSvg name="maize-lifecycle" className="ph-fig-support" caption={focus.captions.cycle} />
-              <div className="ph-04-copy">
-                {focus.body.map((t) => (
-                  <p className="ph-body" key={t.slice(0, 20)}>{t}</p>
-                ))}
-              </div>
-            </div>
+            <InlineSvg name="maize-lifecycle" className="ph-fig-support ph-04-cycle" caption={focus.captions.cycle} />
           </Reveal>
         </div>
       </section>
@@ -355,7 +389,7 @@ export default function PostHarvestPage() {
         <div className="ph-canvas">
           <Reveal>
             <div className="ph-v2-head">
-              <p className="num">05</p>
+              <p className="ph-chapter-label">{chapterLabel("challenge")}</p>
               <h2>{challenge.heading}</h2>
               <p className="lede">{challenge.lead}</p>
             </div>
@@ -460,7 +494,7 @@ export default function PostHarvestPage() {
         <div className="ph-canvas">
           <Reveal>
             <div className="ph-v2-head">
-              <p className="num">06</p>
+              <p className="ph-chapter-label">{chapterLabel("concepts")}</p>
               <h2>{concepts.heading}</h2>
               <p className="lede">{concepts.lead}</p>
             </div>
@@ -488,9 +522,12 @@ export default function PostHarvestPage() {
                   <p className="ph-lbl">{concepts.evaluationLabel}</p>
                   <InlineSvg name="sketch-legend" className="ph-legend" />
                 </div>
-                <ul className="ph-strip ph-strip-3">
-                  {concepts.options.map((o) => (
-                    <li key={o.slug} data-picked={o.selected || undefined}>
+                {/* The three are read, then the choice resolves: the picked card's blue
+                    frame and note arrive last, so the selection reads as a decision rather
+                    than a conclusion handed over up front. */}
+                <Reveal tag="ul" className="ph-strip ph-strip-3">
+                  {concepts.options.map((o, i) => (
+                    <li key={o.slug} data-picked={o.selected || undefined} style={{ "--i": i } as React.CSSProperties}>
                       <div className="ph-strip-frame">
                         <Image
                           src={`/post-harvest/concept/concept-${o.slug}-760.webp`}
@@ -502,7 +539,7 @@ export default function PostHarvestPage() {
                       {o.selected ? <p className="ph-picked-note">{concepts.selectedNote}</p> : null}
                     </li>
                   ))}
-                </ul>
+                </Reveal>
 
                 {/* The outcome sits at the foot of the column it concludes, and pins to
                     the photograph's bottom edge so the tall picture does not leave the
@@ -583,7 +620,7 @@ export default function PostHarvestPage() {
             <div className="ph-07-head">
               <p className="ph-lbl ph-07-eyebrow">{finalConcept.label}</p>
               <div className="ph-v2-head">
-                <p className="num">07</p>
+                <p className="ph-chapter-label">{chapterLabel("final-concept")}</p>
                 <h2>{finalConcept.heading}</h2>
                 <div className="lede">
                   <p>{finalConcept.lead}</p>
@@ -733,7 +770,7 @@ export default function PostHarvestPage() {
         <div className="ph-canvas">
           <Reveal>
             <div className="ph-v2-head">
-              <p className="num">08</p>
+              <p className="ph-chapter-label">{chapterLabel("mechanism")}</p>
               <h2>{mechanism.heading}</h2>
               <p className="lede">{mechanism.lead}</p>
             </div>
@@ -762,16 +799,17 @@ export default function PostHarvestPage() {
             </div>
           </Reveal>
 
-          <Reveal>
-            <ol className="ph-steplabels" style={{ marginTop: "var(--pair)" }}>
-              {mechanism.steps.map((s) => (
-                <li key={s.name}>
+          {/* Staggered because the mechanism is a sequence: heated air collects, rises,
+              dries, exits. A static diagram cannot carry that order. The stagger is pure
+              CSS -- animation-delay: calc(var(--i) * 120ms) -- so no JS runs per step. */}
+          <Reveal tag="ol" className="ph-steplabels">
+            {mechanism.steps.map((s, i) => (
+              <li key={s.name} style={{ "--i": i } as React.CSSProperties}>
                   <span className="n">{s.n}</span>
                   <b>{s.name}</b>
                   <span className="t">{s.text}</span>
                 </li>
-              ))}
-            </ol>
+            ))}
           </Reveal>
 
           <Reveal>
@@ -814,7 +852,7 @@ export default function PostHarvestPage() {
         <div className="ph-canvas">
           <Reveal>
             <div className="ph-v2-head">
-              <p className="num">09</p>
+              <p className="ph-chapter-label">{chapterLabel("status")}</p>
               <h2>{status.heading}</h2>
             </div>
           </Reveal>
@@ -924,7 +962,7 @@ export default function PostHarvestPage() {
           <div className="ph-canvas ph-10-photo-content">
             <Reveal>
               <div className="ph-v2-head">
-                <p className="num">10</p>
+                <p className="ph-chapter-label">{chapterLabel("reflection")}</p>
                 <h2>{reflection.heading}</h2>
                 <p className="lede">{reflection.lead}</p>
               </div>

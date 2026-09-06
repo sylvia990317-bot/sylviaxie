@@ -2,8 +2,8 @@
 <rect width="1000" height="640" fill="#fbfbfa"/>
 <circle cx="330" cy="320" r="225" fill="none" stroke="#14161a" stroke-width="1.4" stroke-dasharray="2 7" stroke-linecap="round"/>
 <circle cx="700" cy="320" r="180" fill="none" stroke="#14161a" stroke-width="1.4" stroke-dasharray="2 7" stroke-linecap="round"/>
-<circle cx="250" cy="300" r="70" fill="#e6ebf4" stroke="#17357a" stroke-width="1.8"/>
-<text x="250" y="297.205" text-anchor="middle" class="s" font-size="13" font-weight="600" fill="#17357a" letter-spacing="0.02em">DRYING</text><text x="250" y="312.155" text-anchor="middle" class="s" font-size="13" font-weight="600" fill="#17357a" letter-spacing="0.02em">PROCESS</text>
+<circle class="ph-latent" cx="250" cy="300" r="70" fill="#e6ebf4" stroke="#17357a" stroke-width="1.8"/>
+<text x="250" y="297.205" text-anchor="middle" class="s ph-latent" font-size="13" font-weight="600" fill="#17357a" letter-spacing="0.02em">DRYING</text><text x="250" y="312.155" text-anchor="middle" class="s ph-latent" font-size="13" font-weight="600" fill="#17357a" letter-spacing="0.02em">PROCESS</text>
 <circle cx="415" cy="392" r="58" fill="#f2f2f0" stroke="#c4c6c9" stroke-width="1.1"/>
 <text x="415" y="396.68" text-anchor="middle" class="s" font-size="13" font-weight="500" fill="#454b54" letter-spacing="0.02em">STORAGE</text>
 <circle cx="400" cy="212" r="56" fill="#f2f2f0" stroke="#c4c6c9" stroke-width="1.1"/>
@@ -30,8 +30,8 @@
 <text x="700" y="249.775" text-anchor="middle" class="s" font-size="15" font-weight="500" fill="#454b54" letter-spacing="0.02em">INFRA-</text><text x="700" y="267.025" text-anchor="middle" class="s" font-size="15" font-weight="500" fill="#454b54" letter-spacing="0.02em">STRUCTURE</text>
 <circle cx="802" cy="372" r="46" fill="#f2f2f0" stroke="#c4c6c9" stroke-width="1.1"/>
 <text x="802" y="369.635" text-anchor="middle" class="s" font-size="11" font-weight="500" fill="#454b54" letter-spacing="0.02em">INDEPEN-</text><text x="802" y="382.28499999999997" text-anchor="middle" class="s" font-size="11" font-weight="500" fill="#454b54" letter-spacing="0.02em">DENCE</text>
-<circle cx="648" cy="412" r="54" fill="#e6ebf4" stroke="#17357a" stroke-width="1.8"/>
-<text x="648" y="409.42" text-anchor="middle" class="s" font-size="12" font-weight="600" fill="#17357a" letter-spacing="0.02em">KNOWLEDGE</text><text x="648" y="423.22" text-anchor="middle" class="s" font-size="12" font-weight="600" fill="#17357a" letter-spacing="0.02em">GAP</text>
+<circle class="ph-latent" cx="648" cy="412" r="54" fill="#e6ebf4" stroke="#17357a" stroke-width="1.8"/>
+<text x="648" y="409.42" text-anchor="middle" class="s ph-latent" font-size="12" font-weight="600" fill="#17357a" letter-spacing="0.02em">KNOWLEDGE</text><text x="648" y="423.22" text-anchor="middle" class="s ph-latent" font-size="12" font-weight="600" fill="#17357a" letter-spacing="0.02em">GAP</text>
 <text x="330" y="126" text-anchor="middle" class="m" font-size="12.5" letter-spacing="0.14em" fill="#14161a">EXPRESSED NEED</text>
 <text x="700" y="524" text-anchor="middle" class="m" font-size="12.5" letter-spacing="0.14em" fill="#14161a">LATENT NEED</text>
 <path d="M250,370 L250,566 L300,566" fill="none" stroke="#17357a" stroke-width="1.3"/>

@@ -41,13 +41,37 @@ export const project = {
   headline: "Rethinking maize drying with farmers in Seme",
   subtitle: "A maize drying concept developed with farmers in Seme, western Kenya.",
   concept: "The Drying Tower",
+  /**
+   * Hero eyebrow row (2026-09-07 hero rebuild). Mirrors HALOGRIP's own hero, where the
+   * left eyebrow names the artefact and the right one carries place and year
+   * (`[ CASE STUDY 001 ]` … `GOTHENBURG, SE / 2025`). Both strings here are assembled from
+   * facts already on the page: the place comes from `context.dateline`, the year from the
+   * course dates in `meta` below.
+   */
+  heroEyebrow: "Case study / Post Harvest",
+  heroPlaceYear: "Seme, Kenya / 2024",
 };
 
-/** Three groups, not a five-row resume table. All confirmed facts preserved. */
+/**
+ * Hero metadata. RE-SLICED, NOT REWRITTEN (2026-09-07 hero rebuild).
+ *
+ * Was three rows (Role / Team / Context) stacked as a `<dl>` in a half-width column. The
+ * rebuilt hero uses HALOGRIP's horizontal `[ LABEL ] / value` grid, which wants short,
+ * parallel values rather than one long sentence, so the single "Context" row was split
+ * into the three facts it already contained:
+ *   - the course and school  -> Context
+ *   - where the work happened -> Location   (same place named in `context.dateline`)
+ *   - when it happened        -> Year
+ * Team is kept as its own column rather than folded away: it is a confirmed fact
+ * (audit §4.2) and dropping it to hit a four-column target would lose information.
+ * No fact is added, removed or reworded here.
+ */
 export const meta: [string, string][] = [
   ["Role", "Design research and concept development"],
   ["Team", "Four students. Two industrial design, two architecture."],
-  ["Context", "Year 4, MSc Industrial Design Engineering, Chalmers. Reality Studio, April to June 2024."],
+  ["Context", "MSc Industrial Design Engineering, Chalmers. Reality Studio."],
+  ["Location", "Seme, Kisumu County, Kenya"],
+  ["Year", "April to June 2024"],
 ];
 
 /**
@@ -558,16 +582,40 @@ export const reflection = {
   closingCaption: "Dusk in Seme, at the end of a field day.",
 };
 
-/** Ordered section registry, drives the page and the progress rail. */
-export const sections = [
-  { n: "01", id: "hero", title: "Post Harvest" },
-  { n: "02", id: "context", title: "Where this happened" },
-  { n: "03", id: "field", title: "Learning in the field" },
-  { n: "04", id: "focus", title: "Finding the focus" },
-  { n: "05", id: "challenge", title: "Defining the challenge" },
-  { n: "06", id: "concepts", title: "Developing with farmers" },
-  { n: "07", id: "final-concept", title: "The Drying Tower" },
-  { n: "08", id: "mechanism", title: "How it was intended to work" },
-  { n: "09", id: "status", title: "What we completed, and what remained open" },
-  { n: "10", id: "reflection", title: "What I would do differently" },
+/**
+ * Ordered section registry. NOW ACTUALLY CONSUMED (2026-09-07): it had existed unused since
+ * the page was built; `chapterLabel()` below reads it so the ten chapter labels have exactly
+ * one source instead of being hard-coded ten times in page.tsx.
+ *
+ * `label` is the short uppercase name that follows the number in the rendered chapter label
+ * ("02 / CONTEXT"), matching HALOGRIP's `[ 01 / OVERVIEW ]` convention. It is deliberately
+ * NOT the same string as `title`: the label names the chapter's subject in one or two words,
+ * the title is the declarative sentence underneath it. Where they would collide the label is
+ * the shorter noun ("CHALLENGE" over "Defining the challenge").
+ *
+ * The numbers are a real sequence (the case study's narrative order), which is why numbered
+ * markers are appropriate here at all.
+ */
+export const sections: { n: string; id: string; title: string; label: string }[] = [
+  { n: "01", id: "hero", title: "Post Harvest", label: "Post Harvest" },
+  { n: "02", id: "context", title: "Where this happened", label: "Context" },
+  { n: "03", id: "field", title: "Learning in the field", label: "Field research" },
+  { n: "04", id: "focus", title: "Finding the focus", label: "Finding the focus" },
+  { n: "05", id: "challenge", title: "Defining the challenge", label: "Challenge" },
+  { n: "06", id: "concepts", title: "Developing with farmers", label: "Concept development" },
+  { n: "07", id: "final-concept", title: "The Drying Tower", label: "Final concept" },
+  { n: "08", id: "mechanism", title: "How it was intended to work", label: "Mechanism" },
+  { n: "09", id: "status", title: "What we completed, and what remained open", label: "Status" },
+  { n: "10", id: "reflection", title: "What I would do differently", label: "Reflection" },
 ];
+
+/**
+ * The rendered chapter label for a section id, e.g. `chapterLabel("context")` -> "02 / Context".
+ * The brackets and the uppercasing are presentation and live in CSS (`.ph-chapter-label`),
+ * not here, so the string stays readable in the data and in screen-reader output.
+ */
+export function chapterLabel(id: string): string {
+  const s = sections.find((x) => x.id === id);
+  if (!s) throw new Error(`Unknown section id: ${id}`);
+  return `${s.n} / ${s.label}`;
+}

@@ -113,6 +113,109 @@ rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
 - Verified by rasterizing the SVG with the project's own `sharp` at 120 DPI and comparing before
   and after.
 
+### Post Harvest 07 — the intro composition refined, previews left untouched (this session, follow-up)
+- Sylvia: the handbook preview structure now works; keep the "Inside the handbook / Browse all 53
+  pages ->" row and the two equal spreads exactly as they are. Refine only the introductory
+  composition above it: rename the title to "The Drying Tower Handbook" so the completed
+  deliverable is immediately clear; move "FINAL CONCEPT" above the title as an eyebrow, not
+  underneath; grow the cover about 30%; narrow the spec column and its divider lines, which
+  currently overwhelm the cover; compress the top composition vertically by about 100-140px so the
+  previews appear sooner; increase the contrast of captions and body copy on the blue background;
+  keep the 53-page link secondary and in its current position; do not redesign the previews again.
+- **Heading and eyebrow.** `finalConcept.heading` renamed "The Drying Tower" -> "The Drying Tower
+  Handbook" in content.ts (the concept keeps its own name, "The Drying Tower," everywhere else in
+  the section's body copy — only the heading changed, per the request). The eyebrow ("Final
+  Concept") moved out of `.lede` (where it rendered below the heading, inside the shared
+  `.ph-v2-head` grid every other section also uses) to a plain sibling `<p className="ph-lbl
+  ph-07-eyebrow">` rendered before `.ph-v2-head` — section 07's own markup only, so the eight other
+  sections that still put their label inside `.lede` are untouched.
+- **Cover +30%, spec column narrower — one change, not two.** `.ph-07-ident`'s cap went 300px ->
+  390px (exactly the requested 30%). Rather than relying on that cap alone against a wide grid
+  track, the row's ratio also moved from 3.4fr/8.6fr to 4.4fr/7.6fr (the same split already used by
+  `.ph-06-lead`, so it is not a new number invented for this one spot) — this makes the 390px cap
+  the reliably binding constraint across ordinary viewport widths, and shrinks the aside/spec
+  column's track from ~943px to ~833px, along with every divider line inside it (`.ph-annot`'s
+  `border-top` runs the column's full width). Verified the aside's rendered height is unaffected by
+  its own narrower track: its content (a lead paragraph and three short annotation rows) is already
+  width-capped by `--measure` well inside both the old and new track widths, so nothing re-wraps.
+- **100-140px turned out to need two passes, because the first pass was calibrated against the
+  wrong viewport.** Compressed five things: the section's top padding (split off from the shared
+  `padding-block` so only the top moved, not the section's closing rhythm), `.ph-07-lead`'s
+  margin-top, `.ph-07-inside`'s margin-top, the annotation list's row gap, and its inline top
+  margin. A first pass, measured live via a Chrome-bridge session whose reported `innerWidth`
+  turned out to be stale (2304px reported, 1536px actual — the same window-sizing flakiness noted
+  in the last two entries), read back a 105-107px delta and looked done. Re-measured with
+  `innerWidth`/`innerHeight` cross-checked in the same call as the delta (confirmed 1536x639, the
+  viewport this session's own screenshots have used throughout): the real delta was only 69px.
+  Tightened all five clamp ranges further and re-verified in the same confirmed viewport: 102px.
+  Method note for next time: when this bridge's window sizing has already misbehaved once in a
+  session, distrust its `innerWidth` on later calls too until it's re-confirmed in the same
+  execution as whatever is being measured, not assumed from an earlier resize call.
+- **Contrast was not re-touched.** `--on-blue-dim` was already bumped 0.62 -> 0.82 alpha in the
+  entry two below this one; re-verified live it still reads 0.82 on `.ph-cap` inside this section,
+  so the request was already satisfied and needed no further change here.
+- **The previews group is untouched, verified rather than assumed:** `.ph-07-inside`,
+  `.ph-07-inside-head`, `.ph-07-previews` and their children were not edited in this pass, and the
+  link's position (in the header row, opposite the "Inside the handbook" label) did not move.
+- Verified with `npx next build` (clean) and, live, in the confirmed 1536x639 viewport: eyebrow
+  renders above the heading (`getBoundingClientRect().top` compared), heading text reads "The
+  Drying Tower Handbook", cover renders at 390px, aside column at 833px, the intro-to-previews gap
+  measures 102px against a 69px baseline (both from the same script, same viewport), and the full
+  reader still opens on 01/07, crosses the tier to 08/53, and preserves scroll position (delta 0)
+  through Escape.
+
+### Post Harvest 07 — the boxed button folded into the previews' own header row (this session, follow-up)
+- Sylvia, on the boxed secondary button from the previous entry below: it is no longer too small,
+  but it floats alone in a large empty area, detached from both the previews and the conclusion,
+  and creates an unnecessary third composition. Remove the standalone CTA. Integrate the entry into
+  a header over the two previews ("INSIDE THE HANDBOOK" left, "Browse all 53 pages ->" right, a rule
+  beneath), previews directly below it. Style the link as a plain secondary text button, ~15-16px
+  semibold, hover underline or colour change, one line, not placed inside either image. After the
+  captions, 64-80px before the concluding statement, quote and status text aligned at the same top,
+  remove the large empty gap. Increase the contrast of the grey-blue captions and body text on the
+  navy background. Preserve the 53-page reader and its functionality.
+- **Third shape for this control in two sessions, and the previous entry's own reasoning explains
+  why it kept moving.** A full-width "paper on blue" band solved "four entrances, none primary" but
+  became the section's dominant element once the reader was reclassified as optional. A small
+  bordered box fixed the size but had nowhere to belong — it was not part of the previews, not part
+  of the conclusion, just adrift between them. It is now `.ph-hb-textlink`: no box, sized to its own
+  label, living inside `.ph-07-inside-head` beside the label "Inside the handbook" (new copy,
+  `finalConcept.previewsLabel`) so "optional access" reads as one property of the previews group
+  rather than a destination in its own right. `HandbookOpen`'s props collapsed from `{title, sub}`
+  to a single `{label}` to match — one line only, per the request, not the two-line copy from
+  the box version.
+- **The 64-80px gap and the top-alignment were the same root cause: `.ph-07-close`'s two children
+  had inconsistent spacing baked in.** \`.ph-status-line\` carried its own \`margin-top: var(--block-y)\`
+  (up to 60px) plus a \`border-top\` and \`padding-top\`, meant for contexts where it stands alone; paired
+  against \`.ph-handbook-quote\` (plain, no top offset) in a two-column grid with \`align-items: start\`,
+  that extra box-model pushed the status text below the quote's top edge despite the grid aligning
+  both columns to the same start line. Zeroed all three properties in the \`.ph-07-close\` scope.
+  Separately, \`.ph-07-close\`'s own \`margin-top\` was the generic \`--beat-y\` token (which the removed
+  CTA had *also* carried on top of, stacking two beats of near-empty canvas around a small button);
+  replaced with an explicit \`clamp(64px, 6vw, 80px)\` matching the literal ask. Verified live: quote
+  and status \`getBoundingClientRect().top\` both read 345px (delta 0), gap from the previews' bottom
+  edge to \`.ph-07-close\`'s top measured 80px.
+- **Contrast: one token, \`--on-blue-dim\`, from 0.62 to 0.82 alpha.** It is the sole color behind
+  every caption, body paragraph, annotation label and the handbook quote's attribution on the
+  section's navy field (\`.ph-v2-blue .ph-cap\`, \`.ph-body\`, \`.ph-annot .k\`, \`.ph-status-line span\`,
+  etc.) — bumping it fixed all of them from one place rather than hunting each rule down. Computed
+  against \`--blue\` (#17357a): 0.62 alpha blended to roughly 5:1, past the WCAG AA floor (4.5:1) on
+  paper but reading as flat grey-on-navy in the screenshot Sylvia was looking at; 0.82 blends to
+  roughly 7.6:1, near AAA, while staying visibly dimmer than full \`--on-blue\` (headings, emphasis)
+  so the two-tier hierarchy is still legible. \`--on-blue-line\` (borders, 0.28 alpha) was left alone —
+  the request was about text, not rules.
+- Preview images were already non-clickable (confirmed again, zero clickable elements inside
+  \`.ph-07-previews\`) and the reader's scroll-preservation fix (\`{ preventScroll: true }\` on the
+  returned focus, from the previous entry) needed no change — verified again with the new trigger
+  element: scrollY delta 0 across both close paths (the Close button, Escape) with the link as the
+  origin instead of the removed box.
+- Verified with \`npx next build\` (clean) and, live: the header row renders exactly as requested
+  (label left, link right, rule beneath, previews directly under it); the link is 15px/600, single
+  line "Browse all 53 pages ->", \`cursor: pointer\`, underlines on hover (zoomed screenshot); clicking
+  it opens the reader on 01/07 and the full 53-page walk (end of overview -> cross the tier -> End)
+  reproduces the same counts as every previous pass; the old \`.ph-hb-secondary\` class matches zero
+  elements anywhere in the section.
+
 ### Post Harvest 07 — the entrance to the reader demoted from a dominant band to a secondary button (this session)
 - Sylvia: the 53-page reader is an optional deep dive, not the primary reading path, and opening it
   interrupts the case-study flow — so the entry should be clear but visually secondary. Keep the two

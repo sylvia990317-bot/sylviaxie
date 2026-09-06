@@ -274,8 +274,16 @@ export const concepts = {
  * "construct", never "rebuild".
  */
 export const finalConcept = {
+  /** Rendered as an eyebrow above the heading, not beside or beneath it (Sylvia, 2026-09-07). */
   label: "Final Concept",
-  heading: "The Drying Tower",
+  /**
+   * Renamed from "The Drying Tower" (Sylvia, 2026-09-07): the concept's name alone read as
+   * a product name, not as "we delivered a handbook." Naming the handbook directly in the
+   * heading makes the completed deliverable legible in one second, matching the deliverable
+   * hierarchy documented above — the concept is still called "The Drying Tower" throughout
+   * the section's body copy and captions, only the heading changed.
+   */
+  heading: "The Drying Tower Handbook",
   /** Approved lead, used verbatim. */
   lead:
     "The project's final deliverable was a construction handbook designed to help farmers build the Drying Tower locally.",
@@ -306,16 +314,18 @@ export const finalConcept = {
     notBuilt: "The full tower was not constructed, and the handbook was not tested through an actual build.",
     page: 44,
   },
+  /** Heads the two-preview group. Uppercased by `.ph-lbl`, not written that way here. */
+  previewsLabel: "Inside the handbook",
   /**
-   * The single entrance to the reader (Sylvia, 2026-09-06, revised 2026-09-07). The two
-   * spreads above this control are the primary reading path; the 53-page reader is an
-   * optional deep dive, so the control that opens it is deliberately secondary, not the
-   * section's focal point. The count comes from HANDBOOK_TOTAL so the promise cannot
-   * outlive the page set.
+   * The single entrance to the reader (Sylvia, 2026-09-06, revised 2026-09-07 and again
+   * 2026-09-07). It lives in the previews' own header row now, beside `previewsLabel`, as
+   * a plain text link rather than a boxed control of any size — the two spreads are the
+   * primary reading path and read on their own, so the 53-page reader stays a one-line,
+   * optional "also available" rather than a second composition of its own. The count comes
+   * from HANDBOOK_TOTAL so the promise cannot outlive the page set.
    */
   handbookCta: {
-    title: "Browse the full handbook",
-    sub: `${HANDBOOK_TOTAL} pages · Opens in full-screen reader →`,
+    label: `Browse all ${HANDBOOK_TOTAL} pages →`,
   },
   captions: {
     step: "One assembly step. Every joint is drawn, with the tubes it needs listed beneath it.",

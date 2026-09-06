@@ -27,7 +27,14 @@
   --line: #e3e4e2;
   --blue: #17357a;
   --on-blue: #f4f5f8;
-  --on-blue-dim: rgba(244, 245, 248, 0.62);
+  /* Contrast bumped 0.62 -> 0.82 (Sylvia, 2026-09-07): this is every caption and body copy
+     on the section 07 navy field (.ph-cap, .ph-body, annotation labels, the handbook
+     quote's attribution, the status line). At 0.62, blended over --blue, it computed to
+     about 5:1 against the background — technically past WCAG AA's 4.5:1 floor but read as
+     grey-on-navy in practice. At 0.82 it computes to about 7.6:1, near AAA, while staying
+     visibly dimmer than full --on-blue (used for headings and emphasis) so the hierarchy
+     between the two is still legible. */
+  --on-blue-dim: rgba(244, 245, 248, 0.82);
   --on-blue-line: rgba(244, 245, 248, 0.28);
 
   /* ---- type scale ---- */
@@ -802,29 +809,63 @@ figure { margin: 0; }
 .ph-conclusion { margin: var(--beat-y) 0 0; padding-top: 14px; border-top: 2px solid var(--blue); font-family: var(--ph-serif), Georgia, serif; font-size: clamp(19px, 1.9vw, 27px); font-weight: 500; line-height: 1.18; letter-spacing: -0.015em; max-width: 32ch; text-wrap: balance; }
 
 /* ---- 07: the handbook is the dominant and the only large plate on the blue field ---- */
-.ph-v2-blue { background: var(--blue); color: var(--on-blue); padding-block: clamp(64px, 7vh, 104px); }
+/* Top padding cut back from the section's own `padding-block` (Sylvia, 2026-09-07, "compress
+   the top composition"): the previews should surface sooner on the scroll, and this is the
+   first of several trims that together bring the intro in about 100-140px shorter, verified
+   live rather than computed, since clamp() ranges make the math unreliable on paper. Bottom
+   padding is untouched — the request was about the top, not the section's closing rhythm. */
+.ph-v2-blue { background: var(--blue); color: var(--on-blue); padding-top: clamp(32px, 4.4vh, 68px); padding-bottom: clamp(64px, 7vh, 104px); }
 .ph-v2-blue .ph-v2-head .num, .ph-v2-blue .ph-v2-head h2 { color: var(--on-blue); }
 .ph-v2-blue .ph-v2-head .lede, .ph-v2-blue .ph-cap, .ph-v2-blue .ph-body { color: var(--on-blue-dim); }
 .ph-v2-blue .ph-lbl { color: var(--on-blue-dim); }
+/* The eyebrow above the heading. A plain sibling of `.ph-v2-head`, not a change to that
+   shared grid (every other section still renders it unmodified, label below the heading) —
+   see the comment above section 07's markup in page.tsx. */
+.ph-07-eyebrow { margin: 0 0 10px; }
 /* The cover is a scanned page, so its box must be the page's own shape. It used to be
    `width:100%` + `object-fit:contain` + `background:#fff` inside a full-canvas box: the
    scan is 1.41:1, the box was ~3.3:1, and the white background filled every pixel the
    letterboxed scan did not — a full-width empty white band with a small drawing adrift
    in it. Sizing the figure to its column and letting the image set its own height means
    the only white on the page is the page. */
-.ph-07-lead { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--pair); }
+.ph-07-lead { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: clamp(16px, 1.6vw, 24px); }
 @media (min-width: 1000px) {
-  /* The cover was the section's dominant when it was also the way in. It is neither now:
-     it identifies the publication beside the intro, and the two interior spreads below get
-     the space instead. Copy leads, cover follows at about 300px. */
-  .ph-07-lead { grid-template-columns: minmax(0, 3.4fr) minmax(0, 8.6fr); gap: clamp(28px, 3.4vw, 60px); }
+  /* Third ratio for this row. 7fr/5fr (cover dominant, when it was also the way in) gave
+     way to 3.4fr/8.6fr (copy leading, cover a small identifier) when the reader moved to
+     its own band. That went too far the other way: at 3.4fr the aside's full-width divider
+     lines read heavier than the cover beside them. 4.4fr/7.6fr — the same split already
+     used by `.ph-06-lead` — gives the now-larger cover a wider track to sit in without
+     forcing the aside's short annotation values to wrap (they are well inside `--measure`
+     regardless of column width, so the aside's rendered height does not change). */
+  .ph-07-lead { grid-template-columns: minmax(0, 4.4fr) minmax(0, 7.6fr); gap: clamp(28px, 3.4vw, 60px); }
 }
-.ph-07-ident { margin-top: 0; display: grid; gap: 12px; min-width: 0; max-width: 300px; }
+/* ~30% larger (300px -> 390px, Sylvia, 2026-09-07): the cover reads as the completed
+   deliverable and was undersized next to the spec column it sits beside. */
+.ph-07-ident { margin-top: 0; display: grid; gap: 12px; min-width: 0; max-width: 390px; }
 .ph-07-ident img { display: block; width: 100%; height: auto; object-fit: contain; background: #fff; box-shadow: 0 14px 36px rgba(9, 24, 60, 0.32); }
 .ph-07-ident .ph-cap { font-size: 13px; max-width: 34ch; }
-@media (max-width: 999px) { .ph-07-ident { max-width: 340px; } }
+@media (max-width: 999px) { .ph-07-ident { max-width: 440px; } }
 .ph-07-aside { min-width: 0; }
 .ph-07-aside .ph-body:first-child { margin-top: 0; }
+/* Annotation rows tightened slightly as part of the same compression pass: three rows at
+   the old gap plus the list's own top margin were the single biggest contributor to the
+   aside column's height, which (being the taller of the two columns even after the cover
+   grew) sets `.ph-07-lead`'s overall height. */
+.ph-07-aside .ph-annots { gap: clamp(8px, 1.2vw, 14px); }
+
+/* The previews' own frame: a header row (a label plus the reader's one text-link entrance)
+   over a rule, with the two spreads directly beneath. This replaces two earlier attempts at
+   the reader's entrance — a full-width band, then a small floating box — both of which read
+   as a third composition competing with the previews. Folding the entrance into this row
+   means "optional access to all 53 pages" costs no vertical space of its own. Margin-top
+   trimmed with the rest of the intro's compression: this is the last gap before the
+   previews, so it is also the most direct way to make them "appear sooner." */
+.ph-07-inside { margin-top: clamp(20px, 2.2vw, 30px); }
+.ph-07-inside-head {
+  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap;
+  gap: 10px 24px; padding-bottom: 13px; border-bottom: 1px solid var(--on-blue-line);
+}
+.ph-07-inside-head .ph-lbl { margin: 0; }
 
 /* Two dimensioned instruction spreads. They were a third-width plate capped at 22vh
    (~424 x 178px), where none of the step text or the cut-list measurements could be
@@ -840,8 +881,12 @@ figure { margin: 0; }
    lets next/image reserve the box from the width/height attributes it already emits. Both
    sheets are about 1.42:1, so bounding the plate at `58vh * 1.42` bounds the height
    without a `max-height` anywhere, and without the squash or the letterbox that
-   `max-height` on a full-width image would cause. */
-.ph-07-previews { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--beat-y); }
+   `max-height` on a full-width image would cause.
+
+   Margin-top is intentionally small (not `--beat-y`): the header row's rule above already
+   does the separating, so the gap here is "label row to its own content," not "beat to
+   beat." */
+.ph-07-previews { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: clamp(22px, 2.2vw, 30px); }
 @media (min-width: 900px) { .ph-07-previews { grid-template-columns: 1fr 1fr; gap: clamp(20px, 2.4vw, 40px); } }
 .ph-07-previews .ph-support-plate-wrap { display: grid; gap: 10px; min-width: 0; max-width: calc(58vh * 1.42); justify-self: center; width: 100%; }
 .ph-07-previews .ph-support-plate { background: #fff; border: 0; padding: clamp(10px, 1.1vw, 18px); }
@@ -874,7 +919,17 @@ figure { margin: 0; }
 .ph-08-foot { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--beat-y); }
 .ph-ghost-frame { aspect-ratio: 4 / 5; }
 .ph-scored-v2 { margin-top: var(--beat-y); }
-.ph-07-close { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: var(--beat-y); }
+/* 64-80px, not the section's usual beat-y (which can hit 60px anyway, but was never the
+   real gap): the previous session's now-removed standalone CTA had its own margin-top on
+   top of this one, stacking two beats of near-empty canvas around a small button. With the
+   CTA gone the request still asks for a specific, smaller gap here, so it is explicit
+   rather than borrowed from --beat-y. */
+.ph-07-close { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: clamp(64px, 6vw, 80px); }
+/* The status paragraph carried a divider (border-top + padding-top) and its own top margin
+   for when `.ph-status-line` stood alone elsewhere. Paired here against the quote in a
+   two-column row, that pushed its text below the quote's top edge. Neither column needs a
+   rule above it here — the row itself is the divider from the previews above. */
+.ph-07-close .ph-status-line { margin-top: 0; padding-top: 0; border-top: 0; }
 .ph-v2 .ph-takeaway { margin-top: var(--beat-y); }
 .ph-v2 .ph-foot { margin-top: var(--pair); }
 .ph-v2 .ph-insights { margin-top: var(--beat-y); }
@@ -1025,36 +1080,27 @@ figure { margin: 0; }
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
-/* THE ENTRANCE, DELIBERATELY SECONDARY (Sylvia, 2026-09-07). The 53-page reader is an
-   optional deep dive, not the primary reading path — that is the two previews above this
-   button, which read on their own without opening anything. So this control is sized to
-   its own label, not the canvas: an outline on the blue field, easy to notice, but with
-   no fill and no stretch to full width, so it cannot outweigh the previews it sits under.
-
-   Target ~44-48px control height with a readable 14-16px title: measured live at 47px
-   (title 15px/1.2, sub 13px/1.25, 5px vertical padding, 1.5px border). Hover firms the
-   border and adds a faint tint rather than inverting — a strong invert reads as urgent,
-   which an optional path should not. */
-.ph-hb-secondary {
-  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px;
-  margin-top: var(--beat-y); text-align: left; cursor: pointer;
-  background: transparent; color: var(--on-blue); border: 1.5px solid var(--on-blue-line);
-  padding: 5px 22px;
+/* THE ENTRANCE, THIRD SHAPE (Sylvia, 2026-09-07, twice). A full-width band, then a small
+   bordered box, both read as a composition of their own — the box in particular floated
+   alone under the previews with nothing beside it. This is a plain text button, sized to
+   its label, sitting in `.ph-07-inside-head` opposite "Inside the handbook" — it belongs to
+   the previews' own header row rather than owning any vertical space of its own. Semibold
+   and on-blue-bright at rest so it is easy to notice against the dim label beside it;
+   underline plus a colour shift on hover, no box, no fill, nothing to imply it is more
+   important than the previews it grants access to. */
+.ph-hb-textlink {
+  display: inline-flex; align-items: baseline; gap: 6px; flex: none;
+  background: transparent; border: 0; padding: 0; margin: 0;
+  font-family: var(--ph-sans), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600; font-size: 15px; line-height: 1.3; white-space: nowrap;
+  color: var(--on-blue); text-decoration: none; cursor: pointer;
   -webkit-appearance: none; appearance: none;
-  transition: border-color 150ms linear, background 150ms linear;
+  transition: color 150ms linear;
 }
-.ph-hb-secondary-title {
-  font-family: var(--ph-sans), ui-sans-serif, system-ui, sans-serif;
-  font-weight: 500; font-size: 15px; line-height: 1.2;
+.ph-hb-textlink:hover, .ph-hb-textlink:focus-visible {
+  color: var(--on-blue); text-decoration: underline; text-underline-offset: 3px;
 }
-.ph-hb-secondary-sub {
-  font-family: var(--ph-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: 13px; line-height: 1.25; color: var(--on-blue-dim);
-}
-.ph-hb-secondary:hover, .ph-hb-secondary:focus-visible {
-  border-color: var(--on-blue); background: rgba(244, 245, 248, 0.08);
-}
-.ph-hb-secondary:focus-visible { outline: 2px solid var(--on-blue); outline-offset: 3px; }
+.ph-hb-textlink:focus-visible { outline: 2px solid var(--on-blue); outline-offset: 4px; }
 
 /* ---- the overlay ---- */
 .ph-hb-overlay {

@@ -483,17 +483,27 @@ export default function PostHarvestPage() {
           outside the page itself.
 
           PREVIEWING IS NOT READING, AND READING IS OPTIONAL (Sylvia, 2026-09-06, revised
-          2026-09-07). The section says three things in order, and each has exactly one job:
+          twice on 2026-09-07). The section says three things in order, and each has exactly
+          one job:
             1. the cover, small, beside the intro ...... the handbook as final deliverable
             2. two large interior spreads .............. representative pages, understood
                                                           without opening anything
-            3. one small outline button ................ optional access to all 53 pages
+            3. a text link inside the previews' own ..... optional access to all 53 pages
+               header row, beside "Inside the handbook"
           Every spread used to carry its own pill, which gave the page four entrances and no
           main one. The spreads are plain, non-clickable images now — they ARE the primary
-          reading path, not bait for the reader. The 53-page reader is a deliberate deep dive
-          that interrupts the case-study flow, so its one entrance (HandbookOpen, in
-          handbook-reader.tsx) is sized and styled to be noticed without becoming the
-          section's focal point: an outline button under the previews, not a full-width band.
+          reading path, not bait for the reader.
+
+          THE ENTRANCE WENT THROUGH TWO SHAPES BEFORE THIS ONE. First a full-width "paper on
+          blue" band — right when the problem was "four entrances, none primary," wrong once
+          the reader was reclassified as an optional deep dive, because at canvas width with
+          a 21-32px serif title it became the section's dominant element. Then a small
+          bordered box under the previews — correctly sized, but it floated alone in a large
+          empty stretch of canvas, reading as an unplanned third composition between the
+          previews and the closing quote. It is now `.ph-07-inside-head`: one row, a label
+          ("Inside the handbook") on the left and the plain text link on the right, with a
+          rule beneath it that also serves as the top edge of the previews group. Nothing
+          about it needs its own vertical space; it is part of the previews' own frame.
 
           The two previews are the interior, deliberately: one construction step and one cut
           list. The cover is not one of them, because it shows nothing about the contents.
@@ -501,16 +511,28 @@ export default function PostHarvestPage() {
           FIXED: the two handbook pages were capped at `max-height: 22vh` in a third-width
           column, i.e. about 424 x 178px. These are dimensioned instruction spreads; at
           that size none of their text is readable. They are a two-up row across the canvas
-          now, capped at 58vh so a short window cannot let them run past the fold. */}
+          now, capped at 58vh so a short window cannot let them run past the fold.
+
+          INTRO REFINED, PREVIEWS UNTOUCHED (Sylvia, 2026-09-07, third pass — the previews
+          group below stayed exactly as it was). Four changes above `.ph-07-inside`:
+          the heading now names the handbook directly (content.ts); the eyebrow moved out of
+          `.lede` to sit above the `num`/heading row instead of below it — a plain sibling
+          `<p>`, not a change to the shared `.ph-v2-head` grid every other section still uses
+          unmodified; the cover grew about 30% (300px -> 390px) and the aside column
+          narrowed to make room for it, since the spec list's full-width divider lines were
+          visually heavier than the cover they sat beside; and the vertical rhythm above the
+          previews was compressed so they surface sooner on the scroll. */}
       <section className="ph-v2 ph-v2-blue" id="final-concept">
         <div className="ph-canvas">
           <Reveal>
-            <div className="ph-v2-head">
-              <p className="num">07</p>
-              <h2>{finalConcept.heading}</h2>
-              <div className="lede">
-                <p className="ph-lbl">{finalConcept.label}</p>
-                <p>{finalConcept.lead}</p>
+            <div className="ph-07-head">
+              <p className="ph-lbl ph-07-eyebrow">{finalConcept.label}</p>
+              <div className="ph-v2-head">
+                <p className="num">07</p>
+                <h2>{finalConcept.heading}</h2>
+                <div className="lede">
+                  <p>{finalConcept.lead}</p>
+                </div>
               </div>
             </div>
           </Reveal>
@@ -521,7 +543,7 @@ export default function PostHarvestPage() {
                 <Image
                   src="/post-harvest/handbook/handbook-cover-1600.webp"
                   alt="Cover of the construction handbook, titled Drying Tower, first version, listing a construction manual, materials needed, tools needed and how to use"
-                  width={1600} height={1132} sizes="(max-width: 999px) 44vw, 300px"
+                  width={1600} height={1132} sizes="(max-width: 999px) 57vw, 390px"
                 />
                 <figcaption className="ph-cap">
                   <b>{finalConcept.deliverable.title}.</b> {finalConcept.deliverable.text}
@@ -532,7 +554,7 @@ export default function PostHarvestPage() {
                 {finalConcept.body.map((t) => (
                   <p className="ph-body" key={t.slice(0, 20)}>{t}</p>
                 ))}
-                <ul className="ph-annots" style={{ marginTop: 22 }}>
+                <ul className="ph-annots" style={{ marginTop: 10 }}>
                   {annotations.map((a) => (
                     <li className="ph-annot" key={a.k}>
                       <span className="v">{a.v}</span>
@@ -546,36 +568,36 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
-            <div className="ph-07-previews">
-              <figure className="ph-support-plate-wrap">
-                <div className="ph-support-plate">
-                  <Image
-                    src="/post-harvest/handbook/handbook-step-1600.webp"
-                    alt="A handbook page headed Step 1, showing how to weld four square tubes into a rectangular frame, with dimensioned sub-steps and the materials needed listed beneath"
-                    width={1600} height={1111} sizes="(max-width: 899px) 92vw, 46vw"
-                  />
-                </div>
-                <figcaption className="ph-cap">{finalConcept.captions.step}</figcaption>
-              </figure>
+            <div className="ph-07-inside">
+              <div className="ph-07-inside-head">
+                <p className="ph-lbl">{finalConcept.previewsLabel}</p>
+                <HandbookOpen label={finalConcept.handbookCta.label} />
+              </div>
 
-              <figure className="ph-support-plate-wrap">
-                <div className="ph-support-plate">
-                  <Image
-                    src="/post-harvest/handbook/handbook-cutlist-1600.webp"
-                    alt="A handbook page headed Cutlist of materials, showing measured steel sections including square tube, angle iron, flat iron, metal sheet and pipe"
-                    width={1600} height={1132} sizes="(max-width: 899px) 92vw, 46vw"
-                  />
-                </div>
-                <figcaption className="ph-cap">{finalConcept.captions.cutlist}</figcaption>
-              </figure>
+              <div className="ph-07-previews">
+                <figure className="ph-support-plate-wrap">
+                  <div className="ph-support-plate">
+                    <Image
+                      src="/post-harvest/handbook/handbook-step-1600.webp"
+                      alt="A handbook page headed Step 1, showing how to weld four square tubes into a rectangular frame, with dimensioned sub-steps and the materials needed listed beneath"
+                      width={1600} height={1111} sizes="(max-width: 899px) 92vw, 46vw"
+                    />
+                  </div>
+                  <figcaption className="ph-cap">{finalConcept.captions.step}</figcaption>
+                </figure>
+
+                <figure className="ph-support-plate-wrap">
+                  <div className="ph-support-plate">
+                    <Image
+                      src="/post-harvest/handbook/handbook-cutlist-1600.webp"
+                      alt="A handbook page headed Cutlist of materials, showing measured steel sections including square tube, angle iron, flat iron, metal sheet and pipe"
+                      width={1600} height={1132} sizes="(max-width: 899px) 92vw, 46vw"
+                    />
+                  </div>
+                  <figcaption className="ph-cap">{finalConcept.captions.cutlist}</figcaption>
+                </figure>
+              </div>
             </div>
-          </Reveal>
-
-          <Reveal>
-            <HandbookOpen
-              title={finalConcept.handbookCta.title}
-              sub={finalConcept.handbookCta.sub}
-            />
           </Reveal>
 
           <Reveal>

@@ -19,13 +19,17 @@ import {
  * elsewhere in the tree that calls `openHandbook(n)`. That is cheaper than threading
  * context through the server component and keeps the two free to move independently.
  *
- * ONE ENTRANCE, DELIBERATELY SECONDARY (Sylvia, 2026-09-06, revised 2026-09-07). The
- * handbook spreads in 07 used to carry a pill each, so the page had four ways in and none
- * of them looked like the main one. The spreads are plain, non-clickable images now — they
- * are the primary reading path, understandable without opening anything — and this one
- * outline button is the only control. The 53-page reader is an optional deep dive that
- * interrupts the case-study flow, so the button reads as available, not as the section's
- * focal point: readable label, modest size, no fill.
+ * ONE ENTRANCE, DELIBERATELY SECONDARY (Sylvia, 2026-09-06, revised twice on 2026-09-07).
+ * The handbook spreads in 07 used to carry a pill each, so the page had four ways in and
+ * none of them looked like the main one. The spreads are plain, non-clickable images now —
+ * they are the primary reading path, understandable without opening anything. The control
+ * that opens the 53-page reader went through two shapes after that: first a full-width
+ * "paper on blue" band (too dominant once the reader was reclassified as optional), then a
+ * small bordered box beneath the previews (correctly sized, but floating alone in its own
+ * empty stretch of canvas — a third composition the section did not need). It is now a
+ * plain text link inside the previews' own header row, beside the "Inside the handbook"
+ * label — see `.ph-07-inside-head` in page.tsx — which is where "optional access" reads as
+ * part of the previews rather than a separate destination.
  *
  * MOTION IS OFF (see reveal.tsx — Sylvia's instruction, 2026-09-03). There is no page-turn
  * animation, no fade between sheets and no transform on open. Turning a page swaps the
@@ -46,17 +50,16 @@ function openHandbook(page: number) {
 }
 
 /**
- * The page's one way into the handbook: a small outline button, sized to its own content
- * rather than the canvas width, so it cannot out-weigh the two previews above it. It is a
- * `<button>` in its entirety rather than a link with a hit area, so there is no dead space
- * inside it that looks clickable but is not. The arrow lives in the copy itself (`sub`, from
- * content.ts), not as a separate element, since the two-line label is quoted verbatim.
+ * The page's one way into the handbook: a single-line text button, no box, sized to its own
+ * label. It sits at the end of the previews' header row, opposite "Inside the handbook", so
+ * it reads as part of that group rather than a destination of its own. One line only — no
+ * page count on a second line, no placement over either image — because the previews
+ * already carry the "what this is" job; this control's only job is "there is more."
  */
-export function HandbookOpen({ title, sub }: { title: string; sub: string }) {
+export function HandbookOpen({ label }: { label: string }) {
   return (
-    <button type="button" className="ph-hb-secondary" onClick={() => openHandbook(HANDBOOK_PLATE_PAGE.cover)}>
-      <span className="ph-hb-secondary-title">{title}</span>
-      <span className="ph-hb-secondary-sub">{sub}</span>
+    <button type="button" className="ph-hb-textlink" onClick={() => openHandbook(HANDBOOK_PLATE_PAGE.cover)}>
+      {label}
     </button>
   );
 }

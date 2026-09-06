@@ -51,15 +51,55 @@ function openHandbook(page: number) {
 
 /**
  * The page's one way into the handbook: a single-line text button, no box, sized to its own
- * label. It sits at the end of the previews' header row, opposite "Inside the handbook", so
- * it reads as part of that group rather than a destination of its own. One line only — no
- * page count on a second line, no placement over either image — because the previews
- * already carry the "what this is" job; this control's only job is "there is more."
+ * label. One line only — no page count on a second line — because the surrounding copy
+ * already carries the "what this is" job; this control's only job is "there is more."
+ *
+ * SUPERSEDED in section 07 by `HandbookCoverOpen` below (2026-09-07, layout-reference pass):
+ * that section now makes the cover itself the entrance, with this same label as its caption
+ * rather than a standalone link. Kept exported in case another section wants a plain text
+ * entrance without a cover to attach it to.
  */
 export function HandbookOpen({ label }: { label: string }) {
   return (
     <button type="button" className="ph-hb-textlink" onClick={() => openHandbook(HANDBOOK_PLATE_PAGE.cover)}>
       {label}
+    </button>
+  );
+}
+
+/**
+ * The cover AND its caption are one click target (2026-09-07, layout-reference pass): "the
+ * entire cover must be clickable" and "clicking either the cover or CTA" open the same
+ * destination, so one <button> wraps both rather than two separate controls racing each
+ * other. A `<button>` cannot contain another interactive element, which is also why this
+ * replaced `HandbookOpen` here instead of nesting it inside a clickable figure.
+ *
+ * THERE IS NO PDF. The brief that produced this component asked for "the existing full
+ * handbook PDF" — no such file exists anywhere in the repository; the handbook has only
+ * ever existed as this in-page flip reader over 53 page images (see the file header above:
+ * "MOTION IS OFF... no page-turn animation" was an explicit, deliberate choice, not an
+ * oversight). This opens that real reader instead of linking to a asset that does not
+ * exist. TODO(sylvia): if a PDF export of the handbook gets made, this is the one place to
+ * point at it.
+ */
+export function HandbookCoverOpen({
+  coverSrc, coverAlt, coverWidth, coverHeight, ctaLabel, contentsLine,
+}: {
+  coverSrc: string; coverAlt: string; coverWidth: number; coverHeight: number;
+  ctaLabel: string; contentsLine: string;
+}) {
+  return (
+    <button
+      type="button"
+      className="ph-07-hb-open"
+      onClick={() => openHandbook(HANDBOOK_PLATE_PAGE.cover)}
+      aria-label={`${ctaLabel}. Opens the construction handbook, page by page, in place on this page.`}
+    >
+      <span className="ph-07-cover-stack">
+        <Image src={coverSrc} alt={coverAlt} width={coverWidth} height={coverHeight} sizes="(max-width: 899px) 60vw, 320px" />
+      </span>
+      <span className="ph-07-hb-cta">{ctaLabel}</span>
+      <span className="ph-07-hb-contents-line">{contentsLine}</span>
     </button>
   );
 }

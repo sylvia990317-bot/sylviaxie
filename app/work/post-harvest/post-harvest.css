@@ -416,12 +416,9 @@ figure { margin: 0; }
 .ph-outcome-cap { margin-top: 14px; display: grid; gap: 5px; max-width: 40ch; }
 .ph-outcome-cap strong { font-size: var(--fs-small); font-weight: 600; color: var(--on-blue); }
 .ph-outcome-cap span { font-size: var(--fs-small); line-height: 1.5; color: var(--on-blue-dim); }
-/* Spread across the copy column rather than bunched at its left (2026-09-07): with the
-   four entries spaced out, this row reaches the column's right edge, which is what lines the
-   intro area up with spread 2's right edge below it. Bumped from 10px to 12px as part of
-   "increase to a clearly readable size". */
-.ph-handbook-contents { list-style: none; display: flex; flex-wrap: wrap; gap: 10px clamp(20px, 3.4vw, 52px); margin: 0; padding: 0; }
-.ph-handbook-contents li { font-family: var(--ph-mono), ui-monospace, monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-blue-dim); }
+/* `.ph-handbook-contents` (a wrapped tag list) removed (2026-09-07, second layout-reference
+   pass): the four entries now render as one centred mono line, `.ph-07-hb-contents-line`,
+   joined with " · " in page.tsx rather than a `<ul>`. */
 
 .ph-handbook-quote { margin: 0; max-width: 30ch; }
 .ph-handbook-quote blockquote { margin: 0; font-family: var(--ph-serif), Georgia, serif; font-size: clamp(19px, 1.9vw, 26px); line-height: 1.25; letter-spacing: -0.015em; color: var(--on-blue); text-wrap: pretty; }
@@ -447,9 +444,15 @@ figure { margin: 0; }
 .ph-mech-figs { display: grid; grid-template-columns: 1fr; gap: clamp(16px, 2vw, 28px); }
 .ph-mech-figs img { background: #fff; border: 1px solid var(--line); aspect-ratio: 595 / 420; object-fit: contain; }
 .ph-mech-figs figcaption { margin-top: 10px; display: flex; align-items: center; gap: 9px; }
+/* A pill, not a fixed-diameter circle (2026-09-07): the two frame badges now read "1" and
+   "2-4" -- matching exactly which of the four numbered steps below each diagram actually
+   shows, since "Creating airflow" is one drawing covering three steps (Rise, Dry, Exit),
+   not a parallel "step 2". A circle sized for one digit could not hold "2-4"; before this,
+   the frames read "1" / "2" beside a list that continued to "3" and "4", which implied a
+   1:1 mapping between diagrams and steps that was never true. */
 .ph-frame-n {
   display: inline-grid; place-items: center; flex: none;
-  width: 17px; height: 17px; border-radius: 50%;
+  min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px;
   background: var(--blue); color: var(--on-blue);
   font-size: 9.5px; letter-spacing: 0; line-height: 1;
 }
@@ -895,51 +898,56 @@ figure { margin: 0; }
 .ph-07-aside .ph-body:first-child { margin-top: 0; }
 .ph-07-aside .ph-annots { gap: clamp(8px, 1.2vw, 14px); }
 
-/* ---- 07 / the handbook, as one numbered sequence (2026-09-07, Sylvia's layout ref) ----
-   "01 / Cover & purpose" and "02 / Selected pages" are two steps of one thing, so they
-   share ONE grid: `--hb-col` is the cover's track, and both the intro row and the spreads
-   row start at the canvas's left edge and end at its right edge. That is what makes the
-   cover's left edge land on spread 1's left edge, and the copy column's right edge land on
-   spread 2's right edge. */
-.ph-07-hb { --hb-col: clamp(240px, 22vw, 300px); margin-top: var(--beat-y); }
+/* ---- 07 / the handbook, as one centred, clickable sequence ----
+   (2026-09-07, SECOND layout-reference pass -- fully replaces the first pass's two-column,
+   numbered layout.) Title -> centred intro -> centred cover-as-entrance -> its CTA caption
+   -> a contents line -> "Selected pages" -> the two spreads. Everything in this block is
+   centred (`justify-items: center` / `text-align: center` / `margin-inline: auto`) except
+   the final two-up spreads, which fill the canvas width edge to edge like every other
+   full-width image pair on the page. */
+.ph-07-hb { margin-top: var(--beat-y); display: grid; justify-items: center; text-align: center; }
 
-.ph-07-hb-head { display: grid; gap: 10px; padding-bottom: clamp(14px, 1.4vw, 20px); border-bottom: 1px solid var(--on-blue-line); }
-.ph-07-hb-head .ph-lbl { margin: 0; }
-/* Held at the section's own h3 scale. The reference sets this very large; at that size it
-   competes with the section heading two rows above it. */
+/* Title kept exactly as it already was elsewhere on the page: no eyebrow, no oversized
+   display size (the reference sets it very large; that was rejected on this pass's
+   explicit instruction), just this section's own h3 scale, centred with a full-width rule
+   under it. */
+.ph-07-hb-head { width: 100%; padding-bottom: clamp(14px, 1.4vw, 20px); border-bottom: 1px solid var(--on-blue-line); }
 .ph-07-hb-head h3 {
   margin: 0; font-family: var(--ph-serif), Georgia, serif;
   font-size: clamp(22px, 2.1vw, 31px); font-weight: 500; line-height: 1.06;
   letter-spacing: -0.02em; color: var(--on-blue);
 }
 
-.ph-07-hb-intro { display: grid; grid-template-columns: 1fr; gap: clamp(26px, 3vw, 52px); align-items: start; margin-top: clamp(26px, 2.8vw, 44px); }
-@media (min-width: 900px) { .ph-07-hb-intro { grid-template-columns: var(--hb-col) minmax(0, 1fr); } }
-
-.ph-07-hb-copy { min-width: 0; display: grid; gap: clamp(22px, 2.4vw, 34px); align-content: start; }
-/* Serif, and larger than body copy: this is the statement that justifies the whole
-   deliverable, not a paragraph of explanation. Same register as `.ph-takeaway` and
-   `.ph-open-claim` elsewhere on the page. */
+/* Sans body copy, not serif display (2026-09-07, refinement pass): reads as the section's
+   explanatory intro line rather than a second display statement competing with the title
+   directly above it. ~520px measure, centred. */
 .ph-07-rationale {
-  margin: 0; font-family: var(--ph-serif), Georgia, serif;
-  font-size: clamp(20px, 1.9vw, 30px); font-weight: 400; line-height: 1.28;
-  letter-spacing: -0.01em; color: var(--on-blue); max-width: 42ch; text-wrap: pretty;
+  margin: clamp(26px, 2.8vw, 40px) 0 0;
+  font-family: var(--ph-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(17px, 1vw, 18px); font-weight: 400; line-height: 1.45;
+  color: var(--on-blue);
+  max-width: 520px;
 }
-.ph-07-hb-contents { display: grid; gap: 12px; }
-.ph-07-hb-contents .ph-lbl { margin: 0; }
 
-/* The cover, and two faint offset page edges behind it so it reads as a bound document
-   rather than one sheet. Opacity over the blue field, not a shadow: the brief rules out
-   drop shadows, and these are pages, not lighting.
+/* The cover, its two offset page edges, the CTA caption and the contents line are ALL
+   inside one <button> (see `HandbookCoverOpen` in handbook-reader.tsx) -- "the entire cover
+   must be clickable" and cover + CTA open the same destination, so one control serves both
+   rather than two racing each other. A plain, unstyled button as the base: no button box,
+   no fill, no border -- the cover image and the text are the only visible things. */
+.ph-07-hb-open {
+  all: unset; cursor: pointer;
+  margin-top: clamp(32px, 3.6vw, 52px);
+  display: grid; justify-items: center; gap: 14px;
+}
+.ph-07-hb-open:focus-visible { outline: 2px solid var(--on-blue); outline-offset: 6px; }
 
-   CROPPED TO THE LEFT PAGE. `handbook-cover-1600.webp` is not a cover, it is a two-page
-   SPREAD scan at 1600x1132 (1.41:1 landscape): the cover artwork is on the left page and
-   the right page is blank. Shown whole it rendered as a book cover wider than tall with a
-   large panel of empty white beside it. The box is set to the left page's proportion
-   (800 x 1132) and the image covers it from the left, so the blank page is cropped away.
-   Done in CSS so the original scan stays intact and the crop stays adjustable. */
-.ph-07-cover { max-width: var(--hb-col); display: grid; gap: 14px; margin: 0; justify-self: start; }
-.ph-07-cover-stack { position: relative; }
+/* Two faint offset page edges behind the cover so it reads as a bound document rather than
+   one sheet. Opacity over the blue field, not a shadow: the brief rules out drop shadows,
+   and these are pages, not lighting. */
+.ph-07-cover-stack {
+  position: relative; width: clamp(220px, 26vw, 320px);
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
 .ph-07-cover-stack::before,
 .ph-07-cover-stack::after {
   content: ""; position: absolute; top: 7px; bottom: 7px; left: 0; right: 0;
@@ -947,27 +955,55 @@ figure { margin: 0; }
 }
 .ph-07-cover-stack::after { transform: translateX(7px); opacity: 0.5; }
 .ph-07-cover-stack::before { transform: translateX(14px); opacity: 0.28; }
-.ph-07-cover img {
+/* Hover/focus: the cover lifts about 4px and scales fractionally, per the brief -- subtle
+   and fast, no button box or overlay text. */
+.ph-07-hb-open:hover .ph-07-cover-stack,
+.ph-07-hb-open:focus-visible .ph-07-cover-stack { transform: translateY(-4px) scale(1.01); }
+@media (prefers-reduced-motion: reduce) { .ph-07-cover-stack { transition: none; } }
+
+/* CROPPED TO THE LEFT PAGE. `handbook-cover-1600.webp` is not a cover, it is a two-page
+   SPREAD scan at 1600x1132 (1.41:1 landscape): the cover artwork is on the left page and
+   the right page is blank. Shown whole it rendered as a book cover wider than tall with a
+   large panel of empty white beside it. The box is set to the left page's proportion
+   (800 x 1132) and the image covers it from the left, so the blank page is cropped away.
+   Done in CSS so the original scan stays intact and the crop stays adjustable. */
+.ph-07-cover-stack img {
   position: relative; z-index: 1;
   display: block; width: 100%; height: auto;
   aspect-ratio: 800 / 1132; object-fit: cover; object-position: left center;
   background: #fff;
 }
-.ph-07-cover figcaption { margin: 0; }
 
-/* 64-80px to the pages block: close enough that the two halves read as one sequence. */
+/* The CTA is text only, underlined on hover/focus -- the brief's whole interaction spec for
+   it, and consistent with `.ph-hb-textlink` elsewhere on the page. */
+.ph-07-hb-cta {
+  font-family: var(--ph-serif), Georgia, serif;
+  font-size: clamp(17px, 1.5vw, 21px); font-weight: 500; letter-spacing: -0.01em;
+  color: var(--on-blue); text-decoration: underline; text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition: text-decoration-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ph-07-hb-open:hover .ph-07-hb-cta,
+.ph-07-hb-open:focus-visible .ph-07-hb-cta { text-decoration-color: currentColor; }
+
+.ph-07-hb-contents-line {
+  font-family: var(--ph-mono), ui-monospace, monospace;
+  font-size: 12.5px; letter-spacing: 0.14em;
+  color: var(--on-blue-dim);
+}
+
+/* 64-80px to the pages block: close enough that the two halves read as one sequence. A
+   thin rule sits under the label pair, matching the rule under the title above. */
 .ph-07-hb-pages-head {
-  display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap;
-  gap: 10px 24px; margin-top: clamp(64px, 6vw, 80px);
+  width: 100%; margin-top: clamp(64px, 6vw, 80px);
   padding-bottom: clamp(12px, 1.2vw, 16px); border-bottom: 1px solid var(--on-blue-line);
 }
 .ph-07-hb-pages-head .ph-lbl { margin: 0 0 6px; }
-.ph-07-hb-sub { margin: 0; font-size: clamp(14px, 1.05vw, 15.5px); line-height: 1.4; color: var(--on-blue-dim); }
+.ph-07-hb-sub { margin: 0; font-family: var(--ph-serif), Georgia, serif; font-size: clamp(17px, 1.5vw, 21px); font-weight: 500; line-height: 1.3; color: var(--on-blue); }
 
-/* `.ph-07-inside` / `.ph-07-inside-head` removed (2026-09-07): the previews' old header row
-   ("Inside the handbook" + the reader link) is now `.ph-07-hb-pages-head`, which carries the
-   "02 / Selected pages" label, its subtitle and the same reader link, inside the shared
-   handbook grid. */
+/* The two spreads fill the canvas edge to edge (`justify-items` on `.ph-07-hb` is centring,
+   not stretching, so this row opts back into full width explicitly). */
+.ph-07-previews { justify-self: stretch; width: 100%; }
 
 /* Two dimensioned instruction spreads. They were a third-width plate capped at 22vh
    (~424 x 178px), where none of the step text or the cut-list measurements could be
@@ -1036,7 +1072,15 @@ figure { margin: 0; }
 .ph-v2-ink .ph-canvas { padding-inline: 0; }
 .ph-done-v2 { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: center; }
 @media (min-width: 900px) { .ph-done-v2 { grid-template-columns: 3fr 2fr; } }
-.ph-done-v2 img { display: block; width: 100%; height: auto; max-height: 24vh; object-fit: contain; background: #fff; }
+/* `aspect-ratio` matching the photo's own 1400x936, not `max-height` (2026-09-07): the old
+   `width:100% + max-height:24vh` pairing forced a roughly 3:1 box regardless of the photo's
+   actual ~1.5:1 shape. `object-fit: contain` then had to letterbox the real photo inside
+   that mismatched box, and `background: #fff` (meant for the line-drawing plates
+   elsewhere on the page, not a photograph) turned the letterbox bars into visible white
+   stripes down both sides. Locking the box to the photo's own ratio means there is never
+   a gap for the background to show through, so `object-fit`/`background` are no longer
+   needed at all. */
+.ph-done-v2 img { display: block; width: 100%; height: auto; aspect-ratio: 1400 / 936; }
 
 @media (max-width: 767px) {
   .ph-dominant img { max-height: 46vh; }
@@ -1074,7 +1118,11 @@ figure { margin: 0; }
    `--edge` trick needed, unlike `.ph-done` in section 09. `.ph-10-photo-content` then
    re-applies `.ph-canvas` (see page.tsx) so its text still lines up with the heading and
    footer on either side of it. */
-.ph-10-photo { position: relative; margin-top: var(--beat-y); overflow: hidden; }
+/* `margin-top: 0`, not `var(--beat-y)` (fifth pass, 2026-09-07): that gap existed to
+   separate this field from the heading that used to sit above it on the plain page. The
+   heading is the first thing inside the field now, so the section's own top padding
+   (`.ph-section`) is already the only gap needed above it. */
+.ph-10-photo { position: relative; margin-top: 0; overflow: hidden; }
 .ph-10-photo-media { position: absolute; inset: 0; z-index: 0; }
 /* `max-height: none` is required, not cosmetic: `.ph-dominant img` and the generic
    `.ph-v2 :where(figure) img` fallback both set a `max-height` sized for `width:100% /
@@ -1089,6 +1137,12 @@ figure { margin: 0; }
    plus the takeaway, spread through the whole frame, so the whole frame needs contrast. */
 .ph-10-photo-scrim { position: absolute; inset: 0; z-index: 1; background: rgba(10, 14, 20, 0.64); }
 .ph-10-photo-content { position: relative; z-index: 2; padding-block: clamp(40px, 5.5vw, 72px); }
+/* The heading moved into the photo field on this same pass: `.ph-v2-head` is authored for
+   the plain page (`--blue` numeral, `--ink` h2, `--ink-soft` lede), so it needs the same
+   on-photo treatment every other element in this field already has. */
+.ph-10-photo .ph-v2-head .num { color: #fff; opacity: 0.75; }
+.ph-10-photo .ph-v2-head h2 { color: #fff; }
+.ph-10-photo .ph-v2-head .lede { color: rgba(255, 255, 255, 0.82); }
 .ph-10-photo .ph-insight { border-top-color: rgba(255, 255, 255, 0.3); }
 .ph-10-photo .ph-insight h3 { color: #fff; }
 .ph-10-photo .ph-insight .ph-body { color: rgba(255, 255, 255, 0.82); }
@@ -1196,7 +1250,13 @@ figure { margin: 0; }
 .ph-support img                        { max-height: 34vh; }
 .ph-support-plate img                  { max-height: 32vh; }
 .ph-07-support .ph-support-plate img   { max-height: 30vh; }
-.ph-done-v2 img                        { max-height: 30vh; }
+/* `.ph-done-v2 img { max-height: 30vh; }` removed here (2026-09-07): this second, later
+   rule was still winning over the `aspect-ratio: 1400/936` fix above, forcing the box back
+   to a fixed height independent of the image's real shape. With width:100% fixed and
+   height forced by max-height, the browser had no free dimension left to preserve the
+   image's own ratio in, so it fell back to `object-fit`'s default, `fill` -- stretching
+   the collector photo to whatever oddly-shaped box the two constraints produced. Deleting
+   this duplicate is what actually lets `aspect-ratio` govern the box. */
 .ph-mech-pair img                      { max-height: 42vh; }
 @media (min-width: 900px) {
   .ph-v2-mosaic figure:not(.ph-mosaic-lead) img { height: clamp(160px, 21vh, 238px); }

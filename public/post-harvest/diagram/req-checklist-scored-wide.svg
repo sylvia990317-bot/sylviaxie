@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 888 487" width="888" font-family="Geist, system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif" role="img" aria-label="Requirement list marked by the team: thirteen of eighteen marked, five left unmarked">
-<rect width="888" height="487" fill="#fbfbfa"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 888 457" width="888" font-family="Geist, system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif" role="img" aria-label="Requirement list marked by the team: thirteen of eighteen marked, five left unmarked">
+<rect width="888" height="457" fill="#fff"/>
 <text x="14" y="30" class="s" font-size="19" font-weight="600" fill="#14161a">Requirement list</text>
 <text x="874" y="30" text-anchor="end" class="m" font-size="11" letter-spacing="0.09em" fill="#787d85">MARKED BY THE TEAM &#183; BOOKLET P.38</text>
 <line x1="14" y1="43" x2="874" y2="43" stroke="#14161a" stroke-width="1.4"/>
@@ -41,10 +41,6 @@
 <path d="M17.2,359 l2.9,3 l5,-6.2" fill="none" stroke="#17357a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 <text x="40" y="363" class="s" font-size="14" fill="#14161a">Process more than 50 kg of grain at once</text>
 <line x1="14" y1="373" x2="424" y2="373" stroke="#e3e4e2" stroke-width="1"/>
-<rect x="14" y="382" width="14" height="14" rx="2" fill="#e6ebf4" stroke="#14161a" stroke-width="1.25"/>
-<path d="M17.2,389 l2.9,3 l5,-6.2" fill="none" stroke="#17357a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="40" y="393" class="s" font-size="14" fill="#14161a">Usable by one person</text>
-<line x1="14" y1="403" x2="424" y2="403" stroke="#e3e4e2" stroke-width="1"/>
 <text x="464" y="69" class="m" font-size="10.5" letter-spacing="0.12em" fill="#787d85">DESIRED FEATURES, CONTINUED</text>
 <rect x="464" y="78" width="14" height="14" rx="2" fill="#e6ebf4" stroke="#14161a" stroke-width="1.25"/>
 <path d="M467.2,85 l2.9,3 l5,-6.2" fill="none" stroke="#17357a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -78,10 +74,14 @@
 <path d="M467.2,295 l2.9,3 l5,-6.2" fill="none" stroke="#17357a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 <text x="490" y="299" class="s" font-size="14" fill="#14161a">Weevils eradicated from the grain after drying</text>
 <line x1="464" y1="309" x2="874" y2="309" stroke="#e3e4e2" stroke-width="1"/>
-<line x1="14" y1="443" x2="874" y2="443" stroke="#e3e4e2" stroke-width="1"/>
-<rect x="14" y="456" width="14" height="14" rx="2" fill="#e6ebf4" stroke="#14161a" stroke-width="1.25"/>
-<path d="M17.2,463 l2.9,3 l5,-6.2" fill="none" stroke="#17357a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="40" y="467" class="s" font-size="13" fill="#454b54">Marked by the team &#183; 13</text>
-<rect x="264" y="456" width="14" height="14" rx="2" fill="none" stroke="#c4c6c9" stroke-width="1.25"/>
-<text x="290" y="467" class="s" font-size="13" fill="#454b54">Left unmarked &#183; could not yet be evaluated &#183; 5</text>
+<rect x="464" y="318" width="14" height="14" rx="2" fill="#e6ebf4" stroke="#14161a" stroke-width="1.25"/>
+<path d="M467.2,325 l2.9,3 l5,-6.2" fill="none" stroke="#17357a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="490" y="329" class="s" font-size="14" fill="#14161a">Usable by one person</text>
+<line x1="464" y1="339" x2="874" y2="339" stroke="#e3e4e2" stroke-width="1"/>
+<line x1="14" y1="413" x2="874" y2="413" stroke="#e3e4e2" stroke-width="1"/>
+<rect x="14" y="426" width="14" height="14" rx="2" fill="#e6ebf4" stroke="#14161a" stroke-width="1.25"/>
+<path d="M17.2,433 l2.9,3 l5,-6.2" fill="none" stroke="#17357a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="40" y="437" class="s" font-size="13" fill="#454b54">Marked by the team &#183; 13</text>
+<rect x="264" y="426" width="14" height="14" rx="2" fill="none" stroke="#c4c6c9" stroke-width="1.25"/>
+<text x="290" y="437" class="s" font-size="13" fill="#454b54">Left unmarked &#183; could not yet be evaluated &#183; 5</text>
 </svg>

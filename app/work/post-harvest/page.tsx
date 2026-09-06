@@ -9,7 +9,7 @@ import {
   project, meta, context, field, participants, focus, challenge,
   concepts, finalConcept, mechanism, status, reflection,
 } from "./content";
-import HandbookReader, { HandbookOpen } from "./handbook-reader";
+import HandbookReader, { HandbookCoverOpen } from "./handbook-reader";
 
 /* Route-scoped fonts, same pattern HALOGRIP uses: none of these reach `/` or any other
    route. Geist carries readable text; Bodoni Moda carries display, section numerals and
@@ -136,20 +136,28 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
-            {/* The roof photograph leads, not the road (Sylvia, 2026-09-07, audit). Only
-                one of these three is evidence: it shows the existing drying method, which
-                is the problem the whole project is about. The road and the planting are
-                atmosphere. The largest cell used to hold the road, so the mosaic's biggest
-                picture was its least relevant one. Both are kept, at supporting size --
-                cutting them is Sylvia's call, not a layout decision. */}
+            {/* The lead photo leads, not the road (Sylvia, 2026-09-07, audit). Of these
+                three, this one and the planting photo are evidence of the harvest itself;
+                the road is atmosphere. The largest cell used to hold the road, so the
+                mosaic's biggest picture was its least relevant one. Both are kept, at
+                supporting size -- cutting them is Sylvia's call, not a layout decision.
+
+                SWAPPED (Sylvia, 2026-09-07, second pass). This slot originally held a photo
+                of crop drying on a roof ridge, captioned to show the existing drying method
+                directly. That file turned out to be a low-resolution camera-preview export
+                (see the recovery note in git history for `field-roof-drying-1600.webp`), so
+                Sylvia replaced it with this sharp photo instead -- a bowl of harvested grain
+                held up during an interview, phone and pen visible. It is evidence of the
+                harvest, not of the drying method specifically; the caption was rewritten to
+                match (`context.captions.grain`, was `roof`). */}
             <div className="ph-v2-mosaic">
               <figure className="ph-mosaic-lead">
                 <Image
-                  src="/post-harvest/photo/field-roof-drying-1600.webp"
-                  alt="Greens laid out to dry along the ridge of a corrugated tin roof on a mud-walled building in Seme"
-                  width={1600} height={1067} sizes="(max-width: 899px) 92vw, 46vw"
+                  src="/post-harvest/photo/field-grain-bowl-1600.webp"
+                  alt="A farmer holding out a metal bowl of harvested grain during an interview, with a phone and pen visible in another person's hands beside it"
+                  width={1600} height={1069} sizes="(max-width: 899px) 92vw, 46vw"
                 />
-                <figcaption className="ph-cap">{context.captions.roof}</figcaption>
+                <figcaption className="ph-cap">{context.captions.grain}</figcaption>
               </figure>
               <figure>
                 <Image
@@ -628,60 +636,46 @@ export default function PostHarvestPage() {
           </Reveal>
 
           {/* --- beat B / the handbook ----------------------------------------
-              Rebuilt to Sylvia's layout reference (2026-09-07). The cover and the two
-              interior spreads used to be two unrelated compositions; they are one numbered
-              sequence now -- "01 / Cover & purpose" then "02 / Selected pages" -- sharing a
-              single grid so the cover's left edge lands on spread 1's left edge and the copy
-              column ends on spread 2's right edge.
+              REBUILT A SECOND TIME to a new layout reference (2026-09-07). The first pass
+              (cover beside an explanation column, "01 /" and "02 /" numbering, a text-link
+              entrance in the pages header) is fully replaced. The handbook is now presented
+              as one complete, clickable deliverable, centred, before the two selected pages:
+              title -> centred intro -> centred cover (the entrance itself) -> its own CTA
+              caption -> the contents line -> "Selected pages" -> the two spreads.
 
-              Deliberately NOT in the reference: no arrows, cards, rounded corners,
-              gradients, icons or drop shadows. The only new device is two faint offset page
-              edges behind the cover, which say "this is a bound document, not one sheet".
-              The reference also sets the title very large; it is held at the section's own
-              h3 scale here so it does not compete with the section heading above it. */}
+              Deliberately NOT here, per this pass's brief: no numbering, no cards, no
+              rounded corners, no gradients, no icons, no strong shadows, no connecting
+              arrows. The only device is two faint offset page edges behind the cover (pure
+              opacity, no shadow), so it reads as a bound document rather than one sheet.
+
+              THERE IS NO PDF. The brief asked for a click to "open the existing full
+              handbook PDF in a new tab" — no PDF exists anywhere in this project; see the
+              long note on `HandbookCoverOpen` in handbook-reader.tsx. The cover and its CTA
+              open the real, existing in-page reader instead of a link to a file that does
+              not exist. */}
           <Reveal>
             <div className="ph-07-hb">
               <div className="ph-07-hb-head">
-                <p className="ph-lbl">{finalConcept.beats.coverLabel}</p>
                 <h3>{finalConcept.beats.handbook}</h3>
               </div>
 
-              <div className="ph-07-hb-intro">
-                <figure className="ph-07-cover">
-                  {/* The stack's two offset edges are drawn in CSS on this wrapper, so the
-                      image itself stays a plain image. */}
-                  <div className="ph-07-cover-stack">
-                    <Image
-                      src="/post-harvest/handbook/handbook-cover-1600.webp"
-                      alt="Cover of the construction handbook, titled Drying Tower, first version, listing a construction manual, materials needed, tools needed and how to use"
-                      width={1600} height={1132} sizes="(max-width: 899px) 60vw, 300px"
-                    />
-                  </div>
-                  <figcaption className="ph-lbl">{finalConcept.beats.coverCaption}</figcaption>
-                </figure>
+              {/* Why a document rather than a machine. Without this the handbook reads as a
+                  fallback for the tower that was never built, instead of as the answer to
+                  section 04's finding. Centred, max ~600px, per the layout reference. */}
+              <p className="ph-07-rationale">{finalConcept.deliverable.rationale}</p>
 
-                <div className="ph-07-hb-copy">
-                  {/* Why a document rather than a machine. Without this the handbook reads
-                      as a fallback for the tower that was never built, instead of as the
-                      answer to section 04's finding. */}
-                  <p className="ph-07-rationale">{finalConcept.deliverable.rationale}</p>
-                  <div className="ph-07-hb-contents">
-                    <p className="ph-lbl">Contents</p>
-                    <ul className="ph-handbook-contents">
-                      {finalConcept.deliverable.contents.map((c) => (
-                        <li key={c}>{c}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              <HandbookCoverOpen
+                coverSrc="/post-harvest/handbook/handbook-cover-1600.webp"
+                coverAlt="Cover of the construction handbook, titled Drying Tower, first version, listing a construction manual, materials needed, tools needed and how to use"
+                coverWidth={1600}
+                coverHeight={1132}
+                ctaLabel={finalConcept.sequence.ctaLabel}
+                contentsLine={finalConcept.deliverable.contents.join(" · ").toUpperCase()}
+              />
 
               <div className="ph-07-hb-pages-head">
-                <div>
-                  <p className="ph-lbl">{finalConcept.beats.pagesLabel}</p>
-                  <p className="ph-07-hb-sub">{finalConcept.beats.pagesSub}</p>
-                </div>
-                <HandbookOpen label={finalConcept.handbookCta.label} />
+                <p className="ph-lbl">{finalConcept.sequence.pagesLabel}</p>
+                <p className="ph-07-hb-sub">{finalConcept.sequence.pagesSub}</p>
               </div>
 
               <div className="ph-07-previews">
@@ -746,6 +740,12 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
+            {/* The two frame badges name which of the four numbered steps below each
+                diagram actually appears in it (Sylvia, 2026-09-07): "1" alone under
+                Capturing heat, "2-4" under Creating airflow, since that single drawing
+                covers Rise, Dry AND Exit together. They used to read plain "1" / "2",
+                which sat directly above a list that continued on to "3" and "4" and read
+                as a parallel one-to-one numbering that was never actually true. */}
             <div className="ph-mech-pair">
               <figure>
                 <Image src="/post-harvest/diagram/mechanism-sun-1200.webp"
@@ -757,7 +757,7 @@ export default function PostHarvestPage() {
                 <Image src="/post-harvest/diagram/mechanism-airflow-1200.webp"
                   alt="Diagram showing warmed air rising from the collector through the tower shelves and out of the chimney"
                   width={1200} height={846} sizes="(max-width: 799px) 92vw, 42vw" />
-                <figcaption><span className="ph-frame-n">2</span>{mechanism.frameCaptions.airflow}</figcaption>
+                <figcaption><span className="ph-frame-n">2–4</span>{mechanism.frameCaptions.airflow}</figcaption>
               </figure>
             </div>
           </Reveal>
@@ -895,30 +895,22 @@ export default function PostHarvestPage() {
 
           FOURTH PASS, same date: not just the takeaway but the whole closing passage --
           the four insights, the takeaway and the caption -- now sits over the photograph
-          as one field, in white. The heading and lead stay on the plain page above it:
-          they introduce the section rather than belonging to what the photograph closes.
-          The utility footer (credit line, back link) comes after, also on the plain
-          page. */}
-      <section className="ph-section ph-v2" id="reflection">
-        <div className="ph-canvas">
-          <Reveal>
-            <div className="ph-v2-head">
-              <p className="num">10</p>
-              <h2>{reflection.heading}</h2>
-              <p className="lede">{reflection.lead}</p>
-            </div>
-          </Reveal>
-        </div>
+          as one field, in white.
 
-        {/* The four insights, the takeaway and the closing photo as one field (Sylvia,
-            2026-09-07, fourth pass): all of it -- not just the takeaway -- reads as the
-            section's real closing passage, set in white over the dusk photograph rather
-            than as plain text with a small photo appended after. Bleeds to the viewport
-            edge the same way `.ph-done` does in section 09 (negative `--edge` margin,
-            `--edge` padding to bring the content back to the canvas edge), so it reads as
-            a deliberate field rather than a boxed inset. The heading and lead above stay
-            on the plain page: they introduce the section, they are not part of what the
-            photograph is closing. */}
+          FIFTH PASS, same date: the heading and lead moved INTO the photo field too. They
+          briefly stayed on the plain page on the reasoning that they introduce the section
+          rather than belong to what the photograph closes -- reads fine as a rule, but
+          Sylvia's call was that the whole section should be one continuous closing scene
+          starting at the heading, not "plain intro, then a photo begins." The utility
+          footer (credit line, back link) still comes after, on the plain page: that one
+          stays a utility line, not part of the reflection itself. */}
+      <section className="ph-section ph-v2" id="reflection">
+        {/* The heading, the four insights, the takeaway and the closing photo as one field:
+            all of it reads as the section's content, set in white over the dusk photograph.
+            Bleeds to the viewport edge the same way `.ph-done` does in section 09 (this
+            `<div>` is a direct child of the `<section>`, not wrapped in `.ph-canvas`, so it
+            is not width-constrained the way the footer below it is), so it reads as a
+            deliberate field rather than a boxed inset. */}
         <div className="ph-10-photo">
           <div className="ph-10-photo-media">
             <Image
@@ -930,6 +922,14 @@ export default function PostHarvestPage() {
           <div className="ph-10-photo-scrim" />
 
           <div className="ph-canvas ph-10-photo-content">
+            <Reveal>
+              <div className="ph-v2-head">
+                <p className="num">10</p>
+                <h2>{reflection.heading}</h2>
+                <p className="lede">{reflection.lead}</p>
+              </div>
+            </Reveal>
+
             <Reveal>
               <ol className="ph-insights">
                 {reflection.insights.map((ins, i) => (

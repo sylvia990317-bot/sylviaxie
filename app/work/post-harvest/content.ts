@@ -88,7 +88,16 @@ export const context = {
   captions: {
     locator: "Seme sits on the north east shore of the Winam Gulf, at the western tip of Kisumu County. Siaya County is its neighbour to the west.",
     road: "The road into Seme.",
-    roof: "Drying on a roof. The existing method puts the crop wherever the sun reaches.",
+    /**
+     * RENAMED from `roof` (Sylvia, 2026-09-07). The roof-drying photo behind this caption
+     * turned out to be a low-resolution camera preview, not a real export (see the note at
+     * its call site in page.tsx); Sylvia replaced it with a sharp photo of a different
+     * moment, a bowl of grain shown during an interview, so the caption is rewritten to
+     * describe what is actually in that photo rather than a roof that is no longer
+     * pictured. TODO(sylvia): if a properly exported roof-drying photo turns up later, it
+     * can go back in the mosaic's lead slot, and this key can revert to describing it.
+     */
+    grain: "Grain from the harvest, shown during an interview.",
     planting: "Planting by hand, the start of the same year's harvest.",
   },
 };
@@ -329,21 +338,17 @@ export const finalConcept = {
     "A black box collector heats air in the sun; a pipe carries it into a shelved tower. The door locks, so the crop can stay outside while the farmer is away.",
   ],
   /**
-   * The handbook half of the section, numbered as two steps of one sequence (Sylvia's
-   * layout reference, 2026-09-07): the cover and why it exists, then the pages themselves.
-   * The tower half above is not numbered -- the section heading already opens
-   * "The Drying Tower, ...", so only the turn to the handbook is marked.
+   * The handbook half of the section's own title (2026-09-07, second layout-reference
+   * pass: "keep the existing title exactly... do not invent a new headline"). It is the
+   * same string as `deliverable.title` below; kept as its own key because this one is the
+   * section-level heading (rendered as an h3) and the other labels a plate.
    *
-   * `pagesSub` takes its count from HANDBOOK_TOTAL so the promise cannot outlive the page
-   * set. It also frees the reader link from carrying the number, which is why that label is
-   * now "Browse the full handbook" rather than "Browse all 53 pages".
+   * A numbered pair, "01 / Cover & purpose" then "02 / Selected pages", was tried in the
+   * first layout-reference pass and removed in the second, whose brief explicitly excludes
+   * numbering.
    */
   beats: {
     handbook: "The construction handbook",
-    coverLabel: "01 / Cover & purpose",
-    coverCaption: "Handbook cover",
-    pagesLabel: "02 / Selected pages",
-    pagesSub: `Two examples from the ${HANDBOOK_TOTAL}-page construction handbook`,
   },
   deliverable: {
     /**
@@ -397,23 +402,28 @@ export const finalConcept = {
     page: 44,
   },
   /**
-   * SUPERSEDED by `beats.pagesLabel` / `beats.pagesSub` (2026-09-07). Kept so nothing that
-   * still imports it breaks; the "02 / Selected pages" header row replaced it.
+   * SUPERSEDED (2026-09-07, second layout-reference pass). The handbook half of section 07
+   * is no longer "cover beside an explanation column, then a numbered pages header" — it is
+   * one centred sequence: title, intro, cover (itself the entrance), a contents line, then
+   * "Selected pages" and the two spreads. No numbering anywhere in it ("01 /", "02 /"), on
+   * this pass's explicit instruction. `previewsLabel` and `handbookCta` below are kept, not
+   * deleted, so nothing importing them breaks; nothing in 07 renders them any more.
    */
   previewsLabel: "Inside the handbook",
-  /**
-   * The single entrance to the reader (Sylvia, 2026-09-06, revised repeatedly through
-   * 2026-09-07). It sits on the right of the "02 / Selected pages" header row as a plain
-   * text link rather than a boxed control of any size — the two spreads are the primary
-   * reading path and read on their own, so the full reader stays a one-line, optional
-   * "also available" rather than a second composition of its own.
-   *
-   * The page count moved OUT of this label and into `beats.pagesSub` ("Two examples from
-   * the 53-page construction handbook"), which is where a reader now meets the number.
-   * Both come from HANDBOOK_TOTAL, so neither promise can outlive the page set.
-   */
   handbookCta: {
     label: "Browse the full handbook →",
+  },
+  /**
+   * The centred sequence itself. The intro text is `deliverable.rationale` (not repeated
+   * here) -- same sentence, now centred above the cover instead of set beside it. `ctaLabel`
+   * names the real destination (the in-page reader, not a PDF — see the note on
+   * `HandbookCoverOpen` in handbook-reader.tsx) and doubles as that control's own caption,
+   * sitting under the cover rather than beside it.
+   */
+  sequence: {
+    ctaLabel: `Browse the full ${HANDBOOK_TOTAL}-page handbook →`,
+    pagesLabel: "Selected pages",
+    pagesSub: "Two examples from inside the handbook",
   },
   captions: {
     step: "One assembly step. Every joint is drawn, with the tubes it needs listed beneath it.",

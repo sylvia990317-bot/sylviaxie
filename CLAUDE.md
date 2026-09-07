@@ -11,23 +11,37 @@ designer. It has two kinds of pages:
   experience, testimonials, contact) styled to match Sylvia's Framer reference site
   (https://sylviaxie.framer.website/).
 - **`/work/<slug>` — individual project case-study pages.** Each one is a self-contained,
-  bespoke-designed page for a single project. The first and only one so far is
-  `/work/halogrip` (an emergency steering wheel concept for autonomous vehicles, a master's
-  thesis with Autoliv/Chalmers).
+  bespoke-designed page for a single project. Two so far:
+  - `/work/halogrip` — an emergency steering wheel concept for autonomous vehicles, a
+    master's thesis with Autoliv/Chalmers. Red/black/Koulen-and-Roboto-Mono.
+  - `/work/post-harvest` — a solar maize-drying tower for smallholder farmers in Seme,
+    Kenya, an MSc Industrial Design Engineering project with architecture students
+    (Reality Studio, Chalmers, 2024). Editorial/documentary: Bodoni Moda serif + Geist
+    sans, blue accent, ten numbered chapters (`chapterLabel()` in `content.ts`) reading
+    01 Hero through 10 Reflection.
 
 More project pages will be added over time as Sylvia has content for them.
 
 ## Hard rules — read before touching styles or structure
 
 1. **Each project case-study page keeps its own bespoke visual style.** Do not unify
-   `/work/halogrip` (or future project pages) into the homepage's design system. This was an
-   explicit decision from Sylvia. HALOGRIP is red/black/Koulen-and-Roboto-Mono on purpose (see
-   CHANGELOG.md — swapped from Nimbus Sans Narrow/DejaVu Sans Mono in an earlier session) — leave
-   it alone unless she asks to redesign it specifically.
+   `/work/halogrip`, `/work/post-harvest` (or future project pages) into the homepage's design
+   system, or into each other. This was an explicit decision from Sylvia. HALOGRIP is
+   red/black/Koulen-and-Roboto-Mono on purpose (see CHANGELOG.md — swapped from Nimbus Sans
+   Narrow/DejaVu Sans Mono in an earlier session); Post Harvest is Bodoni Moda/Geist with a blue
+   accent, on purpose too — leave each alone unless Sylvia asks to redesign that specific page.
+   One narrow, explicitly-approved exception: Post Harvest's wide-container mechanism
+   (`--shell`/`.ph-shell` in `post-harvest.css`) is a deliberate structural mirror of HALOGRIP's
+   own `.shell`/`--gutter` pattern in `halogrip.css`, at HALOGRIP's own numbers — Sylvia asked
+   for that specific cross-project reference (see CHANGELOG.md, "measured against HALOGRIP
+   directly"). That is a layout/sizing borrow, not a visual-style unification (type, colour and
+   voice stayed Post Harvest's own) — don't read it as license to unify anything else the two
+   pages share just because this one mechanism was intentionally matched.
 2. **CSS isolation is load-bearing, not incidental.** `app/globals.css` is shared across every
    route (Tailwind import + `@theme` tokens + a minimal reset). `app/work/halogrip/halogrip.css`
-   is imported *only* from `app/work/halogrip/page.tsx` — Next.js code-splits it per route, so it
-   never loads on `/`. When adding a new project page with its own custom CSS, follow the same
+   and `app/work/post-harvest/post-harvest.css` are each imported *only* from their own route's
+   `page.tsx` — Next.js code-splits them per route, so neither ever loads on `/` or on each
+   other's route. When adding a new project page with its own custom CSS, follow the same
    pattern: a route-scoped `<slug>.css` imported only from that route's `page.tsx`, never added to
    `globals.css`.
 3. **Any addition to the shared reset in `globals.css` must go inside `@layer base { ... }`.**
@@ -48,6 +62,15 @@ More project pages will be added over time as Sylvia has content for them.
 6. **"Coming soon" project cards are intentionally non-clickable** (`comingSoon: true`, no `href`
    in `app/data/projects.ts`) — plain `<div>`, not a link to a dead-end page. Only add a real
    `<Link>` once a project actually has a page to link to.
+7. **Post Harvest has three different container widths; know which one a section is on before
+   widening anything.** `.ph-canvas` (`--canvas`, 1600px) is the default reading width, used by
+   most sections. `.ph-shell` (`--shell`, 1700px) is the wide container, mirroring HALOGRIP's own
+   `.shell` — currently on section 09 and 10 only. `.ph-04-canvas` (literal `1680px`) is section
+   04's own one-off, sized for its sticky two-column diagram stage and not shared with anything
+   else. This split exists because Sylvia asked, across several sessions, to widen specific
+   sections without touching `--canvas` globally (see CHANGELOG.md, the whole "large-screen
+   whitespace" thread) — before changing any section's width, check which container class it's
+   actually on, and don't assume `.ph-canvas` alone is "the" canvas.
 
 ## Structure reference
 
@@ -80,21 +103,52 @@ app/
       close-project-button.tsx Client component for the fixed top-right pill — IntersectionObserver
                              toggles a dark/light opaque state to match whatever section is
                              behind it, see CHANGELOG.md
+    post-harvest/
+      page.tsx              Post Harvest case study — own `metadata` export, own CSS import,
+                             10 numbered chapters (see `content.ts`'s `sections`/`chapterLabel`)
+      post-harvest.css      Post Harvest-only styles (`--canvas`/`--shell` width tokens, all
+                             component classes) — see CLAUDE.md hard rule 7 for the three
+                             container widths, and CHANGELOG.md for why each exists
+      content.ts             All page copy, evidence-sourced (each factual claim carries an
+                             `Evidence` tag and a booklet page number — see the file's own
+                             header comment). Edit copy here, not in page.tsx
+      handbook-pages.ts      Page list for the in-page handbook reader (see below)
+      handbook-reader.tsx    Client component, `position: fixed` full-page handbook viewer —
+                             mounted once at the bottom of page.tsx (not inside any section) so
+                             its own cascade never inherits a section's local image rules, see
+                             the mount-site comment in page.tsx
+      inline-svg.tsx          Server component: reads a diagram SVG from
+                             `public/post-harvest/diagram/*.svg` at build time and inlines its
+                             markup, so the SVG's `<text>` binds to the page's own webfont
+                             variables instead of falling back to the system sans
+      reveal.tsx             Client component, one-time fail-open fade-up on scroll into view
+                             (IntersectionObserver; content is visible by default even if JS
+                             never runs) — used throughout the page for section entrances
+      scroll-steps.tsx        Client component, GSAP ScrollTrigger-driven step tracker for
+                             section 04's scrollytelling stage (one trigger per step, a fixed
+                             48% reading line, no pin/scrub) — see CHANGELOG.md for why this
+                             replaced an earlier IntersectionObserver version
 public/
   media/                   HALOGRIP's images (kept flat at /media/*.webp; not yet reorganized
-                            per-project since there's only one project with real assets)
+                            per-project since it predates post-harvest/'s per-project layout)
+  post-harvest/             Post Harvest's images, already organized per-project (unlike
+                            media/ above): concept/, diagram/ (includes the inlined SVGs
+                            inline-svg.tsx reads), figure/, handbook/ (+ handbook/pages/, the
+                            handbook-reader.tsx page scans), photo/, portrait/, vignette/
   home/                    Homepage's real assets (avatar, portrait, logos/, projects/) — see
                             CHANGELOG.md for the source→destination mapping
   fonts/                   HALOGRIP's old self-hosted fonts (Nimbus Sans Narrow, DejaVu Sans
                             Mono) — superseded by Koulen/Roboto Mono (next/font/google, loaded
                             in page.tsx), left on disk unused, not deleted
-design-source/              NOT deployed — outside public/, so Vercel never serves it. Sylvia's
-                            raw HALOGRIP design source: the original pitch-deck pptx/mp4
-                            (halogrip-pitch-deck/), the standalone HTML/CSS prototype that
-                            need-scene.tsx was built from (section 2 reference/), and every
-                            exploratory render/sketch/reference image that page.tsx etc. don't
-                            actually import (halogrip图片/, mirrors public/media's own subfolder
-                            names). Kept for history, not wired into the site — see CHANGELOG.md.
+design-source/              NOT deployed — outside public/, so Vercel never serves it.
+                            halogrip-pitch-deck/, halogrip图片/ and section 2 reference/ are
+                            HALOGRIP's raw source (the original pitch-deck pptx/mp4, every
+                            exploratory render/sketch page.tsx doesn't import, and the
+                            standalone HTML/CSS prototype need-scene.tsx was built from).
+                            kenya-photo-originals/ is Post Harvest's: a handful of RAW (.ARW) +
+                            JPEG field-photo originals, most already processed into
+                            public/post-harvest/photo/*.webp. Kept for history, not wired into
+                            the site — see CHANGELOG.md.
 ```
 
 ## Open items Sylvia still needs to supply
@@ -105,9 +159,9 @@ These currently ship as flagged placeholders (grep for `TODO(sylvia)`):
 - Real CV link/file
 - Real testimonials (3 placeholder slots currently in `app/data/testimonials.ts`)
 - Real per-project tags for the hover ticker on each project card (`PLACEHOLDER_TAGS` in
-  `app/data/projects.ts`, used by `ProjectCard.tsx`'s hover-reveal tag ticker)
-- Real thumbnail for the HALOGRIP card itself — the other 3 project cards now have real cover
-  photos, HALOGRIP's `image` field points at `/home/projects/halogrip-cover.png` (already real)
+  `app/data/projects.ts`, used by `ProjectCard.tsx`'s hover-reveal tag ticker) — Post Harvest's
+  card already has its own real tags (`["Field research", "Concept development", "2024"]`);
+  HALOGRIP's card still uses `PLACEHOLDER_TAGS`
 - Whether the 2018–2019 "Bachelor Thesis Student · Apple" entry (seen in the Framer reference) is
   real — it looked like unedited template filler and was deliberately omitted from
   `app/data/experience.ts`
@@ -116,6 +170,16 @@ These currently ship as flagged placeholders (grep for `TODO(sylvia)`):
 - The homepage's logo marquee (`chalmers logo.svg`) markup looks scraped from a web page (purple
   `#6746EB` before recoloring, Tailwind-style classes baked into the SVG) rather than Chalmers'
   official seal — flagging in case it's the wrong sub-brand mark
+- Post Harvest, all in `content.ts` (grep `TODO(sylvia)` there for the exact call sites):
+  - `field.contribution`'s attribution to Apollo is sourced from a portfolio deck, not the
+    booklet — needs confirming ("Open question B" in the file's own comment)
+  - Whether the construction handbook was actually delivered to farmers is unconfirmed (Sylvia
+    believes it probably was, but was not the teammate responsible) — if confirmed, it becomes a
+    statable fact belonging in section 09 beside `status.completed.items`
+  - A properly-exported roof-drying photo, if one turns up, would replace the current
+    interview-bowl photo in the needs-mosaic's lead slot (`focus.captions.grain`)
+  - A surviving sketch of the round-one storage concept (mentioned in the report, no image in
+    the asset set) would let section 04's "method check" become something shown, not just told
 
 ## Deployment
 

@@ -17,6 +17,16 @@
    elements, no grain or overlap added purely for checklist compliance.
    MOTION: not yet authored beyond the existing fail-open reveal. */
 
+:root {
+  /* Fallback only, overwritten on mount by head-height.tsx's `ResizeObserver` with
+     `.ph-04-head`'s real rendered height -- see the "04, scrollytelling" block in this
+     file for where it's consumed. Global (not `.ph-root`-scoped) because it is a plain
+     document-root custom property the component sets via `document.documentElement`,
+     and this file's own `--ph-root`-scoped tokens are unavailable at that measurement
+     point (`.ph-04-head`'s box is already laid out by the time it's read). */
+  --ph-04-head-h: 190px;
+}
+
 .ph-root {
   /* ---- colour ---- */
   --paper: #fbfbfa;
@@ -67,23 +77,38 @@
      reaches its cap, so laptop proportions are unchanged while wide screens genuinely
      gain width.
 
-     --shell      default, for reading-led sections
-     --shell-wide image-led moments: hero and the blue chapter field
-     --edge*      the space outside each shell, used for controlled edge bleeds
+     --shell      the wide, HALOGRIP-mirrored container (see below) -- 09 only, as of
+                  2026-09-07
+     --shell-wide reserved, unused (see note below)
+     --edge*      the space outside each shell, used for controlled edge bleeds --
+                  currently only consumed by dead v1 selectors (`.ph-done`, `.ph-return*`),
+                  so changing --shell/--shell-wide has no live visual effect through --edge
 
      Body copy and captions are constrained separately in `ch`, so line length never grows
      with the container. Nothing about the type scale changes on wide screens. */
   --gutter: clamp(20px, 5vw, 88px);
-  --shell: 1960px;
-  /* Was 2320px. The hero is the only section still on `--shell-wide`; every v2 section
-     caps at `--canvas` (1600px as of 2026-09-07, was 1480px when this comment was
-     written), so at 1920px they already gain a healthy margin per side instead of
-     stretching. 2320px let the hero alone keep growing past that,
-     so a 1920px viewport ran the hero content nearly edge to edge while every other
-     section had margins. 1800px brings it into the same family: still wider than the
-     reading canvas (this is the one deliberately image-led, full-width moment), but no
-     longer unbounded. */
-  --shell-wide: 1800px;
+  /* 1700px, was 1960px, then briefly dead code entirely. `--shell`/`.ph-shell` sat unused
+     from an earlier design pass (this file's own comment used to say "the hero is the
+     only section still on --shell-wide", which was already stale -- the hero has read at
+     `.ph-canvas.ph-hero-inner` for a while). Revived 2026-09-07 for section 09
+     specifically: `.ph-09-canvas`'s bespoke `min(1560px, calc(100% - 96px))` formula had
+     already been tuned to Sylvia's own numbers at a 2048px viewport (x=244..1804, 76.2% of
+     viewport -- inside every range she gave), but like any `min(fixed, ...)` formula it
+     stops growing past that, so on a wider screen the same fixed width reads as a
+     shrinking share of the viewport ("a narrow tablet layout floating in a large screen",
+     her words). Told directly not to fix that by touching a canvas value again -- but then
+     pointed at HALOGRIP's own `.shell` (`halogrip.css`: `width:min(100%,1700px);
+     padding-inline:var(--gutter)`) as the reference. Confirmed HALOGRIP's own shell has
+     the identical ceiling shape (content flatlines around 1524-1532px past roughly
+     1876-1900px viewport) -- this is the shared design language's accepted "capped reading
+     width", not a defect unique to this file's formula, so matching HALOGRIP means
+     matching its ceiling too, just at HALOGRIP's own, more generous number and its
+     simpler mechanism (width cap and gutter computed separately, not baked into one
+     calc()). `--gutter` itself (already close to HALOGRIP's `clamp(22px,5.2vw,84px)`) is
+     deliberately left untouched -- its only live consumer is the mobile `.ph-band`
+     bleed, and mobile/tablet stays out of scope for this pass. */
+  --shell: 1700px;
+  --shell-wide: 1800px; /* still unused; left as-is, not part of this change */
   --edge: calc(max(0px, (100vw - var(--shell)) / 2) + var(--gutter));
   --edge-wide: calc(max(0px, (100vw - var(--shell-wide)) / 2) + var(--gutter));
   --maxw: var(--shell); /* kept for older rules */
@@ -102,9 +127,12 @@
 
 /* ---------- primitives ---------- */
 
+/* HALOGRIP's own `.shell` pattern (`halogrip.css`: `width:min(100%,1700px);
+   padding-inline:var(--gutter)`), mirrored here at the same numbers -- see `--shell`'s
+   own comment above for why. Live as of 2026-09-07 on section 09's three wrappers; every
+   other section still reads at the narrower `--canvas`. */
 .ph-shell { width: 100%; max-width: var(--shell); margin-inline: auto; padding-inline: var(--gutter); }
-/* Image-led sections get the wider shell. Section backgrounds still span the full
-   viewport, because the background sits on the <section>, not on the shell. */
+/* Reserved, still unused -- kept from an earlier pass, not part of this change. */
 .ph-shell-wide { max-width: var(--shell-wide); }
 .ph-section { padding-block: var(--section-y); }
 .ph-section-sunk { background: var(--paper-sunk); }
@@ -356,27 +384,17 @@ figure { margin: 0; }
    or any other section. */
 .ph-04-canvas { width: min(1680px, calc(100% - clamp(48px, 8vw, 160px))); margin-inline: auto; }
 
-/* 09 ONLY (`id="status"`). Same problem as 04's, found the same way (Sylvia: "the actual
-   content canvas is still only around 1000-1100px" at ~2048px): section 09 reads its
-   heading, its dark "completed" band, its scored-checklist figure and the "why those
-   stayed open" two-column explanation each inside their OWN `.ph-canvas`, so all four
-   were capped at the shared 1480px (as it was then; `--canvas` was later widened to
-   1600px, independently of this rule -- see its definition above) -- confirmed unchanged
-   at 1480px in the browser after the 04 fix, since that fix was deliberately scoped to 04
-   alone. `.ph-09-canvas` is
-   applied ALONGSIDE `.ph-canvas` (`className="ph-canvas ph-09-canvas"`), not instead of
-   it, specifically so `.ph-v2-ink .ph-canvas`'s existing `padding-inline: 0` (the dark
-   band's own rule, just above) keeps matching without being duplicated here -- the
-   `.ph-canvas.ph-09-canvas` compound selector below only needs to win on `width` and
-   `max-width`, which `padding-inline: 0` here does redundantly but harmlessly for that
-   one band and for real on the other three.
-   Width formula: `min(1560px, calc(100% - 96px))`, not the `92vw` the brief also offered
-   -- the two are identical at exactly 1200px viewport width (`92vw` = 1104px there, and
-   so is `calc(100% - 96px)`) and diverge below it, where `92vw` gives less than the
-   requested 48px-per-side floor (e.g. 40px per side at 1000px) while `calc(100% - 96px)`
-   holds that floor exactly at any width. Above 1200px the two are close enough that the
-   choice never shows. */
-.ph-canvas.ph-09-canvas { width: min(1560px, calc(100% - 96px)); max-width: none; padding-inline: 0; margin-inline: auto; }
+/* 09 used to have its own `.ph-canvas.ph-09-canvas` compound rule here (a bespoke
+   `min(1560px, calc(100% - 96px))`, gutter baked into the calc so padding-inline had to
+   be forced to 0). SUPERSEDED 2026-09-07: that formula was tuned correctly for a 2048px
+   viewport but, like any `min(fixed px, ...)` formula, stopped growing past it, which read
+   as a fixed-width card floating in the middle of a wider screen. Replaced by `.ph-shell`
+   (see its definition and the `--shell` token's own comment near the top of this file) --
+   HALOGRIP's own container pattern, at HALOGRIP's own numbers. `page.tsx` now renders
+   09's three wrappers as `className="ph-shell"` directly, not `.ph-canvas` plus a second
+   class, so there is no dark-band padding special case to maintain either: `.ph-shell`
+   keeps its `padding-inline: var(--gutter)` on all three uniformly, because unlike the
+   old formula it never baked the gutter into the width calc in the first place. */
 
 /* Captions are read, so they are set in the text face at 14px on the body ink rather
    than 11px mono on --muted, which failed the review for size and contrast. */
@@ -445,38 +463,128 @@ figure { margin: 0; }
 .ph-v2 .ph-svg-body svg { max-height: none; }
 
 /* ================= 02 CONTEXT (v2) =================
-   One composition: heading, dateline, lead and both statistics on the left, the locator
-   at supporting scale on the right. The map is capped at 340px so it orients the reader
-   without becoming the hero. Then one compact evidence mosaic, three photographs on a
-   single height so they read as one strip rather than three posters. */
+   REBUILT 2026-09-07 (mockup-referenced pass) as one continuous narrative instead of a
+   card grid: chapter head -> location band (locator beside the road photograph, no card
+   around either) -> evidence rail (the two research numbers as one horizontal strip) ->
+   documentary pair (grain, then planting, closing the location story). See the matching
+   JSX comments in page.tsx for how the four beats map to individual Reveal wrappers. */
 
-.ph-v2-ctx { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; }
-/* Ranked, not a two-up of equals (2026-09-07 audit): the loss figure is the section's
-   argument and gets display scale; the population figure is context for the place and is
-   held at roughly the old size. Stacked rather than side by side, so the lead statistic
-   gets the full column width to be large in. */
-.ph-v2-stats { display: grid; grid-template-columns: 1fr; gap: clamp(16px, 1.8vw, 26px); margin-top: clamp(22px, 2.4vw, 34px); }
-.ph-v2-stat { border-left: 2px solid var(--blue); padding-left: 16px; }
-.ph-v2-stat b { display: block; font-family: var(--ph-serif), Georgia, serif; font-size: clamp(24px, 2.2vw, 31px); line-height: 1; letter-spacing: -0.025em; font-weight: 500; font-variant-numeric: tabular-nums; }
-.ph-v2-stat span { display: block; margin-top: 7px; font-size: 13.5px; line-height: 1.45; color: var(--ink-soft); max-width: 34ch; }
-.ph-v2-stat-lead b { font-size: clamp(38px, 4.4vw, 62px); }
-.ph-v2-stat-lead span { font-size: 15px; max-width: 38ch; }
-.ph-v2-map { max-width: 340px; }
-.ph-v2-map .ph-svg-body { padding: 12px; }
+/* ---- chapter head ----
+   ALIGNMENT PASS 2026-09-07 (approved composition below untouched, no redesign). The
+   header had drifted onto its own 4fr/5fr column split, which is why it read as
+   disconnected from the map/road composition beneath it. It now reuses the EXACT same
+   grid as `.ph-v2-location` below -- same `grid-template-columns`, same column-gap, no
+   separate max-width -- so the title column's left edge lines up with the map's and the
+   dateline/paragraph column's left edge lines up with the road photograph's.
+
+   Two rows, not one stacked block: eyebrow + dateline share row 1, h2 + paragraph share
+   row 2. CSS Grid rows are bands shared across every column, so once h2 and the
+   paragraph are both placed in row 2 they land on the same top edge automatically --
+   that alignment doesn't depend on the row-gap value, which is free to be sized purely
+   for legible separation between the two rows.
+
+   `.ph-v2-head` itself is shared markup every other section still reads at its plain
+   single-column default -- everything here is `#context`-scoped so no other chapter head
+   moves. DOM order in page.tsx is untouched (eyebrow, title, dateline, paragraph, the
+   original reading order); this is pure grid placement, so mobile/tablet -- where
+   `.ph-v2-head`'s own base rule (`grid-template-columns: 1fr`) still applies below 900px
+   -- keeps stacking in that same original order without any extra rule. */
+#context .ph-v2-location { margin-top: clamp(64px, 6vw, 80px); }
+@media (min-width: 900px) {
+  #context .ph-v2-head {
+    grid-template-columns: minmax(240px, 320px) 1fr;
+    column-gap: clamp(36px, 4vw, 64px);
+    row-gap: clamp(20px, 2.2vw, 32px);
+    align-items: start;
+  }
+  #context .ph-v2-head .ph-chapter-label { grid-column: 1; grid-row: 1; }
+  #context .ph-v2-head h2 { grid-column: 1; grid-row: 2; }
+  #context .ph-v2-head > .ph-lbl { grid-column: 2; grid-row: 1; margin: 0; }
+  #context .ph-v2-head .lede { grid-column: 2; grid-row: 2; max-width: 560px; margin: 0; }
+}
+
+/* Title one-liner, >=1200px only (2026-09-07): the title column stays exactly
+   `minmax(240px, 320px)` -- unchanged, so the map still lines up under it -- this only
+   lets the h2's own text overflow rightward into the column gap instead of wrapping.
+   `white-space: nowrap` + `max-width: none` don't touch the grid track itself, so the
+   dateline/paragraph column, its left edge, and every font-size stay exactly as they
+   were; only the title's line box is allowed to paint past its column's right edge. */
+@media (min-width: 1200px) {
+  #context .ph-v2-head h2 { white-space: nowrap; max-width: none; }
+}
+
+/* ---- location band ---- */
+.ph-v2-location { display: grid; grid-template-columns: 1fr; gap: clamp(24px, 2.6vw, 40px); margin-top: var(--beat-y); align-items: start; }
+/* The map's own background already matches the page (seme-locator.svg fills #fbfbfa), so
+   dropping the shared diagram card (background/border/padding from `.ph-svg-body` in the
+   primitives block above) lets it sit directly on the canvas instead of floating in a
+   white box. Scoped to this one instance -- every other inlined diagram keeps its card. */
+.ph-v2-map .ph-svg-body { background: transparent; border: none; padding: 0; }
+.ph-v2-map { max-width: 320px; }
 .ph-v2-map .ph-cap { margin-top: 10px; }
-
-.ph-v2-mosaic { display: grid; grid-template-columns: 1fr; gap: clamp(14px, 1.5vw, 22px); margin-top: var(--beat-y); }
-.ph-v2-mosaic figure { display: grid; gap: 10px; align-content: start; }
-/* One shared height, three different widths: a mosaic, not a row of posters. */
-.ph-v2-mosaic img { display: block; width: 100%; height: clamp(228px, 30vh, 330px); object-fit: cover; }
-.ph-v2-mosaic .ph-cap { font-size: 13.5px; max-width: 38ch; }
+/* The road is the location band's focal image, at a deliberately large, cropped scale --
+   the same photograph the old mosaic held at 26% width now reads as the section's second
+   dominant visual, beside the map rather than boxed in with two other photos. */
+/* +75px over the whole clamp curve (2026-09-07, refinement pass): taller box, same
+   width, means object-fit: cover crops the photo less vertically, not more -- this is
+   the fix for the person at the road's centre getting cut too tight. */
+.ph-v2-road img { display: block; width: 100%; height: clamp(395px, calc(44vh + 75px), 675px); object-fit: cover; }
+.ph-v2-road .ph-cap { margin-top: 10px; }
 
 @media (min-width: 900px) {
-  .ph-v2-ctx { grid-template-columns: minmax(0, 1fr) 340px; column-gap: clamp(40px, 4vw, 72px); }
-  /* Was `1fr 1fr`. The two statistics are no longer equals, so they no longer share a
-     row: the lead figure needs the full column width to be set large in, and pairing them
-     side by side is what made them read as a matched set in the first place. */
-  .ph-v2-mosaic { grid-template-columns: 1.55fr 1fr 1fr; }
+  .ph-v2-location { grid-template-columns: minmax(240px, 320px) 1fr; gap: clamp(36px, 4vw, 64px); position: relative; }
+  /* Subtle connector, marker to photograph (2026-09-07, refinement pass): fixed pixel
+     math, not percentages, because the map column reliably renders at its 320px cap on
+     every viewport this wide (the 1fr road column stays comfortably positive even at
+     exactly 900px, so minmax never has to shrink the map below its ceiling). The Seme
+     marker sits at (543.5, 967.5) in the locator's own 1000x1320 viewBox -- 54.35% across,
+     73.3% down -- so at a 320px-wide, aspect-locked map figure that's (174px, 310px) from
+     the location band's own top-left corner. The line runs from there to the road
+     photograph's left edge, i.e. across the rest of the map column plus the grid gap. */
+  .ph-v2-location::after {
+    content: "";
+    position: absolute;
+    left: 174px;
+    top: 310px;
+    width: calc(146px + clamp(36px, 4vw, 64px));
+    height: 1.5px;
+    background: var(--blue);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+}
+
+/* ---- evidence rail ----
+   Ranked, not a two-up of equals (2026-09-07 audit, carried over): the loss figure is the
+   section's argument and gets display scale, the population figure is context for the
+   place and stays smaller. Row, not stack: number and explanation share a baseline inside
+   each stat, and the two stats sit side by side under one hairline rule -- research
+   evidence read at a glance, not a pair of dashboard tiles. */
+.ph-v2-evidence {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: clamp(24px, 3vw, 40px) clamp(40px, 5vw, 72px);
+  margin-top: clamp(32px, 3.6vw, 52px);
+  padding-top: clamp(20px, 2.2vw, 30px);
+  /* rgba of --blue (#17357a) at low opacity -- a rule, not a card border. */
+  border-top: 1px solid rgba(23, 53, 122, 0.22);
+}
+.ph-evidence-stat { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 16px; border-left: 2px solid var(--blue); padding-left: 16px; }
+.ph-evidence-stat b { font-family: var(--ph-serif), Georgia, serif; font-weight: 500; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; font-size: clamp(26px, 2.6vw, 36px); }
+.ph-evidence-stat span { font-size: 13.5px; line-height: 1.45; color: var(--ink-soft); max-width: 34ch; }
+.ph-evidence-stat-lead { flex: 1 1 320px; }
+.ph-evidence-stat-lead b { font-size: clamp(42px, 5vw, 68px); }
+.ph-evidence-stat-lead span { font-size: 15px; max-width: 38ch; }
+
+/* ---- documentary pair ----
+   The conclusion of the location story, not a separate collage: two photographs, roughly
+   7/5, sharing one height so they read as a matched close rather than two posters. */
+.ph-v2-documentary { display: grid; grid-template-columns: 1fr; gap: clamp(16px, 1.8vw, 26px); margin-top: var(--beat-y); }
+.ph-v2-documentary figure { display: grid; gap: 10px; align-content: start; }
+.ph-v2-documentary img { display: block; width: 100%; height: clamp(260px, 34vh, 400px); object-fit: cover; }
+.ph-v2-documentary .ph-cap { font-size: 14px; max-width: 40ch; }
+
+@media (min-width: 900px) {
+  .ph-v2-documentary { grid-template-columns: 7fr 5fr; }
 }
 
 /* ================= 05 CHALLENGE (v2) =================
@@ -853,6 +961,12 @@ figure { margin: 0; }
      stagger is CSS cascade rather than five hand-written delays (and no JS). */
   .ph-meta div { animation: ph-hero-text-in 500ms cubic-bezier(0.2, 0.65, 0.2, 1) calc(320ms + var(--i, 0) * 60ms) both; }
 
+  /* --- 02 context: a quicker beat than the 400ms default, and the road photograph
+     settles in fractionally after the map beside it, so the location band reads as
+     map-then-road even when both cross the viewport threshold together. */
+  #context .ph-reveal-armed.is-visible { transition-duration: 300ms; }
+  #context .ph-v2-location-road.ph-reveal-armed.is-visible { transition-delay: 90ms; }
+
   /* --- 08 the four steps, in sequence ------------------------------------------
      The one genuinely explanatory animation on the page: hot air rising is an ordered
      process, and a still diagram cannot show order. Runs once when the list is reached. */
@@ -1000,7 +1114,6 @@ figure { margin: 0; }
   font-size: 14px; line-height: 1.5; letter-spacing: 0; text-transform: none;
   color: var(--ink-soft); max-width: 46ch;
 }
-.ph-v2-mosaic .ph-cap { font-size: 14px; }
 /* ================= ONE DOMINANT VISUAL =================
    The rule the whole page now obeys: each section has exactly one visual allowed to own
    a viewport. Everything else is evidence at supporting scale. The previous version had
@@ -1064,7 +1177,36 @@ figure { margin: 0; }
    `ScrollTrigger` (one trigger per step, `start: "top 48%"` / `end: "bottom 48%"` --  a
    fixed reading line, not a pinned timeline or scroll-jack; see that file's own comment
    for why this replaced an `IntersectionObserver` ratio race). */
-.ph-04-scroll { margin-top: var(--beat-y); }
+/* Sticky header, desktop/tablet only (see the `@media (min-width: 1280px)` rule below --
+   the mobile/no-JS reading order stays plain document flow, header included). Scoped to
+   `.ph-04-head` alone, NOT to `.ph-v2-head` in general, so no other section's heading
+   becomes sticky by accident -- `.ph-v2-head` is shared markup across every V2 section.
+   `top: 0` + its own containing block (this `<section>`, via `.ph-04-canvas`) is what
+   makes it release naturally right as section 05 begins: sticky can never hold past its
+   own containing block's bottom edge, so once the scroll stage below it runs out, the
+   header scrolls away with the rest of the section -- no JS, no manual unstick. */
+.ph-04-head { position: relative; z-index: 3; padding-bottom: 14px; }
+@media (min-width: 1280px) {
+  .ph-04-head {
+    position: sticky;
+    top: 0;
+    background: var(--paper);
+    padding-top: clamp(28px, 3.4vw, 44px);
+    padding-bottom: clamp(18px, 2vw, 28px);
+  }
+}
+/* The lede ("We were assigned grain storage...") is deliberately NOT inside `.ph-04-head`
+   (Sylvia): it should read once at the section's entrance and then scroll away like any
+   other paragraph, not stay pinned through all three steps the way the eyebrow + h2 do.
+   Same type as `.ph-v2-head .lede` elsewhere (copied, not shared, since this paragraph is
+   a sibling of `.ph-v2-head` now, not a child of it) -- a placement change, not a new
+   style. `.ph-04-head`'s own `padding-bottom` (above) is what keeps a small gap between
+   the sticky h2 and this paragraph in both the mobile stack and the desktop stuck state. */
+.ph-04-lede {
+  font-size: clamp(16px, 1.15vw, 17.5px); line-height: 1.5; color: var(--ink-soft);
+  margin: 0 0 var(--beat-y); max-width: var(--measure-narrow); text-wrap: pretty;
+}
+.ph-04-scroll { margin-top: 0; }
 .ph-04-step { max-width: var(--measure); margin: 0 0 var(--beat-y); }
 .ph-04-step:last-child { margin-bottom: 0; }
 .ph-04-step .ph-lbl { margin: 0 0 7px; color: var(--blue); }
@@ -1076,11 +1218,20 @@ figure { margin: 0; }
 }
 .ph-04-visual { margin: 0 0 var(--beat-y); }
 .ph-04-visual:last-child { margin-bottom: 0; }
-/* Each drawing paints its own ground (`<rect fill="#fbfbfa">`, the page's --paper) inside
-   .ph-svg-body's white plate, so the plate would otherwise draw a second, differently
-   coloured frame around it -- unlike the photograph, which sits on a white plate directly.
-   Same fix .ph-legend uses elsewhere: match the plate to the drawing's own ground. */
-.ph-04-visual--needs .ph-svg-body, .ph-04-visual--cycle .ph-svg-body { background: var(--paper); }
+/* No card here (Sylvia, visual cleanup pass): every other `.ph-svg-body`/`.ph-bags-plate`
+   on the page is a white bordered plate, but section 04's three visuals are asked to sit
+   directly on the page ground instead, with no shared frame around the stage. Scoped to
+   `.ph-04-visual` specifically so every OTHER diagram on the page keeps its own plate --
+   this only strips the card's paint, never its layout (sizing/centring stay on the same
+   elements, see the per-step width rules below). The drawings already paint their own
+   `<rect fill="#fbfbfa">` ground matching --paper, so going transparent here is seamless
+   against the page. */
+.ph-04-visual .ph-svg-body,
+.ph-04-visual .ph-bags-plate {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
 /* NO min-width floor here, unlike every other diagram on the page -- deliberately.
    `.ph-04-canvas` is fluid rather than fixed (see its definition above `.ph-canvas`), so
    the plate's real width now depends on viewport: ~695px net at the 1280px armed
@@ -1107,6 +1258,14 @@ figure { margin: 0; }
   /* 1280 is the desktop breakpoint; below it there is no grid, no sticky, and no opacity
      rule -- the section is the same plain stack a narrow viewport gets.
 
+     `--ph-04-head-h` (defined on `:root`, see the top of this file) is `.ph-04-head`'s
+     REAL rendered height, kept live by head-height.tsx's `ResizeObserver` -- not a guess
+     re-tuned per step or per visual; one measured value, read by both the text rows and
+     the sticky visual below, so both share the same stage floor instead of drifting apart
+     with their own offsets. `--ph-04-stage-h` is what's left of the viewport once that
+     header is accounted for; it is the ONE alignment system the brief asked for, shared
+     by `.ph-04-step` and `.ph-04-visual` alike.
+
      The column split reads 35% / 65% below, but that is the split BEFORE the gap between
      them, and CSS Grid resolves percentage tracks against the container's full width, not
      width-minus-gap -- so whichever track is flexible enough to absorb the shortfall
@@ -1116,6 +1275,7 @@ figure { margin: 0; }
      here rather than reusing `--pair` for exactly that reason: at `clamp(24px, 2.4vw,
      48px)` the stage measures 62-63% at every armed width from 1280px to the `.ph-04-canvas`
      ceiling (measured in the browser), while the text column stays at a clean 35%. */
+  .ph-04-canvas { --ph-04-stage-h: calc(100svh - var(--ph-04-head-h)); }
   .ph-04-armed.ph-04-scroll {
     display: grid;
     grid-template-columns: minmax(0, 35%) minmax(0, 65%);
@@ -1135,20 +1295,70 @@ figure { margin: 0; }
      and were impossible to anticipate (Sylvia). `min-height` is a floor, not a fixed
      height: a step that genuinely needs more room (01, at a narrow armed width where its
      three paragraphs wrap taller) can still grow past it. The content itself is
-     untouched -- centring it vertically in the taller slot is layout, not typography. */
-  .ph-04-armed .ph-04-step { min-height: 60svh; display: flex; flex-direction: column; justify-content: center; }
+     untouched -- centring it vertically in the taller slot is layout, not typography.
+     Grid replaces the old flex column here so the step uses the exact same `--ph-04-stage-h`
+     the sticky visual beside it does, instead of two independently-tuned centring rules --
+     `align-content: center` (not `align-items`) is the load-bearing part: with no explicit
+     `grid-template-rows`, a plain `align-items: center` leaves each of the four children
+     (step index, label, two paragraph lines) as its own auto-height ROW, and with this
+     much leftover space in a `min-height: var(--ph-04-stage-h)` container, Grid's default
+     `align-content: normal` computes to `stretch` -- every row was inflating to an equal
+     share of the slot and centring its own line inside that inflated row, which is what
+     blew the gaps between paragraphs out to ~80px instead of the 10px `margin-bottom`
+     actually asked for (Sylvia, screenshot). `align-content: center` keeps the four rows
+     at their natural content height and centres that whole short block as one group --
+     same outcome `justify-content: center` gave the old flex column, on the grid this
+     brief asked for. */
+  .ph-04-armed .ph-04-step { min-height: var(--ph-04-stage-h); display: grid; align-content: center; }
+  /* The sticky visual: `top` starts it exactly below the sticky header (never under it,
+     never with a gap above it) and `height` matches the same `--ph-04-stage-h` the steps
+     use, so this box's own vertical centre sits at the same screen position the active
+     step's centre does. Never a per-step or per-visual offset -- one rule, uniformly
+     applied to all three `.ph-04-visual` elements; only opacity/visibility below picks
+     which one is showing. */
   .ph-04-armed .ph-04-visual {
-    grid-column: 2; grid-row: 1 / 4; align-self: start;
-    position: sticky; top: clamp(20px, 3vw, 48px);
+    grid-column: 2; grid-row: 1 / 4;
+    position: sticky; top: var(--ph-04-head-h); height: var(--ph-04-stage-h);
     margin: 0; opacity: 0; pointer-events: none; visibility: hidden;
+    display: grid; align-items: center; justify-items: center;
   }
-  /* A fixed-height stage so the three visuals -- a 1.5:1 photo, a 1.68:1 map, a 3.3:1 band
-     -- crossfade in the same footprint instead of the section resizing under the reader as
-     the active one changes. Sized to the tallest (needs-map, ~600-620px at this width);
-     the other two centre inside it via .ph-svg-body/.ph-bags-plate's own place-items. */
-  .ph-04-armed .ph-04-visual { min-height: 620px; display: grid; }
+  /* One stable STAGE for all three states -- the invisible positioning box above never
+     changes size or moves between steps. Its HEIGHT is shared by all three (same fixed
+     clamp, ~64-68svh), so the frame never resizes vertically as the active state changes;
+     WIDTH now scales per visual on request (Sylvia): the photo reads small relative to
+     the stage as a plate/document, so it's sized up toward the maize-lifecycle band's own
+     scale, while the needs-map keeps the width it already had (it was already read as
+     "right"). `justify-items: center` above is what keeps a narrower plate centred in the
+     stage instead of pinned to its left edge now that width isn't a uniform 100%. */
   .ph-04-armed .ph-04-visual .ph-svg-body,
-  .ph-04-armed .ph-04-visual .ph-bags-plate { height: 100%; }
+  .ph-04-armed .ph-04-visual .ph-bags-plate { height: clamp(460px, 66svh, 700px); }
+  .ph-04-armed .ph-04-visual--photo .ph-bags-plate { width: 75%; }
+  .ph-04-armed .ph-04-visual--needs .ph-svg-body { width: 100%; }
+  .ph-04-armed .ph-04-visual--cycle .ph-svg-body { width: 94%; }
+  /* The base `.ph-bags-plate img` rule (`width:100%; height:auto; max-height:46vh`) was
+     tuned for the OLD, always-100%-wide plate; at the new 75% width its 46vh ceiling binds
+     before the width does, at typical viewport heights, undershooting the 72-78% target.
+     Same technique as the two SVGs above instead: both axes fixed to the (now width-scaled)
+     plate's own box and `object-fit: contain` does the aspect-preserving fit, so the photo
+     actually reaches its plate's width rather than being capped by a stale vh number. */
+  .ph-04-armed .ph-04-visual--photo .ph-bags-plate img {
+    width: 100%; height: 100%; max-height: none; object-fit: contain;
+  }
+  /* `overflow-y: hidden` only -- `.ph-svg-body`'s own `overflow-x: auto` (post-harvest.css,
+     the "legibility floor" block above) stays intact so the existing narrow-viewport
+     fallback (a horizontal scrollbar under the two large 04 diagrams' `min-width` floor)
+     is unchanged; only the newly-possible vertical overflow from a fixed-height plate is
+     guarded against here, as a backstop behind the `object-fit: contain` fix below. */
+  .ph-04-armed .ph-04-visual .ph-svg-body { overflow-y: hidden; }
+  /* Base `.ph-svg-body svg` is width:100%/height:auto (fine when the plate's own height
+     is auto, wrong the instant the plate's height is a fixed clamp as above -- a tall
+     drawing then overflows the fixed box and the plate's own `overflow-x: auto` computes
+     `overflow-y: auto` too per the CSS overflow spec, so it silently grew a scrollbar
+     instead of shrinking. Both axes fixed (100%/100%) plus `object-fit: contain` is the
+     real fix the brief asked for: the drawing scales to fit inside the frame on
+     whichever axis is tighter, exactly like the photo's own `.ph-bags-plate img` rule
+     below already does. */
+  .ph-04-armed .ph-04-visual .ph-svg-body svg { width: 100%; height: 100%; object-fit: contain; }
 
   .ph-04-armed[data-active-step="0"] .ph-04-visual--photo,
   .ph-04-armed[data-active-step="1"] .ph-04-visual--needs,
@@ -1496,7 +1706,9 @@ figure { margin: 0; }
 
 /* ---- 09: the marked list is the dominant ---- */
 .ph-v2-ink { background: var(--ink); color: var(--paper); padding-block: clamp(30px, 3.4vw, 46px); margin-top: var(--pair); }
-.ph-v2-ink .ph-canvas { padding-inline: 0; }
+/* `.ph-v2-ink .ph-canvas { padding-inline: 0 }` removed 2026-09-07: this band's inner
+   wrapper is `.ph-shell` now, not `.ph-canvas` (see the 09-section comment in page.tsx),
+   and `.ph-shell` never needed its padding zeroed in the first place. */
 .ph-done-v2 { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: center; }
 @media (min-width: 900px) { .ph-done-v2 { grid-template-columns: 3fr 2fr; } }
 /* `aspect-ratio` matching the photo's own 1400x936, not `max-height` (2026-09-07): the old
@@ -1524,7 +1736,12 @@ figure { margin: 0; }
    drawing, not the shared `.ph-fig-primary` class (currently used nowhere else, but kept
    generic on purpose): 75% of `.ph-09-canvas`'s own width, inside the requested 70-78%
    range, so it keeps scaling with the wider canvas instead of stopping dead at 1040px. */
-.ph-scored-v2 .ph-fig-primary { max-width: none; width: 75%; }
+/* 80%, was 75%. Measured against HALOGRIP's own #concepts card at the same viewport
+   (2560px logical): the card is 65.3% of its shell, this figure was already 67.2% of
+   its own -- proportionally ahead, not behind, so the "checklist reads smaller" theory
+   didn't hold up against the numbers. Bumped anyway to a round number that puts it
+   decisively ahead of HALOGRIP's own ratio rather than just barely past it (2026-09-07). */
+.ph-scored-v2 .ph-fig-primary { max-width: none; width: 80%; }
 /* 64-80px, not the section's usual beat-y (which can hit 60px anyway, but was never the
    real gap): the previous session's now-removed standalone CTA had its own margin-top on
    top of this one, stacking two beats of near-empty canvas around a small button. With the
@@ -1545,11 +1762,11 @@ figure { margin: 0; }
 /* 10's closing field (2026-09-07, fourth pass -- see the section comment in page.tsx for
    the earlier passes this replaces). The four insights, the takeaway and the caption sit
    over the dusk photograph as one passage, in white. `.ph-10-photo` is a direct child of
-   the `<section>`, not wrapped in `.ph-canvas` like the heading above and the footer
-   below it, so it bleeds to the section's own full width for free -- no negative-margin
-   `--edge` trick needed, unlike `.ph-done` in section 09. `.ph-10-photo-content` then
-   re-applies `.ph-canvas` (see page.tsx) so its text still lines up with the heading and
-   footer on either side of it. */
+   the `<section>`, not wrapped in a canvas/shell, so it bleeds to the section's own full
+   width for free -- no negative-margin `--edge` trick needed, unlike `.ph-done` in
+   section 09. `.ph-10-photo-content` then re-applies `.ph-shell` (fifth pass, see
+   page.tsx) so its text still lines up with the utility footer below it -- both switched
+   from `.ph-canvas` to `.ph-shell` together, matching section 09's own width. */
 /* `margin-top: 0`, not `var(--beat-y)` (fifth pass, 2026-09-07): that gap existed to
    separate this field from the heading that used to sit above it on the plain page. The
    heading is the first thing inside the field now, so the section's own top padding
@@ -1585,15 +1802,6 @@ figure { margin: 0; }
 @media (min-width: 1000px) {
   .ph-08-foot { grid-template-columns: 3fr 2fr; }
   /* `.ph-07-close` had a two-column rule here; it is a single column now. */
-}
-
-/* ---- 02: one lead photograph, two small ones. Three equal frames read as three
-       competing focal points, which is exactly what the review flagged. ---- */
-@media (min-width: 900px) {
-  .ph-v2-mosaic { grid-template-columns: 2fr 1fr; grid-template-rows: auto auto; align-items: start; }
-  .ph-mosaic-lead { grid-row: 1 / 3; }
-  .ph-mosaic-lead img { height: clamp(300px, 40vh, 430px); }
-  .ph-v2-mosaic figure:not(.ph-mosaic-lead) img { height: clamp(132px, 17.5vh, 194px); }
 }
 
 /* ---- 05: the rail sits under the dominant photograph as a compact row, with the
@@ -1684,10 +1892,6 @@ figure { margin: 0; }
    the collector photo to whatever oddly-shaped box the two constraints produced. Deleting
    this duplicate is what actually lets `aspect-ratio` govern the box. */
 .ph-mech-pair img                      { max-height: 42vh; }
-@media (min-width: 900px) {
-  .ph-v2-mosaic figure:not(.ph-mosaic-lead) img { height: clamp(160px, 21vh, 238px); }
-  .ph-mosaic-lead img { height: clamp(336px, 44vh, 490px); }
-}
 
 /* Diagrams: the locator and the legend were both small enough that their own labels
    were the limiting factor, so they gain width rather than height. */

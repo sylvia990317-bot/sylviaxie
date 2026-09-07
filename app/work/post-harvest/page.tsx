@@ -6,6 +6,7 @@ import "./post-harvest.css";
 import Reveal from "./reveal";
 import InlineSvg from "./inline-svg";
 import ScrollSteps from "./scroll-steps";
+import HeadHeightVar from "./head-height";
 import {
   project, meta, context, field, participants, focus, challenge,
   concepts, finalConcept, mechanism, status, reflection, chapterLabel,
@@ -129,81 +130,94 @@ export default function PostHarvestPage() {
         </div>
       </header>
 
-      {/* ============ 02 Context ============  V2 PROTOTYPE
-          One composition first: heading, dateline, lead and both statistics read against
-          the locator in a single viewport. The map is capped at 340px because it orients
-          the reader; it is not the subject of the section. Then one compact evidence
-          mosaic on a single image height, so three photographs read as one strip of
-          evidence rather than three separate posters. */}
+      {/* ============ 02 Context ============
+          REBUILT 2026-09-07 (mockup-referenced pass) as one continuous narrative rather
+          than a card grid: place -> the road into it -> the scale of the problem -> the
+          harvest itself. Four beats, each its own Reveal so the map settles in before the
+          road photograph, which settles in before the evidence rail, which settles in
+          before the closing documentary pair -- see the per-beat comments below and the
+          matching CSS block in post-harvest.css. */}
       <section className="ph-section ph-v2" id="context">
         <div className="ph-canvas">
+          {/* DOM order stays the original reading order (eyebrow, title, dateline,
+              paragraph) -- what changes on desktop is pure CSS grid placement (see
+              #context .ph-v2-head in post-harvest.css), which repositions the dateline
+              next to the eyebrow without touching source/mobile order. */}
           <Reveal>
-            <div className="ph-v2-ctx">
-              <div>
-                <div className="ph-v2-head">
-                  <p className="ph-chapter-label">{chapterLabel("context")}</p>
-                  <h2>{context.heading}</h2>
-                  <div className="lede">
-                    <p className="ph-lbl">{context.dateline}</p>
-                    <p>{context.lead}</p>
-                  </div>
-                </div>
-
-                {/* One lead statistic, one supporting. See the note on `context.stats`. */}
-                <div className="ph-v2-stats">
-                  {context.stats.map((s) => (
-                    <div
-                      className={`ph-v2-stat${s.lead ? " ph-v2-stat-lead" : ""}`}
-                      key={s.value}
-                    >
-                      <b>{s.value}</b>
-                      <span>{s.label}. {s.cite}.</span>
-                    </div>
-                  ))}
-                </div>
+            <div className="ph-v2-head">
+              <p className="ph-chapter-label">{chapterLabel("context")}</p>
+              <h2>{context.heading}</h2>
+              <p className="ph-lbl">{context.dateline}</p>
+              <div className="lede">
+                <p>{context.lead}</p>
               </div>
-
-              <InlineSvg name="seme-locator" className="ph-v2-map" caption={context.captions.locator} />
             </div>
           </Reveal>
 
-          <Reveal>
-            {/* The lead photo leads, not the road (Sylvia, 2026-09-07, audit). Of these
-                three, this one and the planting photo are evidence of the harvest itself;
-                the road is atmosphere. The largest cell used to hold the road, so the
-                mosaic's biggest picture was its least relevant one. Both are kept, at
-                supporting size -- cutting them is Sylvia's call, not a layout decision.
+          {/* Location band: the two-stage locator (western Kenya, zooming to the Seme field
+              site -- both panels already live in the one seme-locator.svg) beside the road
+              photograph at emotional-focal scale. No card around either -- the map's own
+              background already matches the page (`fill="#fbfbfa"`), so dropping the shared
+              diagram card here (post-harvest.css) lets it sit directly on the canvas. */}
+          <div className="ph-v2-location">
+            <Reveal>
+              <InlineSvg name="seme-locator" className="ph-v2-map" caption={context.captions.locator} />
+            </Reveal>
+            <Reveal className="ph-v2-location-road">
+              <figure className="ph-v2-road">
+                <Image
+                  src="/post-harvest/photo/road-to-seme-2000.webp"
+                  alt="A red earth road curving through dense green vegetation near Seme, with a person pushing a bicycle loaded with jerrycans"
+                  width={2000} height={1333} sizes="(max-width: 899px) 92vw, min(1104px, 70vw)"
+                />
+                <figcaption className="ph-cap">{context.captions.road}</figcaption>
+              </figure>
+            </Reveal>
+          </div>
 
-                SWAPPED (Sylvia, 2026-09-07, second pass). This slot originally held a photo
-                of crop drying on a roof ridge, captioned to show the existing drying method
-                directly. That file turned out to be a low-resolution camera-preview export
-                (see the recovery note in git history for `field-roof-drying-1600.webp`), so
-                Sylvia replaced it with this sharp photo instead -- a bowl of harvested grain
-                held up during an interview, phone and pen visible. It is evidence of the
-                harvest, not of the drying method specifically; the caption was rewritten to
-                match (`context.captions.grain`, was `roof`). */}
-            <div className="ph-v2-mosaic">
-              <figure className="ph-mosaic-lead">
+          {/* Evidence rail: the two research numbers as one horizontal strip, ranked (the
+              loss figure leads, the population figure supports), not two stacked dashboard
+              tiles. See the note on `context.stats` in content.ts for why they're ranked. */}
+          <Reveal>
+            <div className="ph-v2-evidence">
+              {context.stats.map((s) => (
+                <div
+                  className={`ph-evidence-stat${s.lead ? " ph-evidence-stat-lead" : ""}`}
+                  key={s.value}
+                >
+                  <b>{s.value}</b>
+                  <span>{s.label}. {s.cite}.</span>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+
+          {/* Documentary pair, closing the location story: the grain photo leads (evidence
+              of the harvest itself), the planting photo supports. Roughly 7/5.
+
+              SWAPPED (Sylvia, 2026-09-07, second pass). The grain slot originally held a
+              photo of crop drying on a roof ridge, captioned to show the existing drying
+              method directly. That file turned out to be a low-resolution camera-preview
+              export (see the recovery note in git history for
+              `field-roof-drying-1600.webp`), so Sylvia replaced it with this sharp photo
+              instead -- a bowl of harvested grain held up during an interview, phone and pen
+              visible. It is evidence of the harvest, not of the drying method specifically;
+              the caption was rewritten to match (`context.captions.grain`, was `roof`). */}
+          <Reveal>
+            <div className="ph-v2-documentary">
+              <figure>
                 <Image
                   src="/post-harvest/photo/field-grain-bowl-1600.webp"
                   alt="A farmer holding out a metal bowl of harvested grain during an interview, with a phone and pen visible in another person's hands beside it"
-                  width={1600} height={1069} sizes="(max-width: 899px) 92vw, 46vw"
+                  width={1600} height={1069} sizes="(max-width: 899px) 92vw, 56vw"
                 />
                 <figcaption className="ph-cap">{context.captions.grain}</figcaption>
               </figure>
               <figure>
                 <Image
-                  src="/post-harvest/photo/road-to-seme-2000.webp"
-                  alt="A red earth road curving through dense green vegetation near Seme, with a person pushing a bicycle loaded with jerrycans"
-                  width={2000} height={1333} sizes="(max-width: 899px) 92vw, 26vw"
-                />
-                <figcaption className="ph-cap">{context.captions.road}</figcaption>
-              </figure>
-              <figure>
-                <Image
                   src="/post-harvest/photo/field-planting-1600.webp"
                   alt="A farmer bending to plant by hand in freshly tilled soil, with young maize seedlings in rows"
-                  width={1600} height={1067} sizes="(max-width: 899px) 92vw, 26vw"
+                  width={1600} height={1067} sizes="(max-width: 899px) 92vw, 38vw"
                 />
                 <figcaption className="ph-cap">{context.captions.planting}</figcaption>
               </figure>
@@ -341,12 +355,25 @@ export default function PostHarvestPage() {
             desktop widths, Sylvia). Section-04-scoped on purpose; do not swap other
             sections onto it. */}
         <div className="ph-04-canvas">
+          {/* `.ph-04-head` is the sticky header wrapper -- scoped to this section only (see
+              post-harvest.css). It shares `.ph-04-canvas`'s horizontal container with the
+              scroll stage below on purpose, so its content stays aligned to the same
+              left edge whether it is in normal flow (mobile / no-JS) or stuck (desktop).
+              Only the eyebrow + h2 live inside it (Sylvia): the lede is a separate,
+              NOT-sticky paragraph right below, so it reads once at the section's entrance
+              and then scrolls away normally instead of staying pinned through all three
+              steps -- there is exactly one "Finding the focus" in the DOM either way, so
+              nothing here duplicates the title. */}
+          <HeadHeightVar className="ph-04-head">
+            <Reveal>
+              <div className="ph-v2-head">
+                <p className="ph-chapter-label">{chapterLabel("focus")}</p>
+                <h2>{focus.heading}</h2>
+              </div>
+            </Reveal>
+          </HeadHeightVar>
           <Reveal>
-            <div className="ph-v2-head">
-              <p className="ph-chapter-label">{chapterLabel("focus")}</p>
-              <h2>{focus.heading}</h2>
-              <p className="lede">{focus.lead}</p>
-            </div>
+            <p className="ph-04-lede">{focus.lead}</p>
           </Reveal>
 
           <ScrollSteps className="ph-04-scroll">
@@ -376,14 +403,16 @@ export default function PostHarvestPage() {
               </div>
             </figure>
 
-            {/* Step 02 -- the latent need. Its one sentence is the needs-map's own former
-                caption; there is no separate label the way steps 01/03 have one, because
-                none existed for this figure before. When this step is active,
+            {/* Step 02 -- the latent need. Now carries its own `.ph-lbl` heading (added on
+                request), same class/spacing as steps 01/03's labels, sourced from the
+                needs-map diagram's own title rather than new copy -- see
+                `focus.captions.needsLabel` in content.ts. When this step is active,
                 `.ph-latent` (the SVG's own central-bubble class, already animated by
                 `.is-visible .ph-latent` elsewhere on the page) gets emphasised further and
                 the surrounding grey bubbles are dimmed -- see post-harvest.css. */}
             <div className="ph-04-step ph-04-step--1">
               <p className="ph-04-step-index">{focus.steps[1].index}</p>
+              <p className="ph-lbl">{focus.captions.needsLabel}</p>
               <p>{focus.captions.needs}</p>
             </div>
             <InlineSvg name="needs-map" className="ph-04-visual ph-04-visual--needs" />
@@ -880,12 +909,13 @@ export default function PostHarvestPage() {
           typographic, not pictorial, and the handbook page inside it is small. An
           unmarked box records only that the item was not assessed. */}
       <section className="ph-section ph-v2 ph-section-sunk" id="status">
-        {/* `ph-09-canvas` alongside `.ph-canvas` on all three wrappers below (heading, dark
-            "completed" band, and the checklist/why/forward group), not instead of it --
-            see that class's definition in post-harvest.css for why (the shared 1480px
-            `.ph-canvas` was leaving very large side margins at wide desktop widths,
+        {/* `.ph-shell` on all three wrappers below (heading, dark "completed" band, and
+            the checklist/why/forward group) -- HALOGRIP's own wide-container pattern
+            (`halogrip.css`'s `.shell`), mirrored at HALOGRIP's own numbers; see `--shell`'s
+            definition in post-harvest.css for the full history (was `.ph-canvas`, then a
+            bespoke `.ph-09-canvas` formula that plateaued too early on very wide screens,
             Sylvia). Section-09-scoped on purpose; do not carry it onto other sections. */}
-        <div className="ph-canvas ph-09-canvas">
+        <div className="ph-shell">
           <Reveal>
             <div className="ph-v2-head">
               <p className="ph-chapter-label">{chapterLabel("status")}</p>
@@ -895,7 +925,7 @@ export default function PostHarvestPage() {
         </div>
 
         <div className="ph-v2-ink">
-          <div className="ph-canvas ph-09-canvas">
+          <div className="ph-shell">
             <Reveal>
               <div className="ph-done-v2">
                 <div>
@@ -925,7 +955,7 @@ export default function PostHarvestPage() {
           </div>
         </div>
 
-        <div className="ph-canvas ph-09-canvas">
+        <div className="ph-shell">
           <Reveal>
             <div className="ph-scored-v2">
               <p className="ph-open-claim">{status.claimOpen}</p>
@@ -984,7 +1014,15 @@ export default function PostHarvestPage() {
             Bleeds to the viewport edge the same way `.ph-done` does in section 09 (this
             `<div>` is a direct child of the `<section>`, not wrapped in `.ph-canvas`, so it
             is not width-constrained the way the footer below it is), so it reads as a
-            deliberate field rather than a boxed inset. */}
+            deliberate field rather than a boxed inset.
+
+            `.ph-shell`, not `.ph-canvas`, as of 2026-09-07 -- matching section 09's own
+            switch (see that section's comment / the `--shell` token in post-harvest.css).
+            Before this, 09 and 10 sat on two different widths (1700px vs 1600px, x=422 vs
+            x=472 at a 2560px viewport -- measured, a real 50px misalignment between
+            adjacent sections), which is what Sylvia meant by "cross-project consistency
+            has not yet been completed": HALOGRIP-mirroring only 09 left 10 the odd one out
+            again. */}
         <div className="ph-10-photo">
           <div className="ph-10-photo-media">
             <Image
@@ -995,7 +1033,7 @@ export default function PostHarvestPage() {
           </div>
           <div className="ph-10-photo-scrim" />
 
-          <div className="ph-canvas ph-10-photo-content">
+          <div className="ph-shell ph-10-photo-content">
             <Reveal>
               <div className="ph-v2-head">
                 <p className="ph-chapter-label">{chapterLabel("reflection")}</p>
@@ -1024,7 +1062,11 @@ export default function PostHarvestPage() {
           </div>
         </div>
 
-        <div className="ph-canvas">
+        {/* `.ph-shell`, matching `.ph-10-photo-content` above (both switched from
+            `.ph-canvas` together, 2026-09-07) -- this utility line still needs to line up
+            with the reflection content directly above it, same as it always did, just at
+            the new width. */}
+        <div className="ph-shell">
           <Reveal>
             <div className="ph-foot">
               <span className="ph-cap">{project.title}, Reality Studio, Chalmers, 2024</span>

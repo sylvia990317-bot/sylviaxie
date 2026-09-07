@@ -225,6 +225,10 @@ export const focus = {
     "The group was not uniform either: farmers who already had a storage room did not need another one. We still put a storage concept into the first farmer evaluation to test that conclusion, and the response confirmed it.",
   ],
   captions: {
+    /** Step 02's own `.ph-lbl` heading, same role as `bags.label` / `redirect.label` for
+     * steps 01/03 -- added on request, reusing the needs-map diagram's own title
+     * ("Expressed vs latent need · Booklet p.21") rather than writing new copy. */
+    needsLabel: "Expressed vs latent need",
     needs: "Needs from the interviews, sorted into what farmers said and what they did not. Booklet p.21.",
     cycle: "Drying is one stage of six, and the stage where the harvest is most exposed.",
   },

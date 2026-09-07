@@ -5,7 +5,145 @@ verified), moved out of `CLAUDE.md` to keep the auto-loaded project instructions
 This file is **not** auto-loaded into context — read it only when you need the historical
 rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
 
-### Post Harvest 10: a real nested max-width, and 09's honest limit (this session)
+### CLAUDE.md brought up to date with Post Harvest (this session)
+
+CLAUDE.md still described the site as having "the first and only [project page] so far... 
+`/work/halogrip`" -- stale by several sessions' worth of Post Harvest work (all the entries
+below, plus everything before them). Updated:
+
+- **"What this project is"**: now lists both case studies, with Post Harvest's own voice
+  (Bodoni Moda/Geist, blue accent, 10 numbered chapters) named the same way HALOGRIP's is.
+- **Hard rule 1** (bespoke visual style per case study): extended to name Post Harvest, plus
+  an explicit carve-out for `.ph-shell` -- Sylvia asked for that one mechanism to mirror
+  HALOGRIP's `.shell` specifically, and future sessions should not read that as license to
+  unify anything else the pages share.
+- **New hard rule 7**: the three different Post Harvest container widths (`.ph-canvas`
+  1600px default, `.ph-shell` 1700px on 09/10 only, `.ph-04-canvas` 1680px on 04 only) and
+  why they're different, so a future session checks which class a section is actually on
+  before assuming `.ph-canvas` is "the" canvas -- this took several back-and-forth sessions
+  to work out and shouldn't need re-deriving.
+- **Structure reference**: added the full `app/work/post-harvest/` file list and
+  `public/post-harvest/`'s asset subfolders (parallel detail level to the existing HALOGRIP
+  entries), and `design-source/kenya-photo-originals/` alongside the HALOGRIP source folders
+  already documented there.
+- **Open items**: added Post Harvest's own open questions from its `TODO(sylvia)` comments
+  (Apollo's attribution, handbook delivery, the roof-drying photo, the round-one storage
+  sketch). Also corrected two stale bullets caught in the process: the "real thumbnail for
+  HALOGRIP" item was already resolved (confirmed the file exists on disk, the note just
+  never got removed) and the tags item now reflects that Post Harvest's card already has
+  real tags while HALOGRIP's still doesn't.
+
+Not touched: nothing about the actual site changed, and neither did anything already-correct
+in CLAUDE.md's Deployment section (this session's own Post Harvest work remains uncommitted
+locally, matching an earlier entry -- routine git status, not something to document here).
+
+### Post Harvest: measured against HALOGRIP directly, then a checklist bump + 10 onto `.ph-shell` (previous session)
+
+Sylvia asked for a same-viewport, code-untouched measurement of HALOGRIP #concepts (its own
+"[ 05 / CONCEPT EXPLORATION ]") against Post Harvest #status (09) before any further
+changes -- her own math (shell "about 90vw" x 75% figure = "only ~67.5vw") assumed the shell
+kept scaling as a flat percentage of viewport past where it's actually capped.
+
+**Measured both at the same 2560px logical viewport, `.ph-canvas`/`Reveal` fade-ins forced
+visible, nothing else touched:**
+
+| | HALOGRIP #concepts | Post Harvest #status (before this entry) |
+|---|---|---|
+| Shell width | 1700px (x=422-2122) | 1700px (x=422-2122) -- identical |
+| Primary visual | active concept card, 1110px | checklist figure, 1143px |
+| Primary visual, % viewport | 43.4vw | 44.6vw |
+| Primary visual, % of shell | 65.3% | 67.2% |
+| Title x | 506px = 19.8vw | 510px = 19.9vw |
+| Title font-size | 61px (`--fs-heading-lg`, capped) | 36px (`.ph-v2-head h2`, capped) |
+
+The width theory didn't survive contact with the numbers: the checklist was already
+proportionally ahead of HALOGRIP's own card, not behind it, in both metrics. What the
+comparison did prove: the two titles are both pinned at their own clamp's ceiling at this
+width, and those ceilings are 61px vs 36px -- a real, 1.7x gap. Reported both findings before
+changing anything, per the brief, rather than acting on the (disproven) width theory alone.
+
+**Adjusted anyway, per the two unconditional items in the brief:**
+
+- `.ph-scored-v2 .ph-fig-primary` 75% -> 80% -- not required by the measurement (67.2% was
+  already ahead of HALOGRIP's 65.3%), but moves it decisively rather than marginally past
+  HALOGRIP's own ratio. Verified: 1219px, still 0px scroll overflow in `.ph-svg-body`.
+- Section 10 moved onto `.ph-shell` (`.ph-10-photo-content` and the utility footer below it,
+  both together so they keep lining up with each other). This is what "cross-project
+  consistency has not yet been completed" concretely meant: 09 alone on `.ph-shell` while 10
+  stayed on the old `--canvas` (1600px) had them starting at x=422 vs x=472 -- a new 50px
+  seam between two adjacent sections that widening only 09 had introduced. Both now start at
+  x=422, matching 09 and HALOGRIP.
+
+**NOT touched: the title font-size gap.** It's real and measured, but `.ph-v2-head h2` is
+used by every section on the page, and CLAUDE.md's hard rule #1 is explicit that each case
+study keeps its own bespoke type voice on purpose (this is exactly the kind of value that
+rule exists to protect). Resizing it to chase HALOGRIP's 61px wasn't done without checking
+first -- flagged in chat instead of acted on silently.
+
+**Verified** in the browser: shell widths match HALOGRIP's 1700px exactly on both 09 and (now)
+10; checklist figure re-measured at 1219px / 80.0% of its shell's inner content width, zero
+scroll overflow; section 10's photo-content and footer both measure x=422/w=1700, matching
+09 and no longer offset from each other. Screenshotted both sections post-change -- no
+overflow, no distortion, checklist visibly larger, section 10's four blocks and footer now
+share one left edge. `npm run build` and `tsc --noEmit` clean.
+
+### Post Harvest 09: `.ph-shell`, HALOGRIP's own container pattern (previous session)
+
+Sylvia, resolving the tension flagged at the end of the previous entry: "这边宽度的规则你
+可以参考halogrip的" (for the width rules here, you can reference HALOGRIP's).
+
+Checked `app/work/halogrip/halogrip.css`'s actual live container: `.shell{width:min(100%,
+1700px);margin-inline:auto;padding-inline:var(--gutter)}` with `--gutter:clamp(22px,5.2vw,
+84px)`. Confirmed HALOGRIP's own shell has the identical ceiling shape 09's bespoke formula
+had -- past roughly 1876-1900px viewport its content flatlines around 1524-1532px and stops
+growing, same as any `min(fixed px, ...)` formula must. That settles the tension from last
+entry: this is the shared design language's accepted "capped reading width," not a defect
+unique to post-harvest's own formula, so matching HALOGRIP means matching its ceiling too --
+just at HALOGRIP's own, more generous number, and its simpler two-part mechanism (width cap
+and gutter computed separately, not baked into one `calc()`).
+
+**Found post-harvest already had a dormant copy of exactly this pattern.** `--shell:
+1960px`, `--shell-wide: 1800px`, `.ph-shell { width: 100%; max-width: var(--shell);
+margin-inline: auto; padding-inline: var(--gutter); }` and `.ph-shell-wide` were sitting in
+the file, structurally identical to HALOGRIP's `.shell`, but never referenced by any live
+element -- confirmed via grep across every `.tsx` file. Their only consumers were equally
+dead v1 selectors (`.ph-done`, `.ph-status*`, `.ph-return*`, `--edge`/`--edge-wide`), long
+superseded by `.ph-done-v2` etc. The file's own comment on `--shell` was already stale,
+still claiming "the hero is the only section still on `--shell-wide`" when the hero has
+read at `.ph-canvas.ph-hero-inner` for several sessions now.
+
+**Fix: revived `--shell` at HALOGRIP's own value (1960px -> 1700px) and wired `.ph-shell`
+onto section 09's three wrappers**, replacing `.ph-canvas.ph-09-canvas` entirely (not
+alongside `.ph-canvas` this time -- `.ph-shell` never needed the old formula's forced
+`padding-inline: 0` workaround, since it computes width and gutter separately instead of
+baking the gutter into one `calc()`). Also dropped the now-orphaned `.ph-v2-ink .ph-canvas
+{ padding-inline: 0 }` rule, which existed only to serve the old formula. Left `--gutter`
+itself untouched -- its one live consumer is the mobile `.ph-band` horizontal-scroll bleed,
+out of scope for this pass, and it was already close to HALOGRIP's own gutter numbers.
+
+Deliberately NOT touched: `.ph-04-canvas` (a categorically different layout -- 04's sticky
+two-column stage has its own carefully re-tuned legibility floor, not re-litigated this
+pass), the site-wide `--canvas` (1600px, 02/03/05/06/07/08/10 -- explicitly off-limits
+again this round), and section 10 (already fixed last entry via the `.ph-insight` nested
+`max-width`, unrelated to any canvas token).
+
+**Verified** in the browser: `--shell` computed to `1700px`, `.ph-shell`'s `max-width`
+matches, and at the one live width this session's environment actually rendered (1536px,
+below the 1700px cap) `.ph-shell` measured 1520.8px with 76.8px padding each side --
+correctly `width: 100%` before the cap engages, exactly as `.ph-canvas` already behaves the
+same way below its own cap elsewhere in this file. The checklist figure
+(`.ph-scored-v2 .ph-fig-primary`) measured 75.0% of the shell's inner content width (1025px
+of 1367px), still square in the requested 70-78% range -- the width is a percentage of the
+padded content box, so it automatically followed `.ph-shell` in without needing its own
+edit. Screenshotted before/after: the dark "completed" band and the checklist now run
+within ~77px of both viewport edges instead of sitting in a visibly narrower centred column.
+`resize_window` still didn't change this session's actual viewport (same limitation noted
+in both prior entries), so the >1700px capped state was verified by reading `.ph-shell`'s
+computed `max-width` and reasoning from `.ph-canvas`'s already-proven identical
+`width:100%;max-width:Xpx` mechanics, not by rendering a literal wide viewport directly.
+`npm run build` and `tsc --noEmit` clean.
+
+### Post Harvest 10: a real nested max-width, and 09's honest limit (previous session)
 
 Sylvia: the `--canvas` widening below "did not materially change the composition,"
 told me not to touch it again, and asked me to inspect actual bounding boxes in sections

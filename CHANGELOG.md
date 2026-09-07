@@ -5,7 +5,342 @@ verified), moved out of `CLAUDE.md` to keep the auto-loaded project instructions
 This file is **not** auto-loaded into context — read it only when you need the historical
 rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
 
-### Post Harvest 04, and a diagram legibility floor that was silently broken everywhere (this session)
+### Post Harvest 10: a real nested max-width, and 09's honest limit (this session)
+
+Sylvia: the `--canvas` widening below "did not materially change the composition,"
+told me not to touch it again, and asked me to inspect actual bounding boxes in sections
+09 and 10 instead. Measured both in the browser rather than guessing -- they turned out to
+be two different situations.
+
+**Section 10 had a real bug, now fixed.** `.ph-insight` (each of the four reflection
+blocks) carried its own `max-width: 44ch` -- meant to keep the paragraph readable, but it
+capped the WHOLE block: numeral, heading, border-top rule and all. In the 2-column grid
+(`.ph-insights`, `1fr 1fr`), that left each block sitting flush left in a ~744px cell at
+only 467px wide, a ~277px dead gap to its neighbour beyond the deliberate `column-gap`. Not
+a canvas problem at all -- `.ph-insights` itself already measured the full padded canvas
+width before this fix. Moved the `44ch` cap off `.ph-insight` and onto just the two pieces
+of running prose inside it (`.ph-body`, `.next`) that actually needed it, plus a `30ch`
+safety cap on the heading (short enough it never actually binds). Verified: each block now
+measures 716px (its full grid cell), body text still wraps at 44ch (394px), and the visual
+difference is immediate -- screenshotted before and after, the four blocks now spread
+across the full width of the dusk photo instead of huddling left in each half.
+
+**Section 09 has no equivalent nested wrapper -- the canvas ceiling itself is the limit.**
+Measured `.ph-done-v2` (the dark "completed" band) and `.ph-why` (the "why these stayed
+open" two-column block): both measure EXACTLY the same x-bounds as `.ph-09-canvas` itself,
+pixel for pixel. There is nothing narrower to remove. The image column already measures
+38.3% of the canvas (inside the requested 36-40%), and at exactly a 2048px viewport
+`.ph-09-canvas`'s formula (`min(1560px, calc(100% - 96px))`) computes to x=244..1804 at
+76.2% of the viewport -- inside every range Sylvia specified (x=220-260 start, x=1780-1820
+end, 75-80% used). The 1560px figure was tuned to land exactly there. What it does not do
+is keep scaling past that: on a wider window (measured at this session's actual ~2560px
+test viewport) the same fixed 1560px reads as only 60.9% of the viewport, which is the
+"narrow tablet floating in a large screen" look Sylvia is describing. That is the
+`.ph-09-canvas`/`.ph-04-canvas` ceiling itself, not a bug in 09's internal grids -- and
+Sylvia's explicit instruction this round was not to touch the canvas again, so it was left
+alone pending her call on that specific tension. Reported plainly rather than guessing
+either direction.
+
+`npm run build` and `tsc --noEmit` clean. No canvas token touched.
+
+### Post Harvest: `--canvas` widened site-wide, 1480px -> 1600px (previous session)
+
+Sylvia, after the 09 fix above: "没有改善啊，大屏幕还是两边大量留白" (no improvement, large
+screens still have big margins on both sides). Diagnosed before changing anything, since
+"no improvement at all" (rather than "still a bit narrow") pointed at a few different
+possible causes -- confirmed by asking rather than guessing:
+
+- **Not a deploy/cache problem.** All of this project's work is uncommitted local changes
+  (`git status`) on `kenya-case-redesign`, itself 5 commits ahead of its own remote and
+  nowhere near `main`; nothing has been pushed or `vercel --prod`'d. If Sylvia had been
+  looking at the live site this would be the whole explanation. She confirmed she was on
+  `localhost:3000`, ruling this out.
+- **Not a 04/09 regression.** Measured both directly: still 1680px / 1560px, exactly as
+  the last two sessions left them.
+- **The real answer, confirmed by asking rather than assuming**: sections 02, 03, 05, 06,
+  07, 08 and 10 -- everything the 04/09 passes didn't touch -- were still reading at the
+  original shared `.ph-canvas` (`--canvas: 1480px`), which was never a bug, just this
+  project's original "editorial reading width" decision (see the file's own header
+  comment). Sylvia now wants that widened too, site-wide.
+
+Presented three ways to do it (one shared token vs. a `.ph-0X-canvas` per remaining
+section vs. one shared opt-in utility class) and she picked the simplest: **widen
+`--canvas` itself**, one line, so every section still using the plain `.ph-canvas` widens
+together. `--canvas: 1480px` -> `1600px` -- a round number between the two section-scoped
+values already validated (1560 for 09, 1680 for 04). `--canvas-pad` (side padding, already
+capped at 56px/side by ~1400px viewport) is untouched, so this only grows the content band,
+not the gutter, and mobile/tablet is unaffected by construction, not by a separate check.
+`.ph-04-canvas`/`.ph-09-canvas` both use literal pixel values in their own `calc()`s, never
+`var(--canvas)`, so this change and those two are fully independent -- confirmed unchanged
+in the browser after this edit.
+
+Updated the stale "1480px" mentions in nearby comments (the `--shell-wide` note, and the
+04/09 canvas blocks' own "every other section reads at 1480px" framing) to say clearly that
+`--canvas` was later widened and that those two sections' own numbers are independent of it,
+so a future reader doesn't take either old value at face value.
+
+**Verified** in the browser: all seven previously-untouched sections (`context`, `field`,
+`challenge`, `concepts`, `final-concept`, `mechanism`, `reflection`) now measure 1600px;
+04 and 09 unchanged at 1680px / 1560px; no page-level horizontal scroll. Spot-checked two
+of the more layout-heavy sections (05's photo-and-vignette-strip beat, 08's diagram pair +
+four-step row + ghosted-body pair) at the new width -- both simply gained more breathing
+room, no overflow, no broken grid, no distortion. `npm run build` and `tsc --noEmit` clean.
+
+### Post Harvest 09: the same wide-margin bug, in a different section (previous session)
+
+Sylvia, following straight on from the 04 container fix above: "The large-screen whitespace
+issue is still not fixed... the requirement-list graphic... heading, graphic, caption and
+bottom two-column explanation." That description doesn't match section 04 (no requirement
+list, no bottom two-column explanation there) -- it matches section **09** ("What we
+completed, and what remained open", `id="status"`), which the 04 fix never touched (it was
+explicitly scoped to 04 only, per that session's own brief: "Do not globally modify already-
+approved sections"). Confirmed in the browser before changing anything: 04's `.ph-04-canvas`
+was still 1680px as expected; 09's three `.ph-canvas` wrappers (heading / dark "completed"
+band / checklist+why+forward) were all still 1480px, exactly the shared, unmodified class.
+The other nested constraint asked about -- "around 1080px / 1200px" -- was
+`.ph-fig-primary { max-width: 1040px }`, wrapping the scored-checklist SVG specifically.
+
+**Fix.** New `.ph-canvas.ph-09-canvas` compound rule (`width: min(1560px, calc(100% - 96px));
+max-width: none; padding-inline: 0`), added ALONGSIDE `.ph-canvas` on all three of 09's
+wrappers rather than replacing the class, so `.ph-v2-ink .ph-canvas`'s existing
+`padding-inline: 0` (the dark band's own rule) keeps matching without needing to be
+duplicated for the new class too. Used `calc(100% - 96px)` rather than the `92vw` also
+offered: the two are equal at exactly 1200px and `92vw` gives less than the requested
+48px-per-side floor below that (40px at 1000px), while `calc(100% - 96px)` holds the floor
+at any width -- same reasoning as 04's `clamp(48px, 8vw, 160px)`, simplified since 09 has no
+equivalent need to keep shrinking past 1200px gracefully. The checklist figure's own
+`max-width: 1040px` is overridden to `width: 75%` (scoped to `.ph-scored-v2 .ph-fig-primary`,
+not the shared `.ph-fig-primary` class, which has no other caller right now but was left
+generic rather than repurposed) -- 75% of 1560px is 1170px, inside the requested 70-78%
+range, and it now scales with the canvas instead of stopping dead at 1040px. Paragraph text
+inside the wider two-column explanation needed no change: `.ph-body { max-width: var(
+--measure) }` (58ch) already caps every paragraph in `.ph-why-say`/`.ph-why-limits`
+independently of their column's width.
+
+**Verified** in the browser: all three of 09's canvases measure 1560px; the checklist figure
+measures 1170px (75.0%) with zero scroll inside its plate; the heading, the dark band, the
+checklist+caption and the "why these remained open" two-column block share one left/right
+edge (screenshotted, visually confirmed). Section 04 reconfirmed unchanged at 1680px, and an
+unrelated section (`#context`) reconfirmed unchanged at 1480px -- this fix touched section 09
+only. `npm run build` and `tsc --noEmit` both clean. Same `resize_window` limitation as the
+04 session (this browser session's `innerWidth` does not respond to it): verified against one
+real wide render plus the formula's own arithmetic, not four independent live viewports.
+
+### Post Harvest 04: deterministic GSAP activation + a section-scoped wide container (previous session)
+
+Sylvia: "Fix the interaction and large-screen container of Section 04 only. Do not redesign
+its typography or content." Two problems, diagnosed before touching anything:
+
+**Problem 1, uncontrolled transitions.** `scroll-steps.tsx`'s single `IntersectionObserver`
+(`rootMargin: "-42% 0px -42% 0px"`, `threshold: [0, 0.25, 0.5, 0.75, 1]`) picked whichever
+step had the highest intersection RATIO -- intersecting area divided by the step's OWN
+area. That is not a fixed reading line: step 02 was one sentence, so it hit ratio 1 (and
+"won") the instant it was fully inside the band and lost again almost immediately, while
+three-paragraph step 01 kept "winning" over a much longer scroll distance purely because it
+had more area to intersect with. The steps' `.ph-04-step` rule itself had no `min-height` at
+all, so their real on-screen heights were whatever their own content happened to need.
+
+**Problem 2, wasted margins.** `page.tsx` wrapped section 04 in `.ph-canvas`
+(`max-width: var(--canvas)`, `--canvas: 1480px`) -- the same shared, fixed-width class every
+other section uses. `--canvas` does not grow past 1480px on any wider viewport, so at
+2048px the section still measured 1480px wide (confirmed in the browser), same as at
+1400px. `--shell-wide` (1800px) was considered as the "existing wide-container token" and
+rejected: it is dead CSS, unused anywhere in this file except its own declaration, and its
+comment scopes it to "hero and the blue chapter field" specifically.
+
+**Fix 1: GSAP ScrollTrigger, one trigger per step, a fixed reading line.**
+`start: "top 48%"` / `end: "bottom 48%"` -- the trigger is active exactly while a step's own
+[top, bottom] span contains the line at 48% of the viewport, in either scroll direction
+(`onToggle`), never area-ratio-based. `.ph-04-step` gets `min-height: 60svh` (a floor, so a
+step that genuinely needs more room can still grow) so all three steps -- 02 included -- get
+the same scroll interval; confirmed in the browser at `min-height:0` per step, all three
+measured exactly 763px tall (60svh of that viewport) before this, they were wildly uneven.
+No `pin`, no `scrub`, no scroll-snap: `ScrollTrigger` only reads position via `onToggle`, and
+the sticky visual is plain CSS `position: sticky`, unpinned, so it un-sticks naturally once
+the reader scrolls past the three steps' combined height.
+
+Hit one real bug building this: the first version created every `ScrollTrigger` in the SAME
+effect that calls `setArmed(true)`, which only *queues* the `ph-04-armed` class -- React had
+not yet committed the re-render that adds it (and with it, `.ph-04-step`'s `min-height:
+60svh`) by the time `ScrollTrigger.create` measured each step's `getBoundingClientRect()`. It
+read the pre-armed, un-grown height, so `end: "bottom 48%"` landed hundreds of pixels short
+of the step's real bottom edge and every step after the first became unreachable. Fixed by
+splitting into two effects: one sets `armed`, a second (`useEffect(..., [armed])`) creates
+the triggers, guaranteeing it runs after that class -- and the layout it drives -- has
+already committed. Also added `document.fonts.ready.then(() => ScrollTrigger.refresh())` as
+a safety net against next/font's `display: swap` still reflowing the page after that.
+
+**Fix 2: `.ph-04-canvas`, a new, section-scoped fluid container.**
+`width: min(1680px, calc(100% - clamp(48px, 8vw, 160px))); margin-inline: auto;`, applied
+only where `page.tsx` wraps `id="focus"`'s content -- every other section's `.ph-canvas`
+is untouched, confirmed unchanged (1480px) in the browser after this change. Grid split
+stayed `minmax(0, 35%) minmax(0, 65%)`, but the column *gap* had to change too: CSS Grid
+resolves percentage tracks against the full container width, not width-minus-gap, so
+whichever track is flexible enough absorbs the shortfall -- here the right (visual) column,
+which measured 61.2% instead of 65% at the old `column-gap: var(--pair)` (up to 64px).
+Given a dedicated, smaller `column-gap: clamp(24px, 2.4vw, 48px)` instead, it measures
+62-63% at every armed width. Net effect on the diagram itself: the needs-map plate went from
+a flat ~824px at every desktop width (the old `.ph-canvas` ceiling) to ~695px at the 1280px
+breakpoint scaling up to ~1003px once `.ph-04-canvas` hits its own 1680px ceiling -- no
+min-width floor was reintroduced (would still force a scrollbar at the narrow end of that
+range), but labels now render up to ~12.1px at the wide end, versus a flat ~9.9px before.
+
+**Verified** in the browser with real mouse-wheel scrolling (not `window.scrollTo` -- see
+below): `data-active-step` moves 0->1->2 and back correctly, each transition landing near
+the 48% line; the needs-map's `.ph-latent` emphasis and the maize-lifecycle Drying-node
+growth both fire at the right moments; the sticky visual stays in place across each step's
+full 60svh interval and un-sticks cleanly into section 05 with no dead space. `.ph-04-canvas`
+measured 1680px (its ceiling) at a 2560-logical-px window with `.ph-04-scroll` filling it
+exactly, left column 35.0% / right column 62.1%, zero horizontal scroll on the diagram
+plate or the page. Fallback re-confirmed by removing `.ph-04-armed` by hand (the identical
+code path a sub-1280px viewport or no-JS visitor takes): `display: block`, correct
+step/visual/step/visual/step/visual order, `.ph-04-step`'s `min-height` back to `0`.
+`npm run build` and `tsc --noEmit` both clean.
+
+Not independently verified: `resize_window` did not change this browser session's actual
+`innerWidth` (stuck reporting a 2560-logical-px window regardless of the size requested,
+same limitation noted in the previous session), so 1440/1920/2048/390 could not be checked
+as literal live viewports. 1680px-ceiling and 2048px-equivalent behaviour (`.ph-04-canvas`
+at its cap) *was* measured directly; 1440px and 390px behaviour is confirmed by the
+`min(1680px, calc(100% - clamp(48px, 8vw, 160px)))` formula's own arithmetic against the one
+verified data point, not a second live render. `prefers-reduced-motion: reduce` likewise
+wasn't emulated live; the CSS was written following this file's two existing precedents
+(`.ph-latent-in`'s guard, `.ph-07-cover-stack`'s) and the GSAP layer needed no reduced-motion
+branch at all, since it only ever writes `data-active-step` -- the crossfade it drives is a
+plain CSS `transition`, already gated by `@media (prefers-reduced-motion: reduce)`.
+`window.scrollTo()` calls from the browser automation tool were also found NOT to reliably
+fire the native `scroll` event `ScrollTrigger` listens for in this environment (confirmed by
+comparing `ScrollTrigger.getAll()[i].progress` against a manual `ScrollTrigger.update()`
+call) -- a tooling artifact, not a page bug; every activation check above used real
+mouse-wheel scroll events instead once this was found.
+
+### Post Harvest 04 rebuilt as a three-step scrollytelling sequence (previous session)
+
+Sylvia, after reviewing a three-state motion storyboard: revise section 04 so the heading
+appears once, then a left column advances through three steps (existing solution / latent
+need / the shift) while a right column is one sticky visual stage that crossfades between
+the PICS-bag photo, the needs map, and the maize-lifecycle drawing. Explicit constraints: no
+scroll-jacking/pinned timeline, 34-36%/64-66% column split, progressive enhancement (works
+fully with no JS and under `prefers-reduced-motion`), mobile disables sticky and stacks
+text→visual→text→visual→text→visual, section stays close to its previous height. Planned in
+plan mode (see the plan file's Section 04 revision) and approved before implementation.
+
+**Architecture.** `page.tsx` (a Server Component -- `InlineSvg` reads the diagram files from
+disk, which only works server-side) cannot pass a render-prop function to a Client Component
+across that boundary, only serialisable elements (`next build` caught this immediately:
+"Functions cannot be passed directly to Client Components"). So `scroll-steps.tsx`'s
+`ScrollSteps` takes plain `children`, and instead of cloning/toggling classes on them, it
+reflects "which step is active" as a `data-active-step="0|1|2"` attribute on its OWN wrapper.
+Every rule that needs to know the active step is a `.ph-04-armed[data-active-step="N"]
+<descendant>` CSS attribute selector, not JS-toggled classNames -- the six children (three
+`.ph-04-step`, three `.ph-04-visual`, source order text/visual/text/visual/text/visual) are
+static markup from the server.
+
+**Fail-open, same shape as `reveal.tsx`.** `ScrollSteps` starts unarmed; it only adds
+`ph-04-armed` after mounting, finding an `IntersectionObserver`, and finding at least one
+`.ph-04-step` child. Every sticky/grid/crossfade rule in `post-harvest.css` lives under
+`.ph-04-armed` *and* `@media (min-width: 1280px)` together, so: no JS -> plain `display:
+block` stack in source order (exactly the required mobile order, with zero extra code for
+mobile specifically); JS but narrow -> same stack; JS and wide -> the two-column grid. The
+three `.ph-04-visual`s share one grid cell (`grid-column: 2; grid-row: 1 / 4`) with
+`position: sticky`, which is what makes them overlap instead of stack; opacity + `visibility`
+(delayed 300ms on the way out, immediate on the way in, so the outgoing image stays in the
+accessibility tree only while still visibly fading) pick which one shows.
+
+**The 34/66 split collides with `--canvas`'s 1480px cap.** Measured in the browser: the right
+column's actual width is ~824px at *every* armed viewport from 1280px up to an ultrawide
+monitor, because `--canvas` never grows past 1480px regardless of window width. A first pass
+gave needs-map a 900px `min-width` floor (inherited from the previous non-scrollytelling
+layout) reasoning it would only rarely scroll; it scrolled permanently, 116px of hidden
+diagram at every width, which is exactly the "separate poster" feel the brief said to avoid.
+Fix: no floor at all for these two drawings now -- `width: 100%` lets them shrink to whatever
+the stage actually has. needs-map's smallest labels render at ~9.9px, a real step down from
+the site's usual 12px floor, but the section is finally shorter than one screen and never
+scrolls sideways.
+
+**Two "subtle emphasis" effects, both CSS-only, no SVG edits.** Step 02 active:
+`.ph-04-armed[data-active-step="1"] .ph-04-visual--needs .ph-latent { stroke-width: 2.6 }`
+thickens the two central bubbles (`DRYING PROCESS` / `KNOWLEDGE GAP`, the class already used
+by `.is-visible .ph-latent`'s one-time reveal animation elsewhere on the page) and dims every
+other solid bubble to 0.55 opacity, leaving the dashed EXPRESSED/LATENT set boundaries alone.
+Step 03 active: `circle[fill="#17357a"] { r: 15 }` grows the one filled Drying dot in
+maize-lifecycle (uniquely matched by its exact fill colour) over the hollow Storage node
+beside it. Both use SVG geometry properties (`r`, `stroke-width`) as CSS, which works because
+neither drawing sets these via an inline `style` attribute -- only presentation attributes,
+which any stylesheet rule outranks.
+
+**Verified** in the browser: heading renders once; `.ph-04-scroll` carries `ph-04-armed` and
+`data-active-step` moves 0->1->2 on scroll (confirmed by removing/restoring the `armed` class
+by hand, which reproduces the exact no-JS/narrow-viewport fallback -- correct interleaved
+order, `display: block`); needs-map plate measures 824px wide with 0px scroll overflow;
+`.ph-latent` emphasis and the Drying-node growth both render correctly at their respective
+active steps; section 04's total height (~1099px at a very tall test viewport, including the
+heading) stays in the same range as the previous three-beats layout. `npm run build` clean.
+Not separately verified in this pass: real `prefers-reduced-motion: reduce` emulation (the
+CSS was written and reviewed rule-by-rule for it, following the two existing precedents in
+this file at `.ph-latent-in`'s guard and `.ph-07-cover-stack`'s) and a real sub-1280px
+viewport (`resize_window` did not take effect in this browser session; the fallback was
+instead verified by removing the `armed` class directly, which exercises the identical CSS
+path a narrow viewport takes).
+
+### Post Harvest 04: the two diagrams were the same width, and that was the problem (previous session)
+
+Sylvia: "section 4 结构不协调分析一下原因" plus "这两张图是不是都有必要还有应该怎么摆放".
+
+**Diagnosis.** The previous pass had given both 04 drawings `max-width: none`, so `needs-map`
+(viewBox 1000x640, 1.56:1) and `maize-lifecycle` (1000x330, 3.03:1) ran the full 1368px canvas at
+identical width. Equal width on unequal aspect ratios produced a ~900px tall block followed by a
+~470px tall, mostly empty strip, and it erased a hierarchy the two figures genuinely have: the
+needs map *is* the section's finding, while the maize year carries one sentence. Two further
+causes, both in the code:
+
+- **A double frame.** Each drawing paints its own ground as `<rect fill="#fbfbfa">` — the page's
+  `--paper` — inside `.ph-svg-body`'s `#fff` plate, so a second, differently coloured rectangle
+  was drawn around every diagram, unlike the photographs beside them.
+- **Only this section scrolled.** The 1270px floor on both drawings meant an in-box horizontal
+  scrollbar on anything under ~1400px, an interaction that appears nowhere else on the page.
+
+**Fix.** The drawings were re-typeset rather than scaled up by their box, which is what let the
+widths come down: `needs-map`'s smallest labels 9.5/10 -> 10.5 (11 was tried and rejected —
+"transport-" already fills its r=30 bubble at 10.5), `maize-lifecycle`'s 9.5/10/10.5 ->
+12.5/13/13.5 with 30 units of empty viewBox height removed (330 -> 300). Then
+`.ph-04-finding` 1200px / floor 1130, `.ph-04-cycle` 1010px / floor 960 — the map stays the
+biggest thing in the section, the maize year is sized as the closing line it is. `.ph-svg-body`
+for both is now `background: var(--paper)`, matching each drawing's own ground.
+
+**And the band got its sentence.** The turn from the assigned brief to drying existed only as two
+annotations inside the SVG. It is now page copy (`focus.redirect` in `content.ts`) sitting beside
+the drawing in `.ph-04-redirect`, so the band's right end carries the conclusion instead of blank
+ground. The pair stacks below 1440px, because the drawing cannot go under 960px without breaking
+the 12px floor.
+
+**Second pass, same session: the needs map did not fit on a screen.** Sylvia: "图片也太大了",
+then "全屏都装不下". Measured, the finding figure was 835px tall against a 695px viewport. The
+governing dimension for this figure is height, not width — needs-map is a 0.59 aspect drawing, so
+every 100px of width costs ~59px of height — and nothing about the width rules had been thought
+about in those terms. Three changes, in order of how much height each bought:
+
+- **Width down to 1002px** (svg 960), which required another re-typeset: satellite labels 10.5 ->
+  12.5 and every other size up ~19%, six satellite bubbles grown r+3 so the larger words still fit,
+  "transport-"/"ation" re-broken as "trans-"/"port", and the TRANSPORTATION bubble r56 -> r63.
+- **The viewBox cropped to the drawing**, 0 0 1000 640 -> 14 10 1040 617. The first crop used a
+  bbox measured *before* the type went up and clipped "and what we found" off the right edge; the
+  1040 is the re-measured content width.
+- **The caption moved beside the plate** instead of under it (`.ph-04-finding` is now a two-column
+  grid above 1300px), which is the last ~65px.
+
+Net: 835px -> 611px tall, inside a 695px viewport, no in-box scroll, no label outside its bubble
+(checked programmatically against every circle), smallest label ~11.5px. The 12px floor is broken
+by half a pixel on six minor satellite words; that is the stated trade for a figure that can be
+seen at once.
+
+**Verified** at 1536px in the browser: finding 1200px wide / svg 1158 / no in-box scroll / smallest
+label 12.2px; cycle 1010 / svg 968 / no scroll / 12.1px; no page-level horizontal scroll; the plate
+no longer draws a second rectangle. `npm run build` clean. Below ~1240px both boxes still scroll
+rather than shrink — the same deliberate trade as before, but entered ~160px later for the map and
+~310px later for the maize year.
+
+### Post Harvest 04, and a diagram legibility floor that was silently broken everywhere
 
 **Section 04 was four bands on four different grids.** Sylvia: "感觉这个section 4 的排版信息不是
 很集中，这次的plan有改进这个排版的计划吗" — and the plan did not: it listed only "add the chapter

@@ -228,6 +228,30 @@ export const focus = {
     needs: "Needs from the interviews, sorted into what farmers said and what they did not. Booklet p.21.",
     cycle: "Drying is one stage of six, and the stage where the harvest is most exposed.",
   },
+  /**
+   * The sentence the maize-year drawing exists to make. It used to be carried only by the
+   * two annotations inside the SVG ("The brief we were given" / "Where the research
+   * pointed"), which meant the section's turn was legible only to a reader who studied the
+   * drawing. Stated as page copy, it lets the drawing be sized as a closing figure rather
+   * than as a second full-width argument (2026-09-07).
+   */
+  redirect: {
+    label: "The turn",
+    text: "So we moved upstream. Storage was the brief, but the losses were already decided one stage earlier, while the maize was drying.",
+  },
+  /**
+   * Section 04 as a three-step scrollytelling sequence (2026-09-07, Sylvia: revised from
+   * the three-beats-stacked layout after reviewing a storyboard). Purely an ordering list --
+   * every string a step renders is read from `bags` / `body` / `captions` / `redirect`
+   * above, never redefined here, so there is exactly one copy of each sentence in the file.
+   * `page.tsx` maps this to left-column text + a right-column visual per step; see
+   * `scroll-steps.tsx` for how the active step is tracked.
+   */
+  steps: [
+    { id: "existing", index: "01", visual: "bags" as const },
+    { id: "latent", index: "02", visual: "needs-map" as const },
+    { id: "shift", index: "03", visual: "maize-lifecycle" as const },
+  ],
 };
 
 /**

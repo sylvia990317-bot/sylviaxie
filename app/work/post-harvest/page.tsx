@@ -5,6 +5,7 @@ import { Geist, Geist_Mono, Bodoni_Moda } from "next/font/google";
 import "./post-harvest.css";
 import Reveal from "./reveal";
 import InlineSvg from "./inline-svg";
+import ScrollSteps from "./scroll-steps";
 import {
   project, meta, context, field, participants, focus, challenge,
   concepts, finalConcept, mechanism, status, reflection, chapterLabel,
@@ -31,9 +32,9 @@ export const metadata: Metadata = {
   openGraph: {
     title,
     description,
-    images: [{ url: "/post-harvest/photo/maize-weevils-1600.webp", width: 1600, height: 1067, alt: "Maize held in a farmer's hands in Seme, Kenya" }],
+    images: [{ url: "/post-harvest/photo/_DYR8130.jpg", width: 3936, height: 2648, alt: "Maize held in a farmer's hands in Seme, Kenya" }],
   },
-  twitter: { card: "summary_large_image", title, description, images: ["/post-harvest/photo/maize-weevils-1600.webp"] },
+  twitter: { card: "summary_large_image", title, description, images: ["/post-harvest/photo/_DYR8130.jpg"] },
 };
 
 /** Real measured and calculated values only. `src` records the source page. */
@@ -112,7 +113,7 @@ export default function PostHarvestPage() {
           <figure className="ph-hero-figure">
             <div className="ph-frame">
               <Image
-                src="/post-harvest/photo/maize-weevils-1600.webp"
+                src="/post-harvest/photo/_DYR8130.jpg"
                 alt="A farmer's hands holding a dried maize cob, Seme, Kenya"
                 fill priority sizes="(max-width: 767px) 100vw, 1480px"
               />
@@ -314,10 +315,32 @@ export default function PostHarvestPage() {
       </section>
 
       {/* ============ 04 Finding the focus ============
-          DOMINANT: the needs map, because the finding lives in it. The lifecycle is the
-          supporting diagram and is held well below it. */}
+          REBUILT 2026-09-07 as a three-step scrollytelling sequence (Sylvia, after a
+          storyboard reference): the heading appears once, then the left column advances
+          through three narrative steps while the right column is one sticky visual stage
+          that crossfades between them. This replaced an earlier three-beats-stacked layout
+          (still visible in git history) that ran the same three pieces of content as
+          independent full-width blocks; the content itself is unchanged, only its
+          choreography.
+
+          `ScrollSteps` (scroll-steps.tsx) is the only client boundary here, and it renders
+          none of this content itself -- page.tsx is a Server Component (InlineSvg reads
+          the diagram files from disk at build time, which only works server-side), so the
+          six children below are plain server-rendered markup with static classNames.
+          `ScrollSteps` only watches scroll position and reflects the active step as a
+          `data-active-step` attribute on its own wrapper; every `.is-active`-equivalent
+          rule in post-harvest.css is a `[data-active-step="N"]` attribute selector, not
+          JS-toggled classes. Without it (no JS, or IntersectionObserver missing, or a
+          narrow viewport under the desktop breakpoint) `.ph-04-scroll` never gains the
+          `ph-04-armed` class its CSS rules key off, so it stays plain block flow -- the DOM
+          order below, step/visual/step/visual/step/visual, *is* that fallback's reading
+          order and section 05's minimum test. */}
       <section className="ph-section ph-v2" id="focus">
-        <div className="ph-canvas">
+        {/* `.ph-04-canvas`, not the shared `.ph-canvas` every other section uses -- see its
+            definition in post-harvest.css for why (large empty side margins at wide
+            desktop widths, Sylvia). Section-04-scoped on purpose; do not swap other
+            sections onto it. */}
+        <div className="ph-04-canvas">
           <Reveal>
             <div className="ph-v2-head">
               <p className="ph-chapter-label">{chapterLabel("focus")}</p>
@@ -326,49 +349,57 @@ export default function PostHarvestPage() {
             </div>
           </Reveal>
 
-          {/* Three beats on one axis, not four bands (2026-09-07, Sylvia: "信息不是很集中").
-              Beat one is the whole PICS-bag argument: what the bags are, and the two
-              paragraphs on why the farmers had stopped trusting them -- those used to sit
-              below the needs map, so the claim and its evidence were separated by the
-              largest figure in the section. Beat two is the needs map alone, at full canvas
-              width so nothing competes with the finding. Beat three is the maize year, the
-              redirect the section is arguing for. Every beat spans the same column.
-
-              The photo is a close-up of printed text (the "PICS / Purdue Improved Crop
-              Storage / 100kg" markings), so it is treated as a document rather than a
-              scene: a white plate with `object-fit: contain` at a legible size, not a
-              cropped `object-fit: cover` photo band. Cover-cropped at a shrunk height it
-              went unreadable (2026-09-07, third pass); contain at 46vh keeps the label in
-              frame. */}
-          <Reveal>
-            <div className="ph-bags">
-              <div className="ph-bags-copy">
-                <p className="ph-lbl">{focus.bags.label}</p>
-                <p>{focus.bags.text}</p>
-                {focus.body.map((t) => (
-                  <p key={t.slice(0, 20)}>{t}</p>
-                ))}
-              </div>
-              <figure>
-                <div className="ph-bags-plate">
-                  <Image
-                    src="/post-harvest/photo/pics-bag-1400.webp"
-                    alt="Close up of a PICS bag in Seme, printed with Purdue Improved Crop Storage and a 100 kg capacity mark"
-                    width={1400} height={936} sizes="(max-width: 899px) 92vw, 46vw"
-                  />
-                </div>
-                <figcaption className="ph-cap">{focus.bags.caption}</figcaption>
-              </figure>
+          <ScrollSteps className="ph-04-scroll">
+            {/* Step 01 -- the existing solution. Same text as the old `.ph-bags` block:
+                label, the bag's own sentence, then both paragraphs on why farmers had
+                stopped trusting it. */}
+            <div className="ph-04-step ph-04-step--0">
+              <p className="ph-04-step-index">{focus.steps[0].index}</p>
+              <p className="ph-lbl">{focus.bags.label}</p>
+              <p>{focus.bags.text}</p>
+              {focus.body.map((t) => (
+                <p key={t.slice(0, 20)}>{t}</p>
+              ))}
             </div>
-          </Reveal>
 
-          <Reveal>
-            <InlineSvg name="needs-map" className="ph-fig-primary ph-04-finding" caption={focus.captions.needs} />
-          </Reveal>
+            {/* The photo is a close-up of printed text (the "PICS / Purdue Improved Crop
+                Storage / 100kg" markings), so it is treated as a document: a white plate
+                with `object-fit: contain`, not a cropped photo band -- unchanged from the
+                previous layout. */}
+            <figure className="ph-04-visual ph-04-visual--photo">
+              <div className="ph-bags-plate">
+                <Image
+                  src="/post-harvest/photo/pics-bag-1400.webp"
+                  alt="Close up of a PICS bag in Seme, printed with Purdue Improved Crop Storage and a 100 kg capacity mark"
+                  width={1400} height={936} sizes="(max-width: 1279px) 92vw, 62vw"
+                />
+              </div>
+            </figure>
 
-          <Reveal>
-            <InlineSvg name="maize-lifecycle" className="ph-fig-support ph-04-cycle" caption={focus.captions.cycle} />
-          </Reveal>
+            {/* Step 02 -- the latent need. Its one sentence is the needs-map's own former
+                caption; there is no separate label the way steps 01/03 have one, because
+                none existed for this figure before. When this step is active,
+                `.ph-latent` (the SVG's own central-bubble class, already animated by
+                `.is-visible .ph-latent` elsewhere on the page) gets emphasised further and
+                the surrounding grey bubbles are dimmed -- see post-harvest.css. */}
+            <div className="ph-04-step ph-04-step--1">
+              <p className="ph-04-step-index">{focus.steps[1].index}</p>
+              <p>{focus.captions.needs}</p>
+            </div>
+            <InlineSvg name="needs-map" className="ph-04-visual ph-04-visual--needs" />
+
+            {/* Step 03 -- the shift. Keeps the lifecycle's own caption ahead of the
+                redirect sentence, so both pieces of existing copy survive. When active,
+                the Drying node in the maize-lifecycle drawing is emphasised over the
+                Storage node it was originally briefed against -- see post-harvest.css. */}
+            <div className="ph-04-step ph-04-step--2">
+              <p className="ph-04-step-index">{focus.steps[2].index}</p>
+              <p className="ph-lbl">{focus.redirect.label}</p>
+              <p>{focus.captions.cycle}</p>
+              <p>{focus.redirect.text}</p>
+            </div>
+            <InlineSvg name="maize-lifecycle" className="ph-04-visual ph-04-visual--cycle" />
+          </ScrollSteps>
         </div>
       </section>
 
@@ -849,7 +880,12 @@ export default function PostHarvestPage() {
           typographic, not pictorial, and the handbook page inside it is small. An
           unmarked box records only that the item was not assessed. */}
       <section className="ph-section ph-v2 ph-section-sunk" id="status">
-        <div className="ph-canvas">
+        {/* `ph-09-canvas` alongside `.ph-canvas` on all three wrappers below (heading, dark
+            "completed" band, and the checklist/why/forward group), not instead of it --
+            see that class's definition in post-harvest.css for why (the shared 1480px
+            `.ph-canvas` was leaving very large side margins at wide desktop widths,
+            Sylvia). Section-09-scoped on purpose; do not carry it onto other sections. */}
+        <div className="ph-canvas ph-09-canvas">
           <Reveal>
             <div className="ph-v2-head">
               <p className="ph-chapter-label">{chapterLabel("status")}</p>
@@ -859,7 +895,7 @@ export default function PostHarvestPage() {
         </div>
 
         <div className="ph-v2-ink">
-          <div className="ph-canvas">
+          <div className="ph-canvas ph-09-canvas">
             <Reveal>
               <div className="ph-done-v2">
                 <div>
@@ -889,7 +925,7 @@ export default function PostHarvestPage() {
           </div>
         </div>
 
-        <div className="ph-canvas">
+        <div className="ph-canvas ph-09-canvas">
           <Reveal>
             <div className="ph-scored-v2">
               <p className="ph-open-claim">{status.claimOpen}</p>

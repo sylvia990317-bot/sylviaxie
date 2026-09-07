@@ -5,6 +5,121 @@ verified), moved out of `CLAUDE.md` to keep the auto-loaded project instructions
 This file is **not** auto-loaded into context — read it only when you need the historical
 rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
 
+### Post Harvest: Section 02 rebuilt against a mockup, then a narrative phase rail added across the whole page (this session)
+
+Five separate asks, worked through in sequence on `/work/post-harvest`. Files touched
+throughout: `app/work/post-harvest/page.tsx`, `content.ts`, `post-harvest.css` -- no other
+route, and HALOGRIP untouched.
+
+**1. Section 02 ("Where this happened") rebuilt against `post-harvest-chapter-prototype
+.html` and a ChatGPT mockup image**, per Sylvia's brief: "one continuous narrative" instead
+of the old card grid. New structure, in `page.tsx`: chapter head -> location band (the
+two-stage `seme-locator.svg` beside the road photograph, its shared diagram card dropped
+so it sits directly on the page since the SVG's own background already matches `--paper`)
+-> evidence rail (`up to 30%` / `122,000`, ranked not stacked, read on one horizontal
+strip) -> documentary pair (grain, then planting photos, roughly 7/5). All facts, photos,
+and captions preserved verbatim -- this was a layout pass, not a content rewrite. Old
+`.ph-v2-ctx`/`.ph-v2-stats`/`.ph-v2-mosaic` classes and their several scattered `@media`
+overrides (accumulated across earlier sessions) deleted outright rather than left dead.
+
+**2. Two refinements, requested after review:** the road photograph's height clamp shifted
++75px across its whole curve (taller box, same width -- less vertical cropping, not more,
+fixing the person at its centre reading cut too tight); and a subtle cobalt connector line
+added from the locator's Seme marker to the road photo's left edge, fixed-pixel-positioned
+off the marker's known SVG coordinates (desktop only, ≥900px, where the two sit side by
+side).
+
+**3. "为什么这么糊啊" (why is it so blurry) -- traced to a bug, not the export.** The
+`road-to-seme-2000.webp` file itself was already one of Sylvia's own good re-exports (0.16
+B/px, in the same tier as her other good exports, confirmed by opening it directly). The
+`<Image sizes="...">` hint on it was `62vw`, which undershot the actual rendered column
+width by 5-10% at typical 1400-1600px desktop viewports -- Next served a smaller srcset
+candidate than the box needed, and the browser stretched it. Fixed to
+`sizes="(max-width: 899px) 92vw, min(1104px, 70vw)"`, computed against the location band's
+real column math (`--canvas` cap, map column's own 320px ceiling, the gap) rather than
+guessed. No original ARW exists in `design-source/kenya-photo-originals/` for this
+particular photo (only three unrelated RAWs plus one JPEG that turned out to be the
+grain-bowl photo) -- flagged to Sylvia rather than invented.
+
+**4. Header realigned to the location band's own grid, in two passes.** First pass gave
+the header its own 4fr/5fr column split at 75% width -- rejected ("现在...用了跟下面地图
+/道路组合不一样的列网格...感觉很散乱"), because it didn't share the map/road composition's
+actual columns. Second pass: header now reuses `.ph-v2-location`'s exact
+`grid-template-columns`/`column-gap`, no separate max-width, with the dateline pulled out
+of its old `.lede` wrapper so eyebrow+dateline share row 1 and title+paragraph share row 2
+(CSS grid rows are bands shared across columns, so pure `grid-row`/`grid-column`
+placement lines the two pairs up without touching DOM/mobile reading order). Verified with
+`getBoundingClientRect()`, not a screenshot guess: title/eyebrow left edge exactly equals
+the map's, dateline/paragraph left edge exactly equals the road photo's. A later, narrower
+ask (title needs to stay one line above 1200px) was solved with one scoped rule --
+`white-space: nowrap` + `max-width: none` on `#context .ph-v2-head h2` only above
+1200px -- letting the title's own text overflow into the column gap rather than widening
+the grid track itself (confirmed the overflow, ~26px, lands nowhere near the paragraph
+column's start).
+
+**5. Narrative phase rail added, the largest piece of this session.** Structural reference:
+`public/media/post-harvest-chapter-prototype.html`'s `.phase`/`.phase-rail` two-level
+sticky technique, reworked into Post Harvest's own visual system (no new colours, no
+copied HALOGRIP identity). Five semantic phases (Discover/Reframe/Develop/Deliver/Reflect,
+new `phases` array in `content.ts`) group the existing ten numbered sections -- section
+numbers, ids, and anchors untouched, `sections`/`chapterLabel()` untouched at first pass.
+Deliver is two physical wrappers, `ph-phase-deliver-dark` (Final Concept alone, rail
+inverted to ivory/white against `--blue`) and `ph-phase-deliver-light` (08-09, rail
+repeated dark-on-light, no hairline between the two halves since they're one phase, not
+two).
+
+**Section 04's animation was the explicit, highest-priority constraint** ("Do not modify
+the existing animation or scrolling behaviour inside Section 04"). `.ph-phase` is a bare
+`display: grid` container -- no `overflow`/`transform`/`filter`/`contain` -- so section
+04's own sticky elements (`.ph-04-head`, `.ph-04-visual`) keep resolving their containing
+blocks to their existing parents (`.ph-04-canvas`, `.ph-04-scroll`) exactly as before; its
+DOM in `page.tsx` and its CSS block are byte-for-byte unchanged. Verified in-browser after
+the wrap, not assumed: `data-active-step` still advances 0->1->2 on scroll, the sticky
+header and crossfading visual stage both still work, `getComputedStyle` confirms
+`.ph-04-head`/`.ph-04-visual` are both still `position: sticky`.
+
+**A real bug caught during that same verification, not by inspection alone:** the rail's
+outer span was written `grid-row: 1 / -1`, which only resolves against the grid's
+*explicit* row definition -- and `.ph-phase` never declares `grid-template-rows`, so `-1`
+was silently collapsing to the first implicit row. Measured: the Reframe phase's rail was
+2661px tall, exactly section 04's own height, not the ~4574px the whole two-section phase
+needed -- meaning the rail was releasing one section early on every multi-section phase.
+Fixed to `grid-row: 1 / span 99` (clamps safely to however many rows a phase actually has);
+re-verified every phase's rail height now matches its wrapper's height, and that only ever
+one rail is stuck at a time across phase boundaries (checked all six simultaneously via
+`getBoundingClientRect()`).
+
+**Then Sylvia flagged the result itself: "好多数字好奇怪"** (a lot of the numbers now look
+strange). Root cause, confirmed by reading the rendered CSS: the new phase number
+(`.ph-phase-no`, e.g. "02") and the existing section chapter label (`.ph-chapter-label`,
+e.g. "[ 04 / FINDING THE FOCUS ]") are byte-identical in font-family, font-size, and
+letter-spacing, differing only by colour -- so two independent counters (5 phases vs. 10
+sections) sitting close together read as one skipping sequence. Went through plan mode for
+this fix specifically (AskUserQuestion on three options -- Roman numerals / drop the phase
+number / push CSS differentiation harder -- was rejected outright by Sylvia in favour of
+her own direct answer): **kept the phase rail's numbers, dropped the number from the
+section chapter label instead.** `chapterLabel(id)` in `content.ts` now returns `s.label`
+alone (`"Context"`, not `"02 / Context"`); the `sections` array's own `n` field, `page.tsx`,
+and all of `post-harvest.css` (brackets/uppercasing already lived in CSS, not the string)
+are untouched. Verified via DOM text content, not a screenshot: every `.ph-chapter-label`
+across sections 02-10 now reads its bare label; hero's eyebrows, which reuse the same CSS
+class but never called `chapterLabel()`, are unaffected.
+
+**Deployment, mid-session:** `vercel --prod --yes` failed with "Not authorized" even though
+`vercel whoami` succeeded -- the local CLI token had gone stale for the deploy-scoped call
+specifically. Fixed with `vercel link --yes --project sylviaxie --scope
+portfolios-projects-5d8ea43e` (re-confirmed the existing link, same `projectId`/`orgId`,
+just refreshed the token), then `vercel --prod --yes` succeeded and aliased to
+https://sylviaxie.vercel.app. Separately, at Sylvia's request: `kenya-case-redesign` pushed
+to GitHub and merged into `main` (clean merge, no conflicts -- `main` didn't have the Post
+Harvest case study at all before this, and picked up one previously-unpushed HALOGRIP
+one-line commit from `main`'s own history along the way).
+
+Verified throughout with `npx tsc --noEmit` and `npx next build` (clean at every step) plus
+in-browser checks -- `getBoundingClientRect()`/`getComputedStyle()` calls on the actual
+rendered page rather than screenshots alone, since this session's screenshot tool was
+unreliable (intermittent blank captures, unrelated to any of the above).
+
 ### CLAUDE.md brought up to date with Post Harvest (this session)
 
 CLAUDE.md still described the site as having "the first and only [project page] so far... 

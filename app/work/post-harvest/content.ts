@@ -638,12 +638,34 @@ export const sections: { n: string; id: string; title: string; label: string }[]
 ];
 
 /**
- * The rendered chapter label for a section id, e.g. `chapterLabel("context")` -> "02 / Context".
- * The brackets and the uppercasing are presentation and live in CSS (`.ph-chapter-label`),
- * not here, so the string stays readable in the data and in screen-reader output.
+ * The rendered chapter label for a section id, e.g. `chapterLabel("context")` -> "Context".
+ * No longer prefixed with the section number (2026-09-07, Sylvia: the phase rail's own
+ * number sat close enough to this one, visually, that the two independent sequences --
+ * five phases vs. ten sections -- read as one skipping count. The phase rail keeps its
+ * number; this one drops it, so only one numbered sequence is ever on screen at once.
+ * `sections[].n` itself is untouched (still the source of truth for section order), only
+ * this rendered string changes. The brackets and the uppercasing are still presentation
+ * and still live in CSS (`.ph-chapter-label`), not here.
  */
 export function chapterLabel(id: string): string {
   const s = sections.find((x) => x.id === id);
   if (!s) throw new Error(`Unknown section id: ${id}`);
-  return `${s.n} / ${s.label}`;
+  return s.label;
 }
+
+/**
+ * Narrative phase rail (2026-09-07, chapter-orientation pass). Five semantic story
+ * phases grouping the ten sections above -- Discover (02-03), Reframe (04-05), Develop
+ * (06), Deliver (07-09), Reflect (10). This is a SEPARATE registry from `sections`, not
+ * a replacement: section numbers, ids and `chapterLabel()` output are unchanged, and
+ * nothing here renumbers or renames a single existing section. `page.tsx` groups the
+ * sections into `<div className="ph-phase">` wrappers by hand (the grouping is fixed,
+ * not data-driven) and reads this array only for each phase's own rail text.
+ */
+export const phases: { n: string; name: string; descriptor: string }[] = [
+  { n: "01", name: "Discover", descriptor: "Fieldwork and context" },
+  { n: "02", name: "Reframe", descriptor: "From brief to actual need" },
+  { n: "03", name: "Develop", descriptor: "Concepts tested with farmers" },
+  { n: "04", name: "Deliver", descriptor: "A buildable system" },
+  { n: "05", name: "Reflect", descriptor: "What remains open" },
+];

@@ -9,7 +9,7 @@ import ScrollSteps from "./scroll-steps";
 import HeadHeightVar from "./head-height";
 import {
   project, meta, context, field, participants, focus, challenge,
-  concepts, finalConcept, mechanism, status, reflection, chapterLabel,
+  concepts, finalConcept, mechanism, status, reflection, chapterLabel, phases,
 } from "./content";
 import HandbookReader, { HandbookCoverOpen } from "./handbook-reader";
 
@@ -52,6 +52,25 @@ function SectionHead({ n, heading, lead }: { n: string; heading: string; lead?: 
       <h2 className="ph-h2">{heading}</h2>
       {lead ? <p className="ph-lead">{lead}</p> : null}
     </div>
+  );
+}
+
+/** Narrative phase rail. See `phases` in content.ts for why this is a separate registry
+ * from the section numbers, and the "NARRATIVE PHASE RAIL" block in post-harvest.css for
+ * the sticky mechanism and the section-04 safety note. `dark` is the one variant: the
+ * Deliver phase repeats this same rail once against the Final Concept section's own
+ * `--blue` background (inverted to ivory/white) and once against sections 08-09's plain
+ * background (its usual dark-on-light), rather than trying to recolour one sticky rail
+ * mid-scroll as the background behind it changes. */
+function PhaseRail({ n, name, descriptor, dark = false }: { n: string; name: string; descriptor: string; dark?: boolean }) {
+  return (
+    <aside className={`ph-phase-rail${dark ? " ph-phase-rail-dark" : ""}`} aria-label={`Phase ${n}, ${name}`}>
+      <Reveal className="ph-phase-rail-inner">
+        <p className="ph-phase-no">{n}</p>
+        <p className="ph-phase-name">{name}</p>
+        <p className="ph-phase-descriptor">{descriptor}</p>
+      </Reveal>
+    </aside>
   );
 }
 
@@ -129,6 +148,14 @@ export default function PostHarvestPage() {
           <div className="ph-hero-rule" />
         </div>
       </header>
+
+      {/* ============ Phase 01 / Discover (02 Context, 03 Field Research) ============
+          Chapter-orientation pass (2026-09-07): groups the next two sections under the
+          phase rail. See content.ts's `phases` and the "NARRATIVE PHASE RAIL" CSS block
+          for the mechanism. No hairline above this phase -- the hero's own closing
+          `.ph-hero-rule` already plays that role. */}
+      <div className="ph-phase ph-phase-discover">
+        <PhaseRail {...phases[0]} />
 
       {/* ============ 02 Context ============
           REBUILT 2026-09-07 (mockup-referenced pass) as one continuous narrative rather
@@ -327,6 +354,17 @@ export default function PostHarvestPage() {
           </Reveal>
         </div>
       </section>
+      </div>
+      {/* ==== / Phase 01 Discover ==== */}
+
+      {/* ============ Phase 02 / Reframe (04 Finding the Focus, 05 Challenge) ============
+          Section 04's own DOM/CSS is completely untouched by this wrapper -- see the
+          "SECTION 04 SAFETY" note in the CSS block this refers to. `.ph-phase` is a bare
+          `display: grid` container (no overflow/transform/filter/contain), so section
+          04's sticky header and sticky visual stage still resolve their containing
+          blocks to their own existing parents exactly as before. */}
+      <div className="ph-phase ph-phase-reframe">
+        <PhaseRail {...phases[1]} />
 
       {/* ============ 04 Finding the focus ============
           REBUILT 2026-09-07 as a three-step scrollytelling sequence (Sylvia, after a
@@ -533,6 +571,12 @@ export default function PostHarvestPage() {
           </Reveal>
         </div>
       </section>
+      </div>
+      {/* ==== / Phase 02 Reframe ==== */}
+
+      {/* ============ Phase 03 / Develop (06 Concept Development) ============ */}
+      <div className="ph-phase ph-phase-develop">
+        <PhaseRail {...phases[2]} />
 
       {/* ============ 06 Developing with farmers ============
           DOMINANT: the farmer reading the sketch. The three concepts are one small
@@ -610,6 +654,20 @@ export default function PostHarvestPage() {
           </Reveal>
         </div>
       </section>
+      </div>
+      {/* ==== / Phase 03 Develop ==== */}
+
+      {/* ============ Phase 04 / Deliver, dark (07 Final Concept) ============
+          Two physical wrappers for one semantic phase (Sylvia's brief: "the rail can be
+          repeated in its dark-on-light version"), not one wrapper trying to recolour a
+          single sticky rail as the background changes mid-scroll underneath it. This one
+          is `ph-phase-deliver-dark`, inverted to ivory/white against the Final Concept
+          section's own `--blue`; the second, `ph-phase-deliver-light` further down, wraps
+          08-09 and repeats the same "04 / Deliver" text in the page's usual dark-on-light.
+          No hairline between the two -- see `.ph-phase-deliver-light { border-top: 0 }`
+          in post-harvest.css -- so they read as one continuous phase, not two. */}
+      <div className="ph-phase ph-phase-deliver-dark">
+        <PhaseRail {...phases[3]} dark />
 
       {/* ============ 07 The Drying Tower ============
           REVERSED (Sylvia, 2026-09-07, visual-hierarchy audit): the handbook cover was
@@ -821,6 +879,15 @@ export default function PostHarvestPage() {
           </Reveal>
         </div>
       </section>
+      </div>
+      {/* ==== / Phase 04 Deliver, dark (continues below, light) ==== */}
+
+      {/* ============ Phase 04 / Deliver, light (08 Mechanism, 09 Status) ============
+          Second half of the Deliver phase -- see the comment on `ph-phase-deliver-dark`
+          above. Sections 08-09 keep their own current lighter presentation unchanged;
+          only the rail repeats. */}
+      <div className="ph-phase ph-phase-deliver-light">
+        <PhaseRail {...phases[3]} />
 
       {/* ============ 08 How it was intended to work ============
           DOMINANT: the two-state drawing, read as one unit. The difference between the
@@ -988,6 +1055,12 @@ export default function PostHarvestPage() {
           </Reveal>
         </div>
       </section>
+      </div>
+      {/* ==== / Phase 04 Deliver ==== */}
+
+      {/* ============ Phase 05 / Reflect (10 Reflection) ============ */}
+      <div className="ph-phase ph-phase-reflect">
+        <PhaseRail {...phases[4]} />
 
       {/* ============ 10 Reflection ============
           REORDERED (Sylvia, 2026-09-07): the dusk photograph used to sit right under the
@@ -1075,6 +1148,8 @@ export default function PostHarvestPage() {
           </Reveal>
         </div>
       </section>
+      </div>
+      {/* ==== / Phase 05 Reflect ==== */}
 
       {/* The handbook reader, mounted once for the whole page.
 

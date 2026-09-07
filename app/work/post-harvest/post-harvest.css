@@ -415,8 +415,9 @@ figure { margin: 0; }
    That was Sylvia's explicit choice from a side-by-side preview of both forms. */
 .ph-v2-head { display: grid; grid-template-columns: 1fr; gap: 14px; }
 
-/* The brackets are presentation, not content: the data holds "02 / Context" and CSS adds
-   the brackets and the uppercasing, so screen readers and the source stay readable. */
+/* The brackets are presentation, not content: the data holds "Context" and CSS adds the
+   brackets and the uppercasing, so screen readers and the source stay readable. No number
+   here any more (2026-09-07) -- see `chapterLabel()`'s own comment in content.ts. */
 .ph-chapter-label {
   margin: 0;
   font-family: var(--ph-mono), ui-monospace, monospace;
@@ -461,6 +462,111 @@ figure { margin: 0; }
    instead of 1.124. Width alone bounds these -- each figure sets its own max-width -- and
    line art is allowed the height its own aspect ratio asks for. */
 .ph-v2 .ph-svg-body svg { max-height: none; }
+
+/* ================= NARRATIVE PHASE RAIL =================
+   ADDED 2026-09-07 (chapter-orientation pass; structural reference:
+   post-harvest-chapter-prototype.html's `.phase`/`.phase-rail` two-level technique).
+   Groups sections 02-10 under five semantic story phases so a reader always knows which
+   part of the narrative they're in -- see `phases` in content.ts for the five phases'
+   text, and page.tsx for how each `<div className="ph-phase ph-phase-*">` wraps its
+   sections. This is purely an orientation layer: it does not renumber a section, rename
+   a heading, or touch any section's own internal layout.
+
+   MECHANISM. Native `position: sticky` only, two levels: `.ph-phase-rail` is a plain,
+   non-sticky grid item spanning the WHOLE phase's height (`grid-row: 1 / -1`, exactly
+   like the `<section>`s beside it collectively occupy); `.ph-phase-rail-inner`, one level
+   deeper, is the actual sticky element. Because its containing block is `.ph-phase-rail`
+   (its own parent, already the full phase height), it sticks at `top` and releases
+   naturally the instant the phase's last section scrolls past -- it can never hold into
+   the next phase's territory, so two rail labels can never overlap. No JS, no scroll
+   listener, no scroll-jacking.
+
+   SECTION 04 SAFETY (Sylvia's highest-priority preservation rule for this pass).
+   `.ph-phase` is a bare `display: grid` container: no `overflow`, `transform`, `filter`,
+   `contain`, or anything else that creates a new containing block or scroll container.
+   Section 04's own sticky elements (`.ph-04-head`, `.ph-04-visual`, see the "04,
+   scrollytelling" block further down) are positioned relative to THEIR OWN existing
+   parents (`.ph-04-canvas`, `.ph-04-scroll`) -- completely unaffected by which grid cell
+   the `<section>` around them now sits in, since a grid item's `position: static`
+   descendants resolve containing blocks exactly as they would in plain block flow.
+   Verified in-browser after this change: the 01 -> 02 -> 03 scrollytelling sequence,
+   its sticky header, and its crossfade all still behave identically. */
+.ph-phase {
+  display: grid;
+  grid-template-columns: clamp(160px, 14vw, 220px) minmax(0, 1fr);
+  column-gap: clamp(48px, 6vw, 88px);
+}
+.ph-phase > section { grid-column: 2; }
+/* The phase boundary hairline. Not on the first phase (Discover) -- the hero already
+   closes with its own `.ph-hero-rule` divider, so a second line right under it would
+   double up. Not on `.ph-phase-deliver-light` either: that wrapper and
+   `.ph-phase-deliver-dark` just above it are two halves of ONE phase (Deliver), not a
+   real boundary -- see the comment on `.ph-phase-deliver-dark` below. */
+.ph-phase:not(.ph-phase-discover) { border-top: 1px solid var(--line); }
+.ph-phase-deliver-light { border-top: 0; }
+
+/* `span 99`, not `1 / -1`: `.ph-phase` never declares `grid-template-rows` (each section
+   is just an implicit auto row), and `-1` only resolves against the EXPLICIT grid, which
+   with no explicit rows defined is a single line pair -- so `1 / -1` silently spanned
+   only the phase's first section (measured: 2661px, exactly section 04's own height,
+   instead of the full ~4574px phase). `span 99` spans that many implicit rows and
+   safely clamps to however many a phase actually has (max two, discover/reframe/
+   deliver-light), which is what "span to wherever this phase's content actually ends"
+   needs with no explicit row count to reference. */
+.ph-phase-rail { grid-column: 1; grid-row: 1 / span 99; padding-left: var(--gutter); }
+.ph-phase-rail-inner { position: sticky; top: clamp(96px, 10vh, 128px); }
+.ph-phase-no {
+  margin: 0 0 12px;
+  font-family: var(--ph-mono), ui-monospace, monospace;
+  font-size: 12px; letter-spacing: 0.12em;
+  color: var(--blue);
+}
+.ph-phase-name {
+  margin: 0 0 10px;
+  font-family: var(--ph-serif), Georgia, serif; font-weight: 500;
+  font-size: clamp(22px, 2vw, 28px); line-height: 1.08; letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.ph-phase-descriptor {
+  margin: 0; max-width: 15ch;
+  font-family: var(--ph-mono), ui-monospace, monospace;
+  font-size: 12px; line-height: 1.5; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Deliver, dark: the same rail inverted to ivory/white against Final Concept's own
+   `--blue` background, reusing that section's own `--on-blue`/`--on-blue-dim`/
+   `--on-blue-line` tokens rather than inventing new colours. The wrapper itself carries
+   the blue too, so the rail's gutter reads as part of the same field, not a light strip
+   beside a dark one. */
+.ph-phase-deliver-dark { background: var(--blue); }
+.ph-phase-deliver-dark .ph-phase-no,
+.ph-phase-deliver-dark .ph-phase-name { color: var(--on-blue); }
+.ph-phase-deliver-dark .ph-phase-descriptor { color: var(--on-blue-dim); }
+.ph-phase-deliver-dark.ph-phase:not(.ph-phase-discover) { border-top-color: var(--on-blue-line); }
+
+@media (max-width: 899px) {
+  /* No reserved column, no sticky: the rail becomes a compact heading in normal document
+     flow, directly above the phase's first section -- "03 / DEVELOP" then the descriptor
+     on its own line beneath, per the brief's own mobile example. */
+  .ph-phase { display: block; }
+  .ph-phase-rail {
+    grid-column: unset; grid-row: unset;
+    padding: clamp(28px, 6vw, 44px) var(--canvas-pad) clamp(18px, 4vw, 28px);
+  }
+  .ph-phase-rail-inner {
+    position: static;
+    display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px;
+  }
+  .ph-phase-no { margin: 0; }
+  .ph-phase-no::after { content: " / "; }
+  .ph-phase-name {
+    margin: 0;
+    font-family: var(--ph-mono), ui-monospace, monospace; font-weight: 400;
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .ph-phase-descriptor { flex-basis: 100%; max-width: none; margin-top: 6px; }
+}
 
 /* ================= 02 CONTEXT (v2) =================
    REBUILT 2026-09-07 (mockup-referenced pass) as one continuous narrative instead of a

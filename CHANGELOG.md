@@ -3114,3 +3114,55 @@ site's DOM/computed styles rather than guessing:
   tight zoomed screenshots on all three states (Forward/Brake/Reverse): clean triangular tip
   clearly proud of the line, no notch, symmetric barbs, in every state.
 - Nothing from this pass has been committed to git either — still sitting in the working tree.
+
+### Post Harvest: narrative phase rail — real chapter-to-chapter spacing, and the 04 Deliver rail merged (this session)
+
+Four rounds of iteration on the left sticky phase rail added in an earlier session (see
+"Narrative phase rail added" above), all in `app/work/post-harvest/page.tsx` and
+`post-harvest.css`.
+
+**Round 1** ("A BUILDABLE SYSTEM" reading flush against "05"): added
+`margin-bottom: clamp(96px, 11vh, 144px)` to `.ph-phase-descriptor`. Turned out to only
+delay when the sticky rail *text* releases/re-pins, not the actual boundary — the real fix
+came in round 3.
+
+**Round 2** (the phase-boundary hairline read as "two stacked boxes"): the old
+`border-top: 1px solid var(--line)` on `.ph-phase:not(.ph-phase-discover)` was first
+re-scoped to `> section:first-of-type` so it stopped crossing the rail column, then removed
+outright once it still read as a cut-off, partial-width line stopping short of the rail.
+Chapter breaks are whitespace-only now — no line anywhere in the rail or the content column.
+
+**Round 3, root cause found** ("03 Develop 和 04 Deliver 之间还是完全没有 spacing"): a
+read-only Explore agent plus live `getBoundingClientRect()` calls confirmed
+`.ph-phase-develop` and `.ph-phase-deliver-dark` sat flush at 0px in document flow — round
+1's `margin-bottom` lives inside `.ph-phase-rail-inner` and never moves the `.ph-phase`
+wrapper `<div>` itself, so `.ph-phase-deliver-dark`'s full-row `background: var(--blue)`
+(colouring both grid columns) snapped on with zero gap the instant 03's content ended,
+regardless of the rail-text delay. Fixed with real space in normal flow instead:
+`.ph-phase:not(.ph-phase-discover) { margin-top: clamp(64px, 8vh, 96px); }`. Verified with
+`getBoundingClientRect()` on all five `.ph-phase` wrappers: every real boundary now measures
+exactly 64px, independent of background colour or scroll/sticky timing.
+
+**Round 4, went through Plan Mode** (this reversed an earlier explicit decision, so it went
+through `AskUserQuestion` rather than being assumed): Deliver had been two physical
+wrappers, `ph-phase-deliver-dark` (07 alone, rail inverted to ivory/white against `--blue`)
+and `ph-phase-deliver-light` (08-09, rail repeated dark-on-light) — Sylvia's own brief from
+the original phase-rail session, quoted in the code comments at the time: "为什么不是常驻
+侧边栏" (why isn't it a persistent sidebar), explicitly rejecting a merged rail. Revisited
+this round: the repeated rail was now reading as "04 Deliver" appearing twice, glued
+together. Merged into one `.ph-phase-deliver` wrapper spanning 07-09 with a single
+`<PhaseRail>` call (the `dark` prop dropped from the component entirely — confirmed dead
+first, `.ph-phase-rail-dark` had zero CSS rules referencing it already). Trade-off Sylvia
+picked over a JS-scroll-synced alternative: the rail no longer inverts colour as the
+background behind it changes — it stays plain ink-on-light for the whole phase.
+`background: var(--blue)` moved off the wrapper (which used to colour both grid columns)
+onto `.ph-fc` itself, section 07's own element, so the colour still bleeds fully across the
+content column at its own edges and never touches the rail/gutter column. Confirmed first
+that every `.ph-fc-ov-*` text overlay inside section 07 already carries its own explicit
+`--on-blue`/`--on-blue-dim`/`--ink` colour rather than inheriting from the wrapper, so this
+move didn't touch any text colour inside 07.
+
+Verified throughout: `npx tsc --noEmit` clean; `getBoundingClientRect()` confirms uniform
+64px gaps at all four real chapter boundaries (01→02, 02→03, 03→04, 04→05); scrolled the
+merged 07→08→09 span confirming one continuous rail with no release/re-pin and no duplicate
+"04 Deliver".

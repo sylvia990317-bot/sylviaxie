@@ -157,10 +157,6 @@ export default function PostHarvestPage() {
                 fill priority sizes="(max-width: 767px) 100vw, 1480px"
               />
             </div>
-            <figcaption className="ph-hero-caption">
-              <span>Stored maize in Seme</span>
-              <span>Sylvia Xie</span>
-            </figcaption>
           </figure>
 
           {/* Closes the chapter and hands off to 02, which opens with its own label. */}

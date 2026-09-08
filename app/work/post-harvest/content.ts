@@ -53,22 +53,20 @@ export const project = {
 };
 
 /**
- * Hero metadata. RE-SLICED, NOT REWRITTEN (2026-09-07 hero rebuild).
+ * Hero metadata. RE-CUT 2026-09-08 (per Sylvia, reviewing the hero directly).
  *
- * Was three rows (Role / Team / Context) stacked as a `<dl>` in a half-width column. The
- * rebuilt hero uses HALOGRIP's horizontal `[ LABEL ] / value` grid, which wants short,
- * parallel values rather than one long sentence, so the single "Context" row was split
- * into the three facts it already contained:
- *   - the course and school  -> Context
- *   - where the work happened -> Location   (same place named in `context.dateline`)
- *   - when it happened        -> Year
- * Team is kept as its own column rather than folded away: it is a confirmed fact
- * (audit §4.2) and dropping it to hit a four-column target would lose information.
- * No fact is added, removed or reworded here.
+ * Was five columns (Role / Team / Context / Location / Year). Cut to four:
+ *   - Role dropped: worded identically across every project's hero, so on a page read in
+ *     isolation it adds no distinguishing information.
+ *   - Team dropped, at Sylvia's request.
+ *   - Deliverable added, mirroring HALOGRIP's own hero meta pattern (`["Deliverable",
+ *     "Fallback steering"]` in app/work/halogrip/content.ts).
+ * Context/Location/Year are unchanged from the 2026-09-07 rebuild, which split them out of
+ * a single "Context" sentence (course+school -> Context, place -> Location, same place
+ * named in `context.dateline`, dates -> Year).
  */
 export const meta: [string, string][] = [
-  ["Role", "Design research and concept development"],
-  ["Team", "Four students. Two industrial design, two architecture."],
+  ["Deliverable", "Solar maize drying tower"],
   ["Context", "MSc Industrial Design Engineering, Chalmers. Reality Studio."],
   ["Location", "Seme, Kisumu County, Kenya"],
   ["Year", "April to June 2024"],

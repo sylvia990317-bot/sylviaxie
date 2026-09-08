@@ -308,32 +308,15 @@ figure { margin: 0; }
 .ph-hero-figure { position: relative; margin: 0; }
 .ph-hero-figure .ph-frame { position: relative; width: 100%; aspect-ratio: 2.2 / 1; overflow: hidden; background: var(--paper-sunk); }
 .ph-hero-figure img { object-fit: cover; object-position: 50% 52%; }
-/* Caption inside the photograph, two ends. A scrim sits under it rather than a flat
-   overlay on the whole image, so the photograph itself is not dimmed. */
-.ph-hero-caption {
-  position: absolute; inset: auto 0 0 0;
-  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 24px;
-  padding: clamp(40px, 6vw, 72px) clamp(16px, 2vw, 26px) clamp(14px, 1.6vw, 20px);
-  font-family: var(--ph-mono), ui-monospace, monospace;
-  font-size: var(--fs-chapter-label);
-  letter-spacing: 0.1em; text-transform: uppercase;
-  color: #fff;
-  background: linear-gradient(180deg, rgba(12, 14, 18, 0) 0%, rgba(12, 14, 18, 0.62) 100%);
-}
 /* The seam into 02: a hairline the width of the canvas, closing the chapter. */
 .ph-hero-rule { height: 1px; background: var(--line); margin-top: clamp(28px, 3vw, 44px); }
 
 @media (min-width: 768px) {
-  .ph-meta { grid-template-columns: repeat(5, 1fr); }
+  .ph-meta { grid-template-columns: repeat(4, 1fr); }
 }
 @media (max-width: 767px) {
-  /* A 2.2:1 band becomes a slit on a phone; the caption also stops being readable over the
-     image at that size, so it drops below it. HALOGRIP keeps its caption overlaid and
-     shrinks it to 8px here -- that is the one part of its hero not copied. */
+  /* A 2.2:1 band becomes a slit on a phone. */
   .ph-hero-figure .ph-frame { aspect-ratio: 4 / 3; }
-  .ph-hero-caption {
-    position: static; padding: 12px 0 0; color: var(--muted); background: none;
-  }
 }
 
 /* ================= V2 LAYOUT SYSTEM =================
@@ -454,8 +437,12 @@ figure { margin: 0; }
    img` at (0,1,2) beat every per-component cap written as `.foo img` at (0,1,1) --
    .ph-dominant img's 54vh, .ph-bags img's 30vh -- regardless of source order, so several
    images (the field walk-in, the chicken/tarp photo, the PICS bag, the reflection dusk
-   photo) were silently rendering at 64vh instead of their intended, smaller cap. */
-.ph-v2 :where(figure) img { max-height: 64vh; }
+   photo) were silently rendering at 64vh instead of their intended, smaller cap.
+   `:not(.ph-hero-figure)` excludes the hero (2026-09-08): its `<header>` also carries
+   `.ph-v2`, so this fallback was matching it too and capping the photo to 64vh inside a
+   taller frame, leaving a visible gap under it -- the hero wants `object-fit: cover` to
+   fill the frame with no ceiling. */
+.ph-v2 :where(figure):not(.ph-hero-figure) img { max-height: 64vh; }
 
 /* The SVGs are deliberately NOT capped by height (2026-09-07). A max-height on a replaced
    element with a viewBox does not shrink the box: the drawing letterboxes inside it, so a

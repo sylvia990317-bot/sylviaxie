@@ -273,6 +273,9 @@ export const challenge = {
   arithmetic:
     "Farmers told us they carry roughly 15 kilograms at a time. A 400 kilogram harvest means dozens of trips out each morning and back each night, across several days of the season.",
   arithmeticPage: 31,
+  /** The bridge from the carrying fact to the requirement checklist beside it (added on
+   * request: the two used to sit next to each other with no sentence connecting them). */
+  arithmeticBridge: "That daily handling is part of what the requirement list had to account for.",
   /** Two beats, each a single visual argument that fits one viewport. */
   beats: {
     threats: "What threatens maize while it dries",

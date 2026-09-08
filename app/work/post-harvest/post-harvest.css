@@ -220,8 +220,14 @@ figure { margin: 0; }
    further down for why: their shared stage box is capped by `--canvas` regardless of
    viewport, so a floor above what that box can ever supply just forces a permanent
    scrollbar instead of a real minimum. */
-.ph-v2-checklist .ph-svg-body svg { min-width: 800px; } /* blank checklist: 13.5 in 888 */
-.ph-scored-v2 .ph-svg-body svg { min-width: 970px; }    /* scored checklist: 12 in a 960 box */
+/* Floor removed on request (Sylvia): both the blank checklist (05) and its scored return
+   (09, same drawing with the team's own marks) should always render in full, never behind
+   their own horizontal scrollbar, even below the ~1400px width where the general trade
+   above (a scrollbar over 8px type) would otherwise kick in. Same shape as the 04 diagrams'
+   own "no floor" exception just above -- `width: 100%; height: auto` (the base
+   `.ph-svg-body svg` rule) is what actually does the shrinking once nothing floors it. */
+.ph-v2-checklist .ph-svg-body svg { min-width: 0; }
+.ph-scored-v2 .ph-svg-body svg { min-width: 0; }
 .ph-svg text { font-family: var(--ph-sans), ui-sans-serif, system-ui, sans-serif; }
 .ph-svg text.m { font-family: var(--ph-mono), ui-monospace, monospace; }
 .ph-svg-cap { display: block; margin-top: 10px; max-width: 52ch; }
@@ -435,8 +441,6 @@ figure { margin: 0; }
    needed and had been given as a one-off; this makes it the shared rule. */
 .ph-v2-head h2 { font-family: var(--ph-serif), Georgia, serif; font-size: clamp(25px, 2.5vw, 36px); font-weight: 500; line-height: 1.04; letter-spacing: -0.02em; margin: 0; max-width: 24ch; text-wrap: balance; }
 .ph-v2-head .lede { font-size: clamp(16px, 1.15vw, 17.5px); line-height: 1.5; color: var(--ink-soft); margin: 0; max-width: var(--measure-narrow); text-wrap: pretty; }
-/* On the blue field the label needs the on-blue treatment like every other small text. */
-.ph-v2-blue .ph-chapter-label { color: var(--on-blue-dim); }
 
 /* A beat is one visual argument, sized to fit a viewport. */
 .ph-beat { margin-top: var(--beat-y); }
@@ -497,13 +501,20 @@ figure { margin: 0; }
   column-gap: clamp(48px, 6vw, 88px);
 }
 .ph-phase > section { grid-column: 2; }
-/* The phase boundary hairline. Not on the first phase (Discover) -- the hero already
-   closes with its own `.ph-hero-rule` divider, so a second line right under it would
-   double up. Not on `.ph-phase-deliver-light` either: that wrapper and
-   `.ph-phase-deliver-dark` just above it are two halves of ONE phase (Deliver), not a
-   real boundary -- see the comment on `.ph-phase-deliver-dark` below. */
-.ph-phase:not(.ph-phase-discover) { border-top: 1px solid var(--line); }
-.ph-phase-deliver-light { border-top: 0; }
+/* The phase boundary hairline that used to live here (a `border-top` marking each new
+   phase's first section) is gone (2026-09-07, Sylvia: still read as an awkward seam even
+   once it stopped crossing the rail column -- a line spanning only the content column,
+   stopping short of the rail, looked like a cut-off edge rather than a clean boundary).
+   The chapter break is now a real gap in document flow instead (see `margin-top` below),
+   not a line to draw or a sticky-timing trick to lean on. */
+/* Real inter-chapter whitespace (2026-09-07, Sylvia: the rail's own margin-bottom above
+   only delays when the sticky TEXT releases/re-pins -- it never moved the `.ph-phase`
+   wrapper itself, so a colour-changing phase like Deliver still snapped its background on
+   with zero gap the instant the previous phase's content ended, regardless of that rail
+   timing). This margin-top is real space in normal flow, so every genuine chapter start
+   -- both columns, any background -- gets an actual gap before it, independent of sticky
+   behaviour. Not on `.ph-phase-discover`: it's the first chapter, nothing precedes it. */
+.ph-phase:not(.ph-phase-discover) { margin-top: clamp(64px, 8vh, 96px); }
 
 /* `span 99`, not `1 / -1`: `.ph-phase` never declares `grid-template-rows` (each section
    is just an implicit auto row), and `-1` only resolves against the EXPLICIT grid, which
@@ -533,17 +544,27 @@ figure { margin: 0; }
   font-size: 12px; line-height: 1.5; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--muted);
 }
+/* Group-to-group breathing room (2026-09-07, Sylvia: 04's descriptor and 05's number read
+   as one continuous block; raised again same day after the divider above was removed --
+   with no line to mark the break at all, the gap alone has to carry it, so this needs to
+   read as clearly larger than the 12px/10px rhythm INSIDE a group, not just larger). This
+   margin-bottom lives on the LAST element of the rail group, not as gap/padding on
+   `.ph-phase-rail-inner` itself, because the sticky release point (see MECHANISM above) is
+   measured off the sticky box's own margin edge: growing it here makes the outgoing rail
+   let go of `top` earlier, so it has already scrolled clear before the next phase's rail
+   reaches the same `top` and starts pinning. Desktop only -- reset in the sub-900px block
+   below, where the rail isn't sticky and this isn't a hand-off, just a static heading. */
+.ph-phase-descriptor { margin-bottom: clamp(96px, 11vh, 144px); }
 
-/* Deliver, dark: the same rail inverted to ivory/white against Final Concept's own
-   `--blue` background, reusing that section's own `--on-blue`/`--on-blue-dim`/
-   `--on-blue-line` tokens rather than inventing new colours. The wrapper itself carries
-   the blue too, so the rail's gutter reads as part of the same field, not a light strip
-   beside a dark one. */
-.ph-phase-deliver-dark { background: var(--blue); }
-.ph-phase-deliver-dark .ph-phase-no,
-.ph-phase-deliver-dark .ph-phase-name { color: var(--on-blue); }
-.ph-phase-deliver-dark .ph-phase-descriptor { color: var(--on-blue-dim); }
-.ph-phase-deliver-dark.ph-phase:not(.ph-phase-discover) { border-top-color: var(--on-blue-line); }
+/* Deliver's rail used to invert to ivory/white here, with the whole `.ph-phase` wrapper
+   (both columns) painted blue so the rail's own gutter read as part of the same field.
+   REVERSED 2026-09-07 (Sylvia, reconsidering the earlier "two wrappers, repeated rail"
+   brief -- see the merged single `.ph-phase-deliver` in page.tsx): the rail is now one
+   persistent sticky element spanning all of 07-09, so it can no longer recolour itself
+   per section as the background behind it changes. It stays the page's normal dark-ink-
+   on-light the whole way through instead. The blue that used to live on the wrapper now
+   lives on `.ph-fc` itself (see that rule, near `.ph-fc-visual`) -- bleeding across the
+   content column's own box only, never the rail/gutter column. */
 
 @media (max-width: 899px) {
   /* No reserved column, no sticky: the rail becomes a compact heading in normal document
@@ -565,7 +586,7 @@ figure { margin: 0; }
     font-family: var(--ph-mono), ui-monospace, monospace; font-weight: 400;
     font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
   }
-  .ph-phase-descriptor { flex-basis: 100%; max-width: none; margin-top: 6px; }
+  .ph-phase-descriptor { flex-basis: 100%; max-width: none; margin-top: 6px; margin-bottom: 0; }
 }
 
 /* ================= 02 CONTEXT (v2) =================
@@ -1610,197 +1631,191 @@ figure { margin: 0; }
 .ph-picked-note { margin: 3px 0 0 !important; font-family: var(--ph-mono), ui-monospace, monospace; font-size: var(--fs-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue) !important; }
 .ph-conclusion { margin: var(--beat-y) 0 0; padding-top: 14px; border-top: 2px solid var(--blue); font-family: var(--ph-serif), Georgia, serif; font-size: clamp(19px, 1.9vw, 27px); font-weight: 500; line-height: 1.18; letter-spacing: -0.015em; max-width: 32ch; text-wrap: balance; }
 
-/* ---- 07: the handbook is the dominant and the only large plate on the blue field ---- */
-/* Top padding cut back from the section's own `padding-block` (Sylvia, 2026-09-07, "compress
-   the top composition"): the previews should surface sooner on the scroll, and this is the
-   first of several trims that together bring the intro in about 100-140px shorter, verified
-   live rather than computed, since clamp() ranges make the math unreliable on paper. Bottom
-   padding is untouched — the request was about the top, not the section's closing rhythm. */
-.ph-v2-blue { background: var(--blue); color: var(--on-blue); padding-top: clamp(32px, 4.4vh, 68px); padding-bottom: clamp(64px, 7vh, 104px); }
-.ph-v2-blue .ph-v2-head h2 { color: var(--on-blue); }
-.ph-v2-blue .ph-v2-head .lede, .ph-v2-blue .ph-cap, .ph-v2-blue .ph-body { color: var(--on-blue-dim); }
-.ph-v2-blue .ph-lbl { color: var(--on-blue-dim); }
-/* The eyebrow above the heading. A plain sibling of `.ph-v2-head`, not a change to that
-   shared grid (every other section still renders it unmodified, label below the heading) —
-   see the comment above section 07's markup in page.tsx. */
-.ph-07-eyebrow { margin: 0 0 10px; }
-/* The tower image and its explanation are one row (2026-09-07, second pass): the body
-   paragraph and the three annotations describe this picture specifically, so they sit
-   beside it. 5.5fr/6.5fr gives the image a little less than half, since the annotation
-   list needs real width for three number-label-source rows. */
-.ph-07-lead { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: clamp(16px, 1.6vw, 24px); }
-@media (min-width: 1000px) {
-  .ph-07-lead { grid-template-columns: minmax(0, 5.5fr) minmax(0, 6.5fr); gap: clamp(24px, 2.8vw, 48px); }
+/* ================= 07 THE DRYING TOWER / FINAL CONCEPT =================
+   REBUILT 2026-09-07 (fifth pass, real handbook assets). Same coordinate system as the
+   fourth pass (`.ph-fc-visual` positioned, every `.ph-fc-ov-*` child absolutely positioned
+   at percentages of that same box, so the whole composition scales together at any
+   viewport width with zero position breakpoints) -- see page.tsx's section-open comment
+   for the new background's own measured boundaries and why several strings below diverge
+   from `finalConcept` in content.ts.
+
+     tower bbox            x 58.1-82.0%   y 3.1-25.8%
+     top blue -> ivory      y 28.2%
+     blank band (handbook + pages, all of it -- this background has NO baked pages)
+                            y 28.2-89.6%  (860px at the 1122px source)
+     ivory -> bottom blue    y 89.6%
+
+   Within that 860px blank band: handbook row (heading/rationale, cover, CTA/contents)
+   top 29.6-56.8%, "Selected pages" label+sentence 58.2-62.1%, the two spreads
+   63.2-88.1%. Set from that budget, then still meant to be nudged by eye against the
+   reference -- see the same "do not treat arbitrary percentages as final" note as the
+   fourth pass. */
+/* Blue lives on the section itself, not the old `.ph-phase-deliver-dark` wrapper (see the
+   note there) -- so it bleeds across this content column's own box, including any margin
+   the 1488px-capped `.ph-fc-visual` leaves on very wide viewports, without touching the
+   rail/gutter column beside it. */
+.ph-fc { background: var(--blue); }
+.ph-fc-visual { position: relative; width: 100%; max-width: 1488px; margin-inline: auto; overflow: hidden; }
+.ph-fc-bg { display: block; width: 100%; height: auto; }
+
+.ph-fc-ov { position: absolute; margin: 0; }
+
+/* ---- act 1 zone (0-28.2% height): eyebrow, heading, lead, tower specs ---- */
+.ph-fc-ov-eyebrow { top: 4%; left: 4%; color: var(--on-blue-dim); }
+
+.ph-fc-ov-intro { top: 7.5%; left: 4%; width: 50%; }
+.ph-fc-ov-heading {
+  font-family: var(--ph-serif), Georgia, serif; font-weight: 500;
+  font-size: clamp(19px, 2.9vw, 40px); line-height: 1.1; letter-spacing: -0.015em;
+  color: var(--on-blue); max-width: 15ch; text-wrap: balance;
 }
-.ph-07-ident { margin-top: 0; display: grid; gap: 12px; min-width: 0; max-width: 390px; }
-.ph-07-ident img { display: block; width: 100%; height: auto; object-fit: contain; background: #fff; box-shadow: 0 14px 36px rgba(9, 24, 60, 0.32); }
-.ph-07-ident .ph-cap { font-size: 13px; max-width: 34ch; }
-@media (max-width: 999px) { .ph-07-ident { max-width: 440px; } }
-/* The tower render sizes to its grid column instead of the 390px fixed identifier width
-   above: it is the dominant image of the row, not a small plate beside a wide aside. */
-.ph-07-ident.ph-07-tower { max-width: none; }
-.ph-07-aside { min-width: 0; }
-.ph-07-aside .ph-body:first-child { margin-top: 0; }
-.ph-07-aside .ph-annots { gap: clamp(8px, 1.2vw, 14px); }
-
-/* ---- 07 / the handbook, as one centred, clickable sequence ----
-   (2026-09-07, SECOND layout-reference pass -- fully replaces the first pass's two-column,
-   numbered layout.) Title -> centred intro -> centred cover-as-entrance -> its CTA caption
-   -> a contents line -> "Selected pages" -> the two spreads. Everything in this block is
-   centred (`justify-items: center` / `text-align: center` / `margin-inline: auto`) except
-   the final two-up spreads, which fill the canvas width edge to edge like every other
-   full-width image pair on the page. */
-.ph-07-hb { margin-top: var(--beat-y); display: grid; justify-items: center; text-align: center; }
-
-/* Title kept exactly as it already was elsewhere on the page: no eyebrow, no oversized
-   display size (the reference sets it very large; that was rejected on this pass's
-   explicit instruction), just this section's own h3 scale, centred with a full-width rule
-   under it. */
-.ph-07-hb-head { width: 100%; padding-bottom: clamp(14px, 1.4vw, 20px); border-bottom: 1px solid var(--on-blue-line); }
-.ph-07-hb-head h3 {
-  margin: 0; font-family: var(--ph-serif), Georgia, serif;
-  font-size: clamp(22px, 2.1vw, 31px); font-weight: 500; line-height: 1.06;
-  letter-spacing: -0.02em; color: var(--on-blue);
+.ph-fc-ov-lead {
+  margin-top: clamp(8px, 1.1vw, 16px);
+  font-size: clamp(11px, 1.05vw, 15px); line-height: 1.45; color: var(--on-blue-dim);
+  max-width: 36ch; text-wrap: pretty;
 }
 
-/* Sans body copy, not serif display (2026-09-07, refinement pass): reads as the section's
-   explanatory intro line rather than a second display statement competing with the title
-   directly above it. ~520px measure, centred. */
-.ph-07-rationale {
-  margin: clamp(26px, 2.8vw, 40px) 0 0;
-  font-family: var(--ph-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(17px, 1vw, 18px); font-weight: 400; line-height: 1.45;
-  color: var(--on-blue);
-  max-width: 520px;
+/* Right of the tower's own 82% right edge: a label, one descriptive paragraph, then the
+   three stats as quiet hairline annotations (no citation line -- see page.tsx's comment),
+   matching the reference's own right-column block. Widened slightly from the fourth pass
+   (14% -> 16%) since a paragraph now sits above the stats, not just the stats alone; still
+   allowed to run down toward the tower's own leg base at ~25.8% before it's tight. */
+.ph-fc-ov-specs { top: 4%; left: 83%; width: 16%; display: grid; gap: clamp(7px, 0.9vw, 12px); }
+.ph-fc-ov-specs-label { color: var(--on-blue-dim); margin: 0; }
+.ph-fc-ov-specs-desc {
+  margin: 0; color: var(--on-blue-dim); font-size: clamp(8px, 0.72vw, 10.5px); line-height: 1.4;
+}
+.ph-fc-ov-specs-annots { gap: clamp(5px, 0.7vw, 10px); }
+.ph-fc-ov-specs-annots .ph-annot { border-top-color: var(--on-blue-line); padding-top: clamp(4px, 0.5vw, 7px); }
+.ph-fc-ov-specs-annots .ph-annot .v { font-size: clamp(11px, 1.2vw, 16px); }
+.ph-fc-ov-specs-annots .ph-annot .k { font-size: clamp(6px, 0.55vw, 8px); }
+
+/* ---- act 2 zone (28.2-89.6% height): handbook heading/rationale, the handbook photo,
+   CTA + contents line, then "Selected pages" and the two spreads ---- */
+.ph-fc-ov-hb-text { top: 32%; left: 4%; width: 26%; }
+.ph-fc-ov-hb-label { color: var(--muted); margin: 0 0 clamp(4px, 0.5vw, 7px); }
+.ph-fc-ov-hb-heading {
+  margin: 0; font-family: var(--ph-serif), Georgia, serif; font-weight: 500;
+  font-size: clamp(16px, 2.1vw, 29px); line-height: 1.08; letter-spacing: -0.01em;
+  color: var(--ink); max-width: 11ch; text-wrap: balance;
+}
+.ph-fc-ov-hb-rationale {
+  margin: clamp(6px, 0.9vw, 12px) 0 0;
+  font-size: clamp(9.5px, 0.85vw, 12.5px); line-height: 1.45; color: var(--ink-soft);
 }
 
-/* The cover, its two offset page edges, the CTA caption and the contents line are ALL
-   inside one <button> (see `HandbookCoverOpen` in handbook-reader.tsx) -- "the entire cover
-   must be clickable" and cover + CTA open the same destination, so one control serves both
-   rather than two racing each other. A plain, unstyled button as the base: no button box,
-   no fill, no border -- the cover image and the text are the only visible things. */
-.ph-07-hb-open {
-  all: unset; cursor: pointer;
-  margin-top: clamp(32px, 3.6vw, 52px);
-  display: grid; justify-items: center; gap: 14px;
-}
-.ph-07-hb-open:focus-visible { outline: 2px solid var(--on-blue); outline-offset: 6px; }
+/* The handbook photo: the section's dominant central object, per the brief. The mockup
+   asset's own canvas (1800x1800, square -- a book photographed at a slight tilt, with its
+   own trailing drop shadow baked in) is used whole, no crop -- see `.ph-fc-handbook-open`
+   below for hover. Centred between the text (left) and CTA (right) columns. */
+.ph-fc-ov-handbook { top: 27%; left: 33%; width: 34%; z-index: 2; }
 
-/* Two faint offset page edges behind the cover so it reads as a bound document rather than
-   one sheet. Opacity over the blue field, not a shadow: the brief rules out drop shadows,
-   and these are pages, not lighting. */
-.ph-07-cover-stack {
-  position: relative; width: clamp(220px, 26vw, 320px);
-  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+.ph-fc-ov-hb-meta { top: 35%; left: 70%; width: 26%; }
+.ph-fc-ov-hb-meta .ph-hb-textlink {
+  display: block; white-space: normal; font-family: var(--ph-serif), Georgia, serif;
+  font-size: clamp(12px, 1.15vw, 16px); font-weight: 500; letter-spacing: -0.005em;
+  color: var(--ink); text-align: left; max-width: none;
 }
-.ph-07-cover-stack::before,
-.ph-07-cover-stack::after {
-  content: ""; position: absolute; top: 7px; bottom: 7px; left: 0; right: 0;
-  background: var(--on-blue); z-index: 0;
-}
-.ph-07-cover-stack::after { transform: translateX(7px); opacity: 0.5; }
-.ph-07-cover-stack::before { transform: translateX(14px); opacity: 0.28; }
-/* Hover/focus: the cover lifts about 4px and scales fractionally, per the brief -- subtle
-   and fast, no button box or overlay text. */
-.ph-07-hb-open:hover .ph-07-cover-stack,
-.ph-07-hb-open:focus-visible .ph-07-cover-stack { transform: translateY(-4px) scale(1.01); }
-@media (prefers-reduced-motion: reduce) { .ph-07-cover-stack { transition: none; } }
-
-/* CROPPED TO THE LEFT PAGE. `handbook-cover-1600.webp` is not a cover, it is a two-page
-   SPREAD scan at 1600x1132 (1.41:1 landscape): the cover artwork is on the left page and
-   the right page is blank. Shown whole it rendered as a book cover wider than tall with a
-   large panel of empty white beside it. The box is set to the left page's proportion
-   (800 x 1132) and the image covers it from the left, so the blank page is cropped away.
-   Done in CSS so the original scan stays intact and the crop stays adjustable. */
-.ph-07-cover-stack img {
-  position: relative; z-index: 1;
-  display: block; width: 100%; height: auto;
-  aspect-ratio: 800 / 1132; object-fit: cover; object-position: left center;
-  background: #fff;
-}
-
-/* The CTA is text only, underlined on hover/focus -- the brief's whole interaction spec for
-   it, and consistent with `.ph-hb-textlink` elsewhere on the page. */
-.ph-07-hb-cta {
-  font-family: var(--ph-serif), Georgia, serif;
-  font-size: clamp(17px, 1.5vw, 21px); font-weight: 500; letter-spacing: -0.01em;
-  color: var(--on-blue); text-decoration: underline; text-decoration-color: transparent;
-  text-underline-offset: 4px;
-  transition: text-decoration-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.ph-07-hb-open:hover .ph-07-hb-cta,
-.ph-07-hb-open:focus-visible .ph-07-hb-cta { text-decoration-color: currentColor; }
-
-.ph-07-hb-contents-line {
+.ph-fc-ov-hb-meta .ph-hb-textlink:hover,
+.ph-fc-ov-hb-meta .ph-hb-textlink:focus-visible { color: var(--ink); }
+.ph-fc-ov-hb-contents {
+  margin: clamp(8px, 0.9vw, 14px) 0 0;
   font-family: var(--ph-mono), ui-monospace, monospace;
-  font-size: 12.5px; letter-spacing: 0.14em;
-  color: var(--on-blue-dim);
+  font-size: clamp(7px, 0.6vw, 9.5px); letter-spacing: 0.12em; color: var(--muted);
 }
 
-/* 64-80px to the pages block: close enough that the two halves read as one sequence. A
-   thin rule sits under the label pair, matching the rule under the title above. */
-.ph-07-hb-pages-head {
-  width: 100%; margin-top: clamp(64px, 6vw, 80px);
-  padding-bottom: clamp(12px, 1.2vw, 16px); border-bottom: 1px solid var(--on-blue-line);
+/* top moved from 58.2% to 56.5%, and the block's real rendered height (measured live: the
+   two-line sentence + label + border/padding runs ~6.4% of the container, not the ~3.9%
+   this was first budgeted at) -- it was overlapping `.ph-fc-ov-spreads` by about 1%
+   (Sylvia: "把下面两个页面都挤到蓝色部分了"). Verified live after this change, not just
+   computed -- see `.ph-fc-ov-spreads`'s own comment for the other half of this fix. */
+.ph-fc-ov-pages-head {
+  top: 55.5%; left: 4%; width: 92%;
+  padding-bottom: clamp(8px, 0.9vw, 13px); border-bottom: 1px solid var(--line);
 }
-.ph-07-hb-pages-head .ph-lbl { margin: 0 0 6px; }
-.ph-07-hb-sub { margin: 0; font-family: var(--ph-serif), Georgia, serif; font-size: clamp(17px, 1.5vw, 21px); font-weight: 500; line-height: 1.3; color: var(--on-blue); }
+.ph-fc-ov-pages-head .ph-lbl { margin: 0 0 4px; }
+.ph-fc-ov-pages-sub {
+  margin: 0; font-size: clamp(10px, 0.9vw, 13px); line-height: 1.4; color: var(--ink-soft);
+  max-width: 62ch;
+}
 
-/* The two spreads fill the canvas edge to edge (`justify-items` on `.ph-07-hb` is centring,
-   not stretching, so this row opts back into full width explicitly). */
-.ph-07-previews { justify-self: stretch; width: 100%; }
+/* The two flat spreads, side by side, each capped by WIDTH so `object-fit: contain` never
+   crops or distorts them (their own 4210x2977 / 1.414 aspect drives the rendered height).
+   Very subtle shadow only, no border -- separates the white sheet from the ivory ground
+   without a card edge, matching every other supporting-plate treatment on this page. */
+/* width trimmed from 92% to 88% (each spread 43%->41%): at 43% each, the pair's real
+   rendered height (aspect-locked to the 4210x2977 source) ran past the 89.6% ivory/blue
+   boundary by about 0.3%, poking their white bottom edge into the closing blue band. */
+.ph-fc-ov-spreads {
+  top: 62.3%; left: 4%; width: 88%;
+  display: grid; grid-template-columns: 1fr 1fr; gap: clamp(14px, 1.8vw, 28px);
+}
+.ph-fc-spread-wrap { margin: 0; min-width: 0; }
+.ph-fc-spread-img {
+  display: block; width: 100%; height: auto;
+  box-shadow: 0 1px 3px rgba(20, 22, 26, 0.07), 0 10px 22px -10px rgba(20, 22, 26, 0.18);
+}
 
-/* Two dimensioned instruction spreads. They were a third-width plate capped at 22vh
-   (~424 x 178px), where none of the step text or the cut-list measurements could be
-   read. Two-up across the canvas gives each about 660px, which is close to the scan's
-   own legible size. */
-/* The two interior spreads: one construction step, one cut list, equal columns so neither
-   reads as the more important of the two. They are the largest thing in the section.
+/* ---- act 3 zone (89.6-100% height): the honest ending, plus the reference's own
+   right-side concluding line ---- */
+/* top moved from 91% Cto 89.8%: the block's real rendered height was running about 0.3%
+   past the container's own bottom edge. */
+.ph-fc-ov-final { top: 89.8%; left: 5%; width: 52%; }
+.ph-fc-ov-final-label { color: var(--on-blue-dim); margin: 0 0 clamp(3px, 0.4vw, 6px); }
+.ph-fc-ov-final-heading {
+  margin: 0; font-family: var(--ph-serif), Georgia, serif; font-weight: 500;
+  font-size: clamp(14px, 2.2vw, 32px); line-height: 1.12; letter-spacing: -0.01em;
+  color: var(--on-blue); text-wrap: balance;
+}
+.ph-fc-ov-final-body {
+  margin: clamp(5px, 0.8vw, 12px) 0 0;
+  font-size: clamp(8.5px, 0.78vw, 12px); line-height: 1.45; color: var(--on-blue-dim);
+  max-width: 52ch;
+}
+.ph-fc-ov-final-note {
+  top: 90%; left: 68%; width: 28%; text-align: right;
+  font-family: var(--ph-mono), ui-monospace, monospace;
+  font-size: clamp(7px, 0.62vw, 9.5px); letter-spacing: 0.1em; text-transform: uppercase;
+  line-height: 1.6; color: var(--on-blue-dim);
+}
 
-   THE 58vh CAP IS EXPRESSED AS A WIDTH, AND IT HAS TO BE. The obvious spelling —
-   `max-height: 58vh` with `width: auto` — deadlocks: before the scan loads its intrinsic
-   size is 0 x 0, so the plate's grid row collapses to 0px, so the image never enters the
-   viewport, so lazy loading never fires and it stays 0 x 0 forever. Keeping `width: 100%`
-   lets next/image reserve the box from the width/height attributes it already emits. Both
-   sheets are about 1.42:1, so bounding the plate at `58vh * 1.42` bounds the height
-   without a `max-height` anywhere, and without the squash or the letterbox that
-   `max-height` on a full-width image would cause.
+/* Mobile: the desktop percentages above already scale the WHOLE composition (image,
+   handbook, every text block) together, so nothing here repositions vertically -- only
+   the narrowest columns get a little more width, since at phone widths their desktop
+   share of the container is too few real pixels to read. Not verified against a live
+   narrow viewport in this pass -- revisit on a real device/emulator before calling this
+   done. */
+@media (max-width: 640px) {
+  .ph-fc-ov-specs { left: 80%; width: 18%; }
+  .ph-fc-ov-intro { width: 55%; }
+  .ph-fc-ov-hb-text { width: 30%; }
+  .ph-fc-ov-handbook { width: 38%; }
+  .ph-fc-ov-hb-meta { left: 72%; width: 24%; }
+  .ph-fc-ov-final { width: 62%; }
+  .ph-fc-ov-final-note { left: 64%; width: 32%; }
+}
 
-   Margin-top is intentionally small (not `--beat-y`): the header row's rule above already
-   does the separating, so the gap here is "label row to its own content," not "beat to
-   beat." */
-.ph-07-previews { display: grid; grid-template-columns: 1fr; gap: var(--pair); align-items: start; margin-top: clamp(22px, 2.2vw, 30px); }
-@media (min-width: 900px) { .ph-07-previews { grid-template-columns: 1fr 1fr; gap: clamp(20px, 2.4vw, 40px); } }
-/* `justify-self: stretch`, not `center`, and no max-width (2026-09-07): the spreads used to
-   be capped at `58vh * 1.42` and centred in their tracks, which floated them inward and made
-   it impossible for spread 1's left edge to line up with the cover above it or spread 2's
-   right edge to line up with the copy column. They now fill their tracks, so the whole
-   handbook block sits on one grid. The 58vh height guard is gone with the cap; these are
-   two-up across the canvas, so their height is already bounded by the track width. */
-.ph-07-previews .ph-support-plate-wrap { display: grid; gap: 10px; min-width: 0; width: 100%; }
-.ph-07-previews .ph-support-plate { background: #fff; border: 0; padding: clamp(10px, 1.1vw, 18px); }
-.ph-07-previews .ph-support-plate img { width: 100%; height: auto; max-width: 100%; max-height: none; object-fit: contain; }
-.ph-v2-blue .ph-annots { margin-top: 0; }
-.ph-v2-blue .ph-annot { border-top-color: var(--on-blue-line); }
-/* Two beats on the blue field (2026-09-07): the same `.ph-beat` device sections 03 and 05
-   use, so "the concept is the tower, the deliverable is the handbook" is carried by the
-   structure. `.ph-beat-head` is authored for the paper ground -- a `--ink` rule and an
-   ink-coloured h3 -- so both need the on-blue treatment here, the same way `.ph-annot`
-   above does. */
-/* `.ph-07-beat` removed: the handbook divider it styled was replaced by `.ph-07-hb-head`,
-   which carries the "01 / Cover & purpose" label above the title. */
-/* 07's one-off `max-width: 24ch` on the heading is gone: 24ch became the shared
-   `.ph-v2-head h2` measure for every chapter (2026-09-07), so the override is redundant. */
-/* 07's tower image: one unannotated render (not the mechanism pair, which stays
-   exclusive to 08 -- see the comment at its call site in page.tsx). A line drawing reads
-   as a document, not a photograph, so it gets a white plate and `object-fit: contain`
-   rather than `.ph-dominant`'s default `object-fit: cover`, which would crop the chimney
-   or base to fill a photo-shaped box. Its column width comes from `.ph-07-lead`'s grid
-   track (see `.ph-07-ident.ph-07-tower` above), not a fixed max-width here. */
-.ph-07-tower img {
-  width: 100%; height: auto; max-height: none; object-fit: contain;
-  background: #fff; border: 1px solid var(--line);
-  padding: clamp(16px, 2vw, 28px); box-sizing: border-box;
+/* ---- the handbook photo button (handbook-reader.tsx's `HandbookPhotoOpen`) ----
+   Same click target as every other handbook entrance on the page (unchanged); only the
+   visual and this hover treatment are new. Plain, unstyled button -- the photo (which
+   already carries its own cover art, paper edge and drop shadow) is the only visible
+   thing. */
+.ph-fc-handbook-open {
+  all: unset; cursor: pointer; display: block; width: 100%;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), filter 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ph-fc-handbook-open img { display: block; width: 100%; height: auto; }
+.ph-fc-handbook-open:focus-visible { outline: 2px solid var(--on-blue); outline-offset: 6px; border-radius: 2px; }
+/* Desktop hover only (`hover: hover` -- never a touch device, so nothing gets stuck
+   "on"): lift 6px, scale ~1.02, a fractional tilt under 0.5deg, and a stronger drop
+   shadow -- via `filter: drop-shadow`, not `box-shadow`, so it hugs the photo's own
+   irregular (already-shadowed, transparent-edged) silhouette instead of drawing a
+   rectangle behind it. No bounce, no glow, no card animation. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ph-fc-handbook-open:hover, .ph-fc-handbook-open:focus-visible {
+    transform: translateY(-6px) scale(1.02) rotate(-0.35deg);
+    filter: drop-shadow(0 22px 30px rgba(4, 10, 28, 0.32));
+  }
 }
 
 /* ---- 08: the two-state drawing is one dominant unit, the ghosted frames are small ---- */
@@ -1809,6 +1824,30 @@ figure { margin: 0; }
 .ph-mech-pair figure { display: grid; gap: 9px; }
 .ph-mech-pair img { display: block; width: 100%; height: auto; background: #fff; border: 1px solid var(--line); aspect-ratio: 595 / 420; object-fit: contain; max-height: 38vh; }
 .ph-mech-pair figcaption { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--ink-soft); }
+
+/* ---- 08 blue variant: "How it was intended to work" sits on the same cobalt field as
+   07 (Sylvia: "mechanism 的背景换成蓝色"). A general-purpose class, not `#mechanism`-scoped,
+   in case another `.ph-v2` section wants the same treatment later -- every child override
+   below is a straight re-tint (ink/muted -> on-blue/on-blue-dim), not a new design. */
+.ph-v2-blue { background: var(--blue); color: var(--on-blue); }
+.ph-v2-blue .ph-chapter-label { color: var(--on-blue-dim); }
+.ph-v2-blue .ph-v2-head h2 { color: var(--on-blue); }
+.ph-v2-blue .ph-v2-head .lede { color: var(--on-blue-dim); }
+.ph-v2-blue .ph-lbl { color: var(--on-blue-dim); }
+.ph-v2-blue .ph-mech-pair img { border-color: var(--on-blue-line); }
+.ph-v2-blue .ph-mech-pair figcaption { color: var(--on-blue-dim); }
+/* `.ph-frame-n`'s base rule is a solid blue pill with on-blue text -- invisible on a blue
+   field, so this flips it: an on-blue pill with blue text, same badge shape. */
+.ph-v2-blue .ph-frame-n { background: var(--on-blue); color: var(--blue); }
+.ph-v2-blue .ph-steplabels li { border-top-color: var(--on-blue); }
+.ph-v2-blue .ph-steplabels .n { color: var(--on-blue); }
+.ph-v2-blue .ph-steplabels b { color: var(--on-blue); }
+.ph-v2-blue .ph-steplabels .t { color: var(--on-blue-dim); }
+.ph-v2-blue .ph-strip-frame { border-color: var(--on-blue-line); }
+.ph-v2-blue .ph-strip h4 { color: var(--on-blue); }
+.ph-v2-blue .ph-strip p { color: var(--on-blue-dim); }
+.ph-v2-blue .ph-quote blockquote { color: var(--on-blue); }
+.ph-v2-blue .ph-quote .who { color: var(--on-blue-dim); }
 
 /* ---- 09: the marked list is the dominant ---- */
 .ph-v2-ink { background: var(--ink); color: var(--paper); padding-block: clamp(30px, 3.4vw, 46px); margin-top: var(--pair); }
@@ -1853,15 +1892,6 @@ figure { margin: 0; }
    top of this one, stacking two beats of near-empty canvas around a small button. With the
    CTA gone the request still asks for a specific, smaller gap here, so it is explicit
    rather than borrowed from --beat-y. */
-/* Single column since 2026-09-07: the status paragraph that used to sit beside the quote
-   moved to section 09 (see the note on `finalConcept.status` in content.ts). The quote can
-   now take a comfortable measure instead of being squeezed into a 318px column beside a
-   two-line block, which is what produced the 156px height mismatch between the two. */
-/* 160-200px, deliberately much larger than the 64-80px inside the handbook block above:
-   that gap holds "01 / cover" and "02 / pages" together as one sequence, this one separates
-   the sequence from what follows it. */
-.ph-07-close { margin-top: clamp(160px, 13vw, 200px); }
-.ph-07-close .ph-handbook-quote { max-width: 42ch; }
 .ph-v2 .ph-takeaway { margin-top: var(--beat-y); }
 .ph-v2 .ph-foot { margin-top: var(--pair); }
 .ph-v2 .ph-insights { margin-top: var(--beat-y); }
@@ -1907,7 +1937,6 @@ figure { margin: 0; }
 .ph-10-photo .ph-cap { color: rgba(255, 255, 255, 0.75); margin-top: 12px; }
 @media (min-width: 1000px) {
   .ph-08-foot { grid-template-columns: 3fr 2fr; }
-  /* `.ph-07-close` had a two-column rule here; it is a single column now. */
 }
 
 /* ---- 05: the rail sits under the dominant photograph as a compact row, with the

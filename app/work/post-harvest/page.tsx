@@ -11,7 +11,7 @@ import {
   project, meta, context, field, participants, focus, challenge,
   concepts, finalConcept, mechanism, status, reflection, chapterLabel, phases,
 } from "./content";
-import HandbookReader, { HandbookCoverOpen } from "./handbook-reader";
+import HandbookReader, { HandbookOpen, HandbookPhotoOpen } from "./handbook-reader";
 
 /* Route-scoped fonts, same pattern HALOGRIP uses: none of these reach `/` or any other
    route. Geist carries readable text; Bodoni Moda carries display, section numerals and
@@ -45,6 +45,19 @@ const annotations = [
   { v: "approx. 100 kg", k: "Estimated design capacity", src: "Calculated, p.36" },
 ];
 
+/** Section 07's own right-column spec block (fifth pass, real handbook assets): matches
+ * `finalconcept reference.png`'s exact wording ("10 SHELVES" / "DRYING CAPACITY", etc.),
+ * not `annotations` above -- that array's labels ("Shelf size", "Estimated design
+ * capacity") are a later, evidence-review rewrite for a different layout pass. Kept as its
+ * own array rather than editing `annotations` in place, since `annotations` may still be
+ * the one other code expects if this section's copy reverts to the evidence-reviewed
+ * wording later. */
+const referenceSpecs = [
+  { v: "10 shelves", k: "Drying capacity" },
+  { v: "81 x 70 x 2.5 cm", k: "Main chamber (L x W x H)" },
+  { v: "approx. 100 kg", k: "Total weight" },
+];
+
 function SectionHead({ n, heading, lead }: { n: string; heading: string; lead?: string }) {
   return (
     <div className="ph-head">
@@ -57,14 +70,20 @@ function SectionHead({ n, heading, lead }: { n: string; heading: string; lead?: 
 
 /** Narrative phase rail. See `phases` in content.ts for why this is a separate registry
  * from the section numbers, and the "NARRATIVE PHASE RAIL" block in post-harvest.css for
- * the sticky mechanism and the section-04 safety note. `dark` is the one variant: the
- * Deliver phase repeats this same rail once against the Final Concept section's own
- * `--blue` background (inverted to ivory/white) and once against sections 08-09's plain
- * background (its usual dark-on-light), rather than trying to recolour one sticky rail
- * mid-scroll as the background behind it changes. */
-function PhaseRail({ n, name, descriptor, dark = false }: { n: string; name: string; descriptor: string; dark?: boolean }) {
+ * the sticky mechanism. One instance now spans all of the Deliver phase (07-09) as a
+ * single persistent sticky element -- it used to take a `dark` variant and repeat once
+ * more, inverted, against Final Concept's own `--blue` background, but that meant the
+ * rail released and re-pinned mid-chapter and read as two chapters instead of one; see
+ * the CSS note on `.ph-fc` for where that inverted colouring went instead.
+ *
+ * A full-bleed `corner` variant (no reserved column) was tried for section 07 during a
+ * reference-fidelity pass and reverted the same day (Sylvia: keeping the persistent
+ * sidebar, consistent with every other section, mattered more than the closer width match
+ * to the generated reference). Section 07 reads inside the normal sticky column again,
+ * same as 02-03/05-06/08-09. */
+function PhaseRail({ n, name, descriptor }: { n: string; name: string; descriptor: string }) {
   return (
-    <aside className={`ph-phase-rail${dark ? " ph-phase-rail-dark" : ""}`} aria-label={`Phase ${n}, ${name}`}>
+    <aside className="ph-phase-rail" aria-label={`Phase ${n}, ${name}`}>
       <Reveal className="ph-phase-rail-inner">
         <p className="ph-phase-no">{n}</p>
         <p className="ph-phase-name">{name}</p>
@@ -552,6 +571,7 @@ export default function PostHarvestPage() {
               <div className="ph-v2-needs">
                 <div className="ph-carry-unit">
                   <p className="ph-body">{challenge.arithmetic}</p>
+                  <p className="ph-body">{challenge.arithmeticBridge}</p>
                   <figure>
                     <div className="ph-carry-figs">
                       <Image src="/post-harvest/figure/figure-carrying-750.webp" alt="Traced illustration of a person carrying baskets of produce, one balanced on the head" width={750} height={1487} sizes="120px" />
@@ -657,243 +677,181 @@ export default function PostHarvestPage() {
       </div>
       {/* ==== / Phase 03 Develop ==== */}
 
-      {/* ============ Phase 04 / Deliver, dark (07 Final Concept) ============
-          Two physical wrappers for one semantic phase (Sylvia's brief: "the rail can be
-          repeated in its dark-on-light version"), not one wrapper trying to recolour a
-          single sticky rail as the background changes mid-scroll underneath it. This one
-          is `ph-phase-deliver-dark`, inverted to ivory/white against the Final Concept
-          section's own `--blue`; the second, `ph-phase-deliver-light` further down, wraps
-          08-09 and repeats the same "04 / Deliver" text in the page's usual dark-on-light.
-          No hairline between the two -- see `.ph-phase-deliver-light { border-top: 0 }`
-          in post-harvest.css -- so they read as one continuous phase, not two. */}
-      <div className="ph-phase ph-phase-deliver-dark">
-        <PhaseRail {...phases[3]} dark />
+      {/* ============ Phase 04 / Deliver (07 Final Concept, 08 Mechanism, 09 Status) ============
+          MERGED into one wrapper (2026-09-08, Sylvia: reconsidered the earlier two-wrapper
+          brief below). Used to be two physical wrappers for one semantic phase -- "the rail
+          can be repeated in its dark-on-light version" -- each rendering its own `PhaseRail`
+          call, so "04 / Deliver" appeared to release and re-pin a second time right in the
+          middle of its own chapter. Now it's a single `.ph-phase` spanning all of 07-09 with
+          one `PhaseRail` call: the rail stays pinned continuously through the whole phase and
+          never recolours (see the CSS note on `.ph-fc` for where its old inverted colouring
+          went instead).
 
-      {/* ============ 07 The Drying Tower ============
-          REVERSED (Sylvia, 2026-09-07, visual-hierarchy audit): the handbook cover was
-          the section's dominant visual, on the reasoning that the handbook is the actual
-          delivered artifact and the tower itself was never built. In practice this meant
-          the climax section of the case study never showed the reader what the design
-          IS: a document cover, three stats and two page spreads, with no image of the
-          tower's own mechanism anywhere before section 08. The mechanism pair (the same
-          two diagrams section 08 uses to explain airflow) is now the dominant visual
-          here, captioned so it cannot be mistaken for a photograph of a built object --
-          `finalConcept.captions.tower` already carried "It was never constructed" and had
-          been unused. The handbook cover drops to a supporting plate beside the
-          deliverable text, where it still reads clearly as the completed artifact.
+          A full-bleed variant (rail collapsed to a static corner label, section spanning
+          both grid columns) was tried here during a reference-fidelity pass and reverted
+          the same day: keeping the persistent sidebar, consistent with every other
+          section, mattered more than the closer width match to the generated reference
+          (Sylvia, at the time: "为什么不是常驻侧边栏" -- since revisited, see above).
+          Section 07 reads inside the normal sticky column again, same mechanism as every
+          other phase. */}
+      <div className="ph-phase ph-phase-deliver">
+        <PhaseRail {...phases[3]} />
 
-          DOMINANT: the tower mechanism pair. The handbook cover and the two handbook
-          pages are supporting plates.
+      {/* ============ 07 The Drying Tower / Final Concept ============
+          REBUILT 2026-09-07 (fifth pass, real handbook assets). Sylvia supplied a clean
+          background (blue tower band / one large blank ivory band / blue closing band,
+          NO text and -- unlike the fourth pass's background -- no "selected pages" spreads
+          baked in either), an isolated 3D handbook-cover mockup, and the two selected-page
+          spreads themselves as separate high-resolution flat scans (4210x2977 each). All
+          five now live in public/post-harvest/photo/finalconcept/ under clean names
+          (fc-bg-clean-1122, fc-handbook-cover-1800, fc-spread-step-4210,
+          fc-spread-materials-4210); the originals Sylvia dropped in are untouched
+          alongside them. Flat scans, not the also-supplied perspective "mockup" spread
+          renders: the mockup's tilt compresses the dimension callouts near each spread's
+          edges, and the brief's own priority is "crispness and readability over dramatic
+          styling."
 
-          FIXED: the cover used to be `width:100%` + `object-fit:contain` + `background:
-          #fff` on a full-canvas box. The scan is 1.41:1 and the box was 3.3:1, so the
-          white background bled the full width of the page and the drawing floated in the
-          middle of a huge empty white band — that band was the "long image". The figure
-          now sizes to the cover's own proportion inside its column, so there is no white
-          outside the page itself.
+          COORDINATES, same method as the fourth pass -- canvas pixel sampling on the new
+          background, not eyeballed: blue1/ivory boundary y=28.2%, blank band 28.2-89.6%
+          (860px at the 1122px source -- more than double the old background's 404px, since
+          this one has no baked pages eating into it), tower bbox unchanged (x 58.1-82.0%,
+          y 3.1-25.8%), blue2 starts y=89.6%.
 
-          PREVIEWING IS NOT READING, AND READING IS OPTIONAL (Sylvia, 2026-09-06, revised
-          twice on 2026-09-07). The section says three things in order, and each has exactly
-          one job:
-            1. the cover, small, beside the intro ...... the handbook as final deliverable
-            2. two large interior spreads .............. representative pages, understood
-                                                          without opening anything
-            3. a text link inside the previews' own ..... optional access to all 53 pages
-               header row, beside "Inside the handbook"
-          Every spread used to carry its own pill, which gave the page four entrances and no
-          main one. The spreads are plain, non-clickable images now — they ARE the primary
-          reading path, not bait for the reader.
+          COPY. This pass matches Sylvia's brief text, which mirrors `finalconcept
+          reference.png`'s OWN captions -- not all of it is the same as `finalConcept` in
+          content.ts, which went through a separate evidence-review pass (added source
+          citations to the specs, hedged the closing claim, cross-referenced section 04 in
+          the rationale). Reused from content.ts where the two agree (heading, handbook
+          heading, contents line, CTA label via HANDBOOK_TOTAL); hardcoded to match the
+          reference where they diverge (lead paragraph, the right-column spec block and its
+          missing citations, "SELECTED PAGES"' own supporting sentence, and all of the
+          closing band). Flagged for Sylvia in this pass's own summary, not silently
+          swapped into content.ts.
 
-          THE ENTRANCE WENT THROUGH TWO SHAPES BEFORE THIS ONE. First a full-width "paper on
-          blue" band — right when the problem was "four entrances, none primary," wrong once
-          the reader was reclassified as an optional deep dive, because at canvas width with
-          a 21-32px serif title it became the section's dominant element. Then a small
-          bordered box under the previews — correctly sized, but it floated alone in a large
-          empty stretch of canvas, reading as an unplanned third composition between the
-          previews and the closing quote. It is now `.ph-07-inside-head`: one row, a label
-          ("Inside the handbook") on the left and the plain text link on the right, with a
-          rule beneath it that also serves as the top edge of the previews group. Nothing
-          about it needs its own vertical space; it is part of the previews' own frame.
+          CLICK BEHAVIOR UNCHANGED. `HandbookPhotoOpen` (handbook-reader.tsx) still calls
+          the exact same `openHandbook(HANDBOOK_PLATE_PAGE.cover)` every other entrance on
+          this page uses. Only its visual (now the real mockup asset) and hover are new. */}
+      <section className="ph-fc" id="final-concept">
+        <div className="ph-fc-visual">
+          <Image
+            src="/post-harvest/photo/finalconcept/fc-bg-clean-1122.png"
+            alt="The Drying Tower rendered against a night sky over Seme, above one large ivory page"
+            width={1122} height={1402}
+            sizes="(max-width: 1488px) 100vw, 1488px"
+            className="ph-fc-bg"
+          />
 
-          The two previews are the interior, deliberately: one construction step and one cut
-          list. The cover is not one of them, because it shows nothing about the contents.
-
-          FIXED: the two handbook pages were capped at `max-height: 22vh` in a third-width
-          column, i.e. about 424 x 178px. These are dimensioned instruction spreads; at
-          that size none of their text is readable. They are a two-up row across the canvas
-          now, capped at 58vh so a short window cannot let them run past the fold.
-
-          INTRO REFINED, PREVIEWS UNTOUCHED (Sylvia, 2026-09-07, third pass — the previews
-          group below stayed exactly as it was). Four changes above `.ph-07-inside`:
-          the heading now names the handbook directly (content.ts); the eyebrow moved out of
-          `.lede` to sit above the `num`/heading row instead of below it — a plain sibling
-          `<p>`, not a change to the shared `.ph-v2-head` grid every other section still uses
-          unmodified; the cover grew about 30% (300px -> 390px) and the aside column
-          narrowed to make room for it, since the spec list's full-width divider lines were
-          visually heavier than the cover they sat beside; and the vertical rhythm above the
-          previews was compressed so they surface sooner on the scroll. */}
-      <section className="ph-v2 ph-v2-blue" id="final-concept">
-        <div className="ph-canvas">
-          <Reveal>
-            <div className="ph-07-head">
-              <p className="ph-lbl ph-07-eyebrow">{finalConcept.label}</p>
-              <div className="ph-v2-head">
-                <p className="ph-chapter-label">{chapterLabel("final-concept")}</p>
-                <h2>{finalConcept.heading}</h2>
-                <div className="lede">
-                  <p>{finalConcept.lead}</p>
-                </div>
-              </div>
-            </div>
+          <Reveal tag="p" className="ph-chapter-label ph-fc-ov ph-fc-ov-eyebrow">
+            {chapterLabel("final-concept")}
           </Reveal>
 
-          {/* --- beat A / the tower -------------------------------------------
-              Deliberately UNLABELLED. A "The Drying Tower" divider here sat two lines under
-              a heading that already opens "The Drying Tower, and a handbook to build it",
-              so it repeated the heading's own first half and cost about 100px to do it.
-              Only the turn to the second subject is marked, which is what the divider is
-              for; the first subject is introduced by the section heading itself. */}
-          <Reveal>
-            {/* The tower image and the copy that explains it are one reading unit
-                (Sylvia, 2026-09-07, second pass): the body paragraph ("a black box
-                collector heats air...") and the three measured annotations describe THIS
-                picture, so they sit beside it rather than one screen further down next to
-                the handbook cover, where they used to read as unrelated to the image
-                above them.
-
-                A single, unannotated isometric of the whole tower, not the mechanism
-                pair: section 08 owns mechanism-sun/mechanism-airflow (the sun-ray and
-                airflow annotations) exclusively, to explain how it works; this section
-                only needs to show what it is, so it uses the plain tower-door render. */}
-            <div className="ph-07-lead">
-              <figure className="ph-07-ident ph-07-tower">
-                <Image src="/post-harvest/diagram/tower-door-1200.webp"
-                  alt="Isometric line drawing of the complete Drying Tower: the shelved cabinet with its door open, the chimney above and the solar collector attached at its base"
-                  width={1200} height={846} sizes="(max-width: 999px) 92vw, 55vw" />
-                <figcaption className="ph-cap">{finalConcept.captions.tower}</figcaption>
-              </figure>
-
-              <div className="ph-07-aside">
-                {finalConcept.body.map((t) => (
-                  <p className="ph-body" key={t.slice(0, 20)}>{t}</p>
-                ))}
-                <ul className="ph-annots" style={{ marginTop: 10 }}>
-                  {annotations.map((a) => (
-                    <li className="ph-annot" key={a.k}>
-                      <span className="v">{a.v}</span>
-                      <span className="k">{a.k}</span>
-                      <span className="src">{a.src}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+          <Reveal className="ph-fc-ov ph-fc-ov-intro">
+            <h2 className="ph-fc-ov-heading">{finalConcept.heading}</h2>
+            {/* Matches the reference's own lead exactly; content.ts's `finalConcept.lead`
+                is a later, more hedged rewrite ("The project's final deliverable was..."),
+                kept there untouched -- see the section-open comment. */}
+            <p className="ph-fc-ov-lead">
+              A low-cost, locally buildable grain drying tower designed for smallholder farmers
+              in western Kenya, paired with a step-by-step construction handbook to enable
+              others to build it.
+            </p>
           </Reveal>
 
-          {/* --- beat B / the handbook ----------------------------------------
-              REBUILT A SECOND TIME to a new layout reference (2026-09-07). The first pass
-              (cover beside an explanation column, "01 /" and "02 /" numbering, a text-link
-              entrance in the pages header) is fully replaced. The handbook is now presented
-              as one complete, clickable deliverable, centred, before the two selected pages:
-              title -> centred intro -> centred cover (the entrance itself) -> its own CTA
-              caption -> the contents line -> "Selected pages" -> the two spreads.
+          {/* Right-column spec block, matching the reference exactly: a label, one
+              descriptive paragraph, then the three stats via `referenceSpecs` (defined
+              above) -- its own wording and no source citations, unlike `annotations`,
+              which this section used in an earlier pass. See the section-open comment. */}
+          <Reveal className="ph-fc-ov ph-fc-ov-specs">
+            <p className="ph-lbl ph-fc-ov-specs-label">The drying tower</p>
+            <p className="ph-fc-ov-specs-desc">
+              A passive, side-fired grain drying tower for maize (corn), using locally
+              available materials and simple construction methods.
+            </p>
+            <ul className="ph-annots ph-fc-ov-specs-annots">
+              {referenceSpecs.map((a) => (
+                <li className="ph-annot" key={a.k}>
+                  <span className="v">{a.v}</span>
+                  <span className="k">{a.k}</span>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
 
-              Deliberately NOT here, per this pass's brief: no numbering, no cards, no
-              rounded corners, no gradients, no icons, no strong shadows, no connecting
-              arrows. The only device is two faint offset page edges behind the cover (pure
-              opacity, no shadow), so it reads as a bound document rather than one sheet.
+          <Reveal className="ph-fc-ov ph-fc-ov-hb-text">
+            <p className="ph-lbl ph-fc-ov-hb-label">The handbook</p>
+            <h3 className="ph-fc-ov-hb-heading">{finalConcept.beats.handbook}</h3>
+            <p className="ph-fc-ov-hb-rationale">{finalConcept.deliverable.rationale}</p>
+          </Reveal>
 
-              THERE IS NO PDF. The brief asked for a click to "open the existing full
-              handbook PDF in a new tab" — no PDF exists anywhere in this project; see the
-              long note on `HandbookCoverOpen` in handbook-reader.tsx. The cover and its CTA
-              open the real, existing in-page reader instead of a link to a file that does
-              not exist. */}
-          <Reveal>
-            <div className="ph-07-hb">
-              <div className="ph-07-hb-head">
-                <h3>{finalConcept.beats.handbook}</h3>
-              </div>
+          <Reveal tag="div" className="ph-fc-ov ph-fc-ov-handbook">
+            <HandbookPhotoOpen
+              photoSrc="/post-harvest/photo/finalconcept/fc-handbook-cover-1800.png"
+              photoAlt="The construction handbook: a printed cover titled Drying Tower, first version, Experimental (Prototype)"
+              photoWidth={1800} photoHeight={1800}
+              ctaLabel={finalConcept.sequence.ctaLabel}
+            />
+          </Reveal>
 
-              {/* Why a document rather than a machine. Without this the handbook reads as a
-                  fallback for the tower that was never built, instead of as the answer to
-                  section 04's finding. Centred, max ~600px, per the layout reference. */}
-              <p className="ph-07-rationale">{finalConcept.deliverable.rationale}</p>
+          <Reveal className="ph-fc-ov ph-fc-ov-hb-meta">
+            <HandbookOpen label={finalConcept.sequence.ctaLabel} />
+            <p className="ph-fc-ov-hb-contents">{finalConcept.deliverable.contents.join(" · ").toUpperCase()}</p>
+          </Reveal>
 
-              <HandbookCoverOpen
-                coverSrc="/post-harvest/handbook/handbook-cover-1600.webp"
-                coverAlt="Cover of the construction handbook, titled Drying Tower, first version, listing a construction manual, materials needed, tools needed and how to use"
-                coverWidth={1600}
-                coverHeight={1132}
-                ctaLabel={finalConcept.sequence.ctaLabel}
-                contentsLine={finalConcept.deliverable.contents.join(" · ").toUpperCase()}
+          {/* "Selected pages": content.ts's own `pagesSub` ("Two examples from inside the
+              handbook") is replaced here with the reference's own longer sentence -- see
+              the section-open comment; `pagesLabel` ("Selected pages") is unchanged and
+              still sourced from content.ts. */}
+          <Reveal className="ph-fc-ov ph-fc-ov-pages-head">
+            <p className="ph-lbl">{finalConcept.sequence.pagesLabel}</p>
+            <p className="ph-fc-ov-pages-sub">
+              A look inside the 53-page handbook, including detailed diagrams, dimensions
+              and a complete list of materials.
+            </p>
+          </Reveal>
+
+          <div className="ph-fc-ov ph-fc-ov-spreads">
+            <Reveal tag="figure" className="ph-fc-spread-wrap">
+              <Image
+                src="/post-harvest/photo/finalconcept/fc-spread-step-4210.png"
+                alt="Handbook pages 46-47: Step 1, making three rectangle frames, and Sub-step 1.1, welding the four square tubes of each frame together, with a materials list and dimensioned parts"
+                width={4210} height={2977} sizes="(max-width: 899px) 92vw, 44vw"
+                className="ph-fc-spread-img"
               />
+            </Reveal>
+            <Reveal tag="figure" className="ph-fc-spread-wrap">
+              <Image
+                src="/post-harvest/photo/finalconcept/fc-spread-materials-4210.png"
+                alt="Handbook pages 12-13: Cutlist of materials for the Drying Tower, dimensioned square tube, angle iron, flat iron, metal sheet, metal pipe and fasteners"
+                width={4210} height={2977} sizes="(max-width: 899px) 92vw, 44vw"
+                className="ph-fc-spread-img"
+              />
+            </Reveal>
+          </div>
 
-              <div className="ph-07-hb-pages-head">
-                <p className="ph-lbl">{finalConcept.sequence.pagesLabel}</p>
-                <p className="ph-07-hb-sub">{finalConcept.sequence.pagesSub}</p>
-              </div>
-
-              <div className="ph-07-previews">
-                <figure className="ph-support-plate-wrap">
-                  <div className="ph-support-plate">
-                    <Image
-                      src="/post-harvest/handbook/handbook-step-1600.webp"
-                      alt="A handbook page headed Step 1, showing how to weld four square tubes into a rectangular frame, with dimensioned sub-steps and the materials needed listed beneath"
-                      width={1600} height={1111} sizes="(max-width: 899px) 92vw, 46vw"
-                    />
-                  </div>
-                  <figcaption className="ph-cap">{finalConcept.captions.step}</figcaption>
-                </figure>
-
-                <figure className="ph-support-plate-wrap">
-                  <div className="ph-support-plate">
-                    <Image
-                      src="/post-harvest/handbook/handbook-cutlist-1600.webp"
-                      alt="A handbook page headed Cutlist of materials, showing measured steel sections including square tube, angle iron, flat iron, metal sheet and pipe"
-                      width={1600} height={1132} sizes="(max-width: 899px) 92vw, 46vw"
-                    />
-                  </div>
-                  <figcaption className="ph-cap">{finalConcept.captions.cutlist}</figcaption>
-                </figure>
-              </div>
-            </div>
+          {/* Closing band: matches the reference's own final-note copy, not
+              `finalConcept.handbookQuote`/`.captions.tower` (a later, more hedged pair of
+              statements) -- see the section-open comment. */}
+          <Reveal className="ph-fc-ov ph-fc-ov-final">
+            <p className="ph-lbl ph-fc-ov-final-label">Final note</p>
+            <h2 className="ph-fc-ov-final-heading">The tower was never constructed.</h2>
+            <p className="ph-fc-ov-final-body">
+              This remains a first prototype on paper and in concept, and still needs
+              real-world testing, iteration and builder feedback in western Kenya.
+            </p>
           </Reveal>
-
-          <Reveal>
-            {/* The section closes on the handbook's own words, and nothing else
-                (Sylvia, 2026-09-07, fourth pass). `finalConcept.status` used to render
-                beside this quote; it said what section 09 already says, almost verbatim
-                ("...through an actual build" vs 09's "...through a real build"), which made
-                three consecutive statements of "not built, not tested" in one section and
-                ended the project's climax on its third hedge. 09 is now the single full
-                account; the one limitation stated here is the tower caption's "It was never
-                constructed", attached to the image so the render cannot be misread as a
-                photograph of a built object. Removing the second column also fixed a 156px
-                height mismatch: the quote ran six lines against a two-line status block. */}
-            <div className="ph-07-close">
-              <figure className="ph-handbook-quote">
-                <blockquote>{finalConcept.handbookQuote.text}</blockquote>
-                <figcaption>{finalConcept.handbookQuote.attribution}</figcaption>
-              </figure>
-            </div>
+          <Reveal tag="p" className="ph-fc-ov ph-fc-ov-final-note">
+            Same knowledge.<br />Bigger possibilities.
           </Reveal>
         </div>
       </section>
-      </div>
-      {/* ==== / Phase 04 Deliver, dark (continues below, light) ==== */}
-
-      {/* ============ Phase 04 / Deliver, light (08 Mechanism, 09 Status) ============
-          Second half of the Deliver phase -- see the comment on `ph-phase-deliver-dark`
-          above. Sections 08-09 keep their own current lighter presentation unchanged;
-          only the rail repeats. */}
-      <div className="ph-phase ph-phase-deliver-light">
-        <PhaseRail {...phases[3]} />
+      {/* ==== 07 Final Concept ends; 08-09 continue below inside the same merged
+          `.ph-phase-deliver` wrapper -- no second `PhaseRail` call, no new `.ph-phase`. ==== */}
 
       {/* ============ 08 How it was intended to work ============
           DOMINANT: the two-state drawing, read as one unit. The difference between the
           frames is the argument, so they are a pair rather than two plates. The ghosted
           handling frames are small evidence beneath. */}
-      <section className="ph-section ph-v2" id="mechanism">
+      <section className="ph-section ph-v2 ph-v2-blue" id="mechanism">
         <div className="ph-canvas">
           <Reveal>
             <div className="ph-v2-head">

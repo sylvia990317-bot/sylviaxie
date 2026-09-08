@@ -81,6 +81,13 @@ export function HandbookOpen({ label }: { label: string }) {
  * oversight). This opens that real reader instead of linking to a asset that does not
  * exist. TODO(sylvia): if a PDF export of the handbook gets made, this is the one place to
  * point at it.
+ *
+ * SUPERSEDED in section 07 by `HandbookPhotoOpen` below (2026-09-07, image-composite pass):
+ * that section's cover is now a separate photo asset (own baked-in shadow, not this flat
+ * cropped spread) positioned over a pre-composed background image, with the CTA/contents
+ * text rendered as their own overlays beside it rather than packed into the same button.
+ * Kept exported and untouched -- same reasoning as `HandbookOpen` above -- in case another
+ * section wants this exact cover-plus-caption-in-one-button shape.
  */
 export function HandbookCoverOpen({
   coverSrc, coverAlt, coverWidth, coverHeight, ctaLabel, contentsLine,
@@ -100,6 +107,39 @@ export function HandbookCoverOpen({
       </span>
       <span className="ph-07-hb-cta">{ctaLabel}</span>
       <span className="ph-07-hb-contents-line">{contentsLine}</span>
+    </button>
+  );
+}
+
+/**
+ * The isolated-photo handbook entrance (2026-09-07, image-composite pass). Section 07's
+ * visual now sits on top of a pre-composed background photo (see `.ph-fc-visual` in
+ * page.tsx) with the handbook itself as a separate absolutely-positioned foreground photo
+ * asset (its own baked-in cover art, paper edges and drop shadow -- not the flat cropped
+ * `handbook-cover-1600.webp` spread `HandbookCoverOpen` above still uses). SAME click
+ * target as every other entrance on this page: `openHandbook(HANDBOOK_PLATE_PAGE.cover)`,
+ * unchanged. Deliberately just the photo -- no CTA/contents spans baked into the button,
+ * since those now render as their own separately positioned text overlays beside it. The
+ * hover lift/scale/shadow/tilt live entirely in CSS (`.ph-fc-handbook-open`), gated behind
+ * `@media (hover: hover)` so touch devices never get a stuck hover state.
+ */
+export function HandbookPhotoOpen({
+  photoSrc, photoAlt, photoWidth, photoHeight, ctaLabel, className,
+}: {
+  photoSrc: string; photoAlt: string; photoWidth: number; photoHeight: number;
+  ctaLabel: string; className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={`ph-fc-handbook-open${className ? ` ${className}` : ""}`}
+      onClick={() => openHandbook(HANDBOOK_PLATE_PAGE.cover)}
+      aria-label={`${ctaLabel}. Opens the construction handbook, page by page, in place on this page.`}
+    >
+      <Image
+        src={photoSrc} alt={photoAlt} width={photoWidth} height={photoHeight}
+        sizes="(max-width: 899px) 46vw, 26vw"
+      />
     </button>
   );
 }

@@ -408,80 +408,88 @@ export default function PostHarvestPage() {
             desktop widths, Sylvia). Section-04-scoped on purpose; do not swap other
             sections onto it. */}
         <div className="ph-04-canvas">
-          {/* `.ph-04-head` is the sticky header wrapper -- scoped to this section only (see
-              post-harvest.css). It shares `.ph-04-canvas`'s horizontal container with the
-              scroll stage below on purpose, so its content stays aligned to the same
-              left edge whether it is in normal flow (mobile / no-JS) or stuck (desktop).
-              Only the eyebrow + h2 live inside it (Sylvia): the lede is a separate,
-              NOT-sticky paragraph right below, so it reads once at the section's entrance
-              and then scrolls away normally instead of staying pinned through all three
-              steps -- there is exactly one "Finding the focus" in the DOM either way, so
-              nothing here duplicates the title. */}
-          <HeadHeightVar className="ph-04-head">
+          {/* `.ph-04-stage` (2026-09-08, compact-composition pass) bounds the head+lede+
+              scroll composition to a deliberate max-width and centers it inside the wider,
+              fluid `.ph-04-canvas` above -- see post-harvest.css for the exact number and
+              why. A plain block wrapper: no position/transform/filter/contain, so it changes
+              neither `.ph-04-head`'s sticky containing block (still `.ph-04-canvas`, via
+              this section) nor `head-height.tsx`'s measurement of `.ph-04-head` itself. Its
+              real job is structural: putting the header, lede and scroll stage under one
+              shared left edge and one shared width ceiling is what makes them read as one
+              composition instead of three independently-positioned pieces. */}
+          <div className="ph-04-stage">
+            {/* `.ph-04-head` is the sticky header wrapper -- scoped to this section only (see
+                post-harvest.css). It shares `.ph-04-stage`'s horizontal container with the
+                scroll stage below on purpose, so its content stays aligned to the same
+                left edge whether it is in normal flow (mobile / no-JS) or stuck (desktop).
+                Only the eyebrow + h2 live inside it (Sylvia): the lede is a separate,
+                NOT-sticky paragraph right below, so it reads once at the section's entrance
+                and then scrolls away normally instead of staying pinned through all three
+                steps -- there is exactly one "Finding the focus" in the DOM either way, so
+                nothing here duplicates the title. */}
+            <HeadHeightVar className="ph-04-head">
+              <Reveal>
+                <div className="ph-v2-head">
+                  <p className="ph-chapter-label">{chapterLabel("focus")}</p>
+                  <h2>{focus.heading}</h2>
+                </div>
+              </Reveal>
+            </HeadHeightVar>
             <Reveal>
-              <div className="ph-v2-head">
-                <p className="ph-chapter-label">{chapterLabel("focus")}</p>
-                <h2>{focus.heading}</h2>
-              </div>
+              <p className="ph-04-lede">{focus.lead}</p>
             </Reveal>
-          </HeadHeightVar>
-          <Reveal>
-            <p className="ph-04-lede">{focus.lead}</p>
-          </Reveal>
 
-          <ScrollSteps className="ph-04-scroll">
-            {/* Step 01 -- the existing solution. Same text as the old `.ph-bags` block:
-                label, the bag's own sentence, then both paragraphs on why farmers had
-                stopped trusting it. */}
-            <div className="ph-04-step ph-04-step--0">
-              <p className="ph-04-step-index">{focus.steps[0].index}</p>
-              <p className="ph-lbl">{focus.bags.label}</p>
-              <p>{focus.bags.text}</p>
-              {focus.body.map((t) => (
-                <p key={t.slice(0, 20)}>{t}</p>
-              ))}
-            </div>
-
-            {/* The photo is a close-up of printed text (the "PICS / Purdue Improved Crop
-                Storage / 100kg" markings), so it is treated as a document: a white plate
-                with `object-fit: contain`, not a cropped photo band -- unchanged from the
-                previous layout. */}
-            <figure className="ph-04-visual ph-04-visual--photo">
-              <div className="ph-bags-plate">
-                <Image
-                  src="/post-harvest/photo/pics-bag-1400.webp"
-                  alt="Close up of a PICS bag in Seme, printed with Purdue Improved Crop Storage and a 100 kg capacity mark"
-                  width={1400} height={936} sizes="(max-width: 1279px) 92vw, 62vw"
-                />
+            <ScrollSteps className="ph-04-scroll">
+              {/* Step 01 -- the existing solution. Same text as the old `.ph-bags` block:
+                  label, the bag's own sentence, then both paragraphs on why farmers had
+                  stopped trusting it. */}
+              <div className="ph-04-step ph-04-step--0">
+                <p className="ph-lbl">{focus.bags.label}</p>
+                <p>{focus.bags.text}</p>
+                {focus.body.map((t) => (
+                  <p key={t.slice(0, 20)}>{t}</p>
+                ))}
               </div>
-            </figure>
 
-            {/* Step 02 -- the latent need. Now carries its own `.ph-lbl` heading (added on
-                request), same class/spacing as steps 01/03's labels, sourced from the
-                needs-map diagram's own title rather than new copy -- see
-                `focus.captions.needsLabel` in content.ts. When this step is active,
-                `.ph-latent` (the SVG's own central-bubble class, already animated by
-                `.is-visible .ph-latent` elsewhere on the page) gets emphasised further and
-                the surrounding grey bubbles are dimmed -- see post-harvest.css. */}
-            <div className="ph-04-step ph-04-step--1">
-              <p className="ph-04-step-index">{focus.steps[1].index}</p>
-              <p className="ph-lbl">{focus.captions.needsLabel}</p>
-              <p>{focus.captions.needs}</p>
-            </div>
-            <InlineSvg name="needs-map" className="ph-04-visual ph-04-visual--needs" />
+              {/* The photo is a close-up of printed text (the "PICS / Purdue Improved Crop
+                  Storage / 100kg" markings), so it is treated as a document: a white plate
+                  with `object-fit: contain`, not a cropped photo band -- unchanged from the
+                  previous layout. */}
+              <figure className="ph-04-visual ph-04-visual--photo">
+                <div className="ph-bags-plate">
+                  <Image
+                    src="/post-harvest/photo/pics-bag-1400.webp"
+                    alt="Close up of a PICS bag in Seme, printed with Purdue Improved Crop Storage and a 100 kg capacity mark"
+                    width={1400} height={936} sizes="(max-width: 1279px) 92vw, 62vw"
+                  />
+                </div>
+              </figure>
 
-            {/* Step 03 -- the shift. Keeps the lifecycle's own caption ahead of the
-                redirect sentence, so both pieces of existing copy survive. When active,
-                the Drying node in the maize-lifecycle drawing is emphasised over the
-                Storage node it was originally briefed against -- see post-harvest.css. */}
-            <div className="ph-04-step ph-04-step--2">
-              <p className="ph-04-step-index">{focus.steps[2].index}</p>
-              <p className="ph-lbl">{focus.redirect.label}</p>
-              <p>{focus.captions.cycle}</p>
-              <p>{focus.redirect.text}</p>
-            </div>
-            <InlineSvg name="maize-lifecycle" className="ph-04-visual ph-04-visual--cycle" />
-          </ScrollSteps>
+              {/* Step 02 -- the latent need. Now carries its own `.ph-lbl` heading (added on
+                  request), same class/spacing as steps 01/03's labels, sourced from the
+                  needs-map diagram's own title rather than new copy -- see
+                  `focus.captions.needsLabel` in content.ts. When this step is active,
+                  `.ph-latent` (the SVG's own central-bubble class, already animated by
+                  `.is-visible .ph-latent` elsewhere on the page) gets emphasised further and
+                  the surrounding grey bubbles are dimmed -- see post-harvest.css. */}
+              <div className="ph-04-step ph-04-step--1">
+                <p className="ph-lbl">{focus.captions.needsLabel}</p>
+                <p>{focus.captions.needs}</p>
+              </div>
+              <InlineSvg name="needs-map" className="ph-04-visual ph-04-visual--needs" />
+
+              {/* Step 03 -- the shift. Keeps the lifecycle's own caption ahead of the
+                  redirect sentence, so both pieces of existing copy survive. When active,
+                  the Drying node in the maize-lifecycle drawing is emphasised over the
+                  Storage node it was originally briefed against -- see post-harvest.css. */}
+              <div className="ph-04-step ph-04-step--2">
+                <p className="ph-lbl">{focus.redirect.label}</p>
+                <p>{focus.captions.cycle}</p>
+                <p>{focus.redirect.text}</p>
+              </div>
+              <InlineSvg name="maize-lifecycle" className="ph-04-visual ph-04-visual--cycle" />
+            </ScrollSteps>
+          </div>
         </div>
       </section>
 

@@ -205,8 +205,12 @@ figure { margin: 0; }
    (.ph-needs, .ph-timeline, .ph-cycle, .ph-locator) also matched nothing, so they had never
    done anything. Unconditional now, and written on the classes actually in use.
 
-   The cost is explicit: below roughly 1400px the two large 04 diagrams scroll in their box
-   rather than shrink. That is the deliberate trade -- a scrollbar over 8px type.
+   The cost is explicit: below roughly 1400px, diagrams that keep this floor scroll in their
+   box rather than shrink -- a scrollbar over 8px type. needs-map and maize-lifecycle are the
+   deliberate exception (see the min-width:0 overrides below): shrinking those two below the
+   floor's own label-legibility target was judged better than a permanent scrollbar inside
+   the 04 scrollytelling stage, whose plate width is capped by that stage's own box
+   regardless of viewport and can genuinely never satisfy a 760px floor at ordinary widths.
 
    2026-09-07: both 04 floors came down, because the drawings were re-typeset rather than
    scaled up by their box. needs-map's smallest labels went 9.5 -> 10.5, and maize-lifecycle's
@@ -216,10 +220,16 @@ figure { margin: 0; }
 .ph-svg-body svg { min-width: 760px; }                  /* field-timeline: 16 in a 1000 box */
 .ph-v2-map .ph-svg-body svg { min-width: 310px; }       /* seme-locator: 39 in a 1000 box */
 .ph-legend .ph-svg-body svg { min-width: 600px; }       /* sketch-legend: 12 in a 600 box */
-/* needs-map and maize-lifecycle carry no floor here -- see the "04, scrollytelling" block
-   further down for why: their shared stage box is capped by `--canvas` regardless of
-   viewport, so a floor above what that box can ever supply just forces a permanent
-   scrollbar instead of a real minimum. */
+/* needs-map and maize-lifecycle carry no floor -- their shared stage box (04 scrollytelling,
+   further down) is capped by that stage's own width regardless of viewport, so a floor above
+   what the box can ever supply just forces a permanent scrollbar instead of a real minimum.
+   This used to be a comment with no rule behind it: `width: 100%` in the 04 armed breakpoint
+   does not clear a separately-set `min-width`, so the general 760px floor above was silently
+   still winning and both diagrams (and their own baked-in "BOOKLET P.xx" captions) were
+   getting cut into a horizontal scrollbar instead of shown in full. Same technique/specificity
+   as the two min-width:0 overrides just below. */
+.ph-04-visual--needs .ph-svg-body svg { min-width: 0; }
+.ph-04-visual--cycle .ph-svg-body svg { min-width: 0; }
 /* Floor removed on request (Sylvia): both the blank checklist (05) and its scored return
    (09, same drawing with the team's own marks) should always render in full, never behind
    their own horizontal scrollbar, even below the ~1400px width where the general trade
@@ -372,6 +382,20 @@ figure { margin: 0; }
    section 04's own content -- see the `id="focus"` section -- never on `.ph-canvas` itself
    or any other section. */
 .ph-04-canvas { width: min(1680px, calc(100% - clamp(48px, 8vw, 160px))); margin-inline: auto; }
+/* `.ph-04-stage` (2026-09-08, compact-composition pass): bounds the head+lede+scroll
+   composition -- everything page.tsx now wraps in `.ph-04-stage` inside `.ph-04-canvas` --
+   to a deliberate max-width and centers it inside the wider, fluid canvas above. 1450px, not
+   `.ph-04-canvas`'s own 1680px ceiling: chosen against the two viewport widths this redesign
+   was actually reviewed at. `.ph-04-canvas`'s net width is ~1325px at a 1440px viewport and
+   ~1590px at 1728px (both below its own 1680px ceiling, per the fluid formula above) -- at
+   1600px this rule would still be a no-op at both those widths, invisible exactly where it
+   was meant to be checked. At 1450px it stays a no-op at ordinary desktop/laptop widths
+   (composition keeps the canvas's full width, nothing shrinks unnecessarily) while genuinely
+   capping and centering the composition on wider monitors, visibly so at 1728px already. No
+   side padding of its own: `.ph-04-canvas`'s own gutter already provides that, and zero own
+   padding is what keeps `.ph-04-head`'s and `.ph-04-scroll`'s content flush to the same left
+   edge as each other. */
+.ph-04-stage { max-width: 1450px; margin-inline: auto; }
 
 /* 09 used to have its own `.ph-canvas.ph-09-canvas` compound rule here (a bespoke
    `min(1560px, calc(100% - 96px))`, gutter baked into the calc so padding-inline had to
@@ -1307,6 +1331,11 @@ figure { margin: 0; }
     background: var(--paper);
     padding-top: clamp(28px, 3.4vw, 44px);
     padding-bottom: clamp(18px, 2vw, 28px);
+    /* Subtle structural anchor (2026-09-08, compact-composition pass), not a card edge --
+       one hairline under the sticky header, same weight/color the rest of the page already
+       uses for a divider under a head (see `.ph-eval-bar-v2`). Spans `.ph-04-stage`'s own
+       content width, since `.ph-04-head` carries no side padding of its own. */
+    border-bottom: 1px solid var(--line);
   }
 }
 /* The lede ("We were assigned grain storage...") is deliberately NOT inside `.ph-04-head`
@@ -1326,10 +1355,6 @@ figure { margin: 0; }
 .ph-04-step .ph-lbl { margin: 0 0 7px; color: var(--blue); }
 .ph-04-step p { margin: 0 0 10px; font-size: 15.5px; line-height: 1.5; color: var(--ink); }
 .ph-04-step p:last-child { margin-bottom: 0; }
-.ph-04-step-index {
-  margin: 0 0 8px; font-family: var(--ph-mono), ui-monospace, monospace; font-size: 13px;
-  letter-spacing: 0.1em; color: var(--muted);
-}
 .ph-04-visual { margin: 0 0 var(--beat-y); }
 .ph-04-visual:last-child { margin-bottom: 0; }
 /* No card here (Sylvia, visual cleanup pass): every other `.ph-svg-body`/`.ph-bags-plate`
@@ -1372,29 +1397,63 @@ figure { margin: 0; }
   /* 1280 is the desktop breakpoint; below it there is no grid, no sticky, and no opacity
      rule -- the section is the same plain stack a narrow viewport gets.
 
-     `--ph-04-head-h` (defined on `:root`, see the top of this file) is `.ph-04-head`'s
-     REAL rendered height, kept live by head-height.tsx's `ResizeObserver` -- not a guess
-     re-tuned per step or per visual; one measured value, read by both the text rows and
-     the sticky visual below, so both share the same stage floor instead of drifting apart
-     with their own offsets. `--ph-04-stage-h` is what's left of the viewport once that
-     header is accounted for; it is the ONE alignment system the brief asked for, shared
-     by `.ph-04-step` and `.ph-04-visual` alike.
+     `--ph-04-head-h` (defined on `:root`, see the top of this file) is `.ph-04-head`'s REAL
+     rendered height, kept live by head-height.tsx's `ResizeObserver`.
 
-     The column split reads 35% / 65% below, but that is the split BEFORE the gap between
-     them, and CSS Grid resolves percentage tracks against the container's full width, not
-     width-minus-gap -- so whichever track is flexible enough to absorb the shortfall
-     (here, the right one, `minmax(0, 65%)`) ends up narrower than its percentage by the
-     whole gap. At `--pair`'s width (up to 64px) that dropped the visual stage to 61.2% of
-     the container, under the 62-65% target. `column-gap` is a smaller, dedicated value
-     here rather than reusing `--pair` for exactly that reason: at `clamp(24px, 2.4vw,
-     48px)` the stage measures 62-63% at every armed width from 1280px to the `.ph-04-canvas`
-     ceiling (measured in the browser), while the text column stays at a clean 35%. */
-  .ph-04-canvas { --ph-04-stage-h: calc(100svh - var(--ph-04-head-h)); }
+     REDESIGN 2026-09-08 (compact-composition pass, replacing the single `--ph-04-stage-h`
+     system): the previous version used ONE shared variable, `calc(100svh - header-height)`,
+     for BOTH the step text's box height AND the sticky visual's box height, then vertically
+     centred the (short) text inside that (near-full-viewport-tall) box. That is what put a
+     couple of lines of text floating alone in a sea of empty space, disconnected from the
+     header above it -- the exact complaint this pass fixes. Three purpose-built variables
+     replace it, decoupled on purpose:
+
+       --ph-04-lead-gap  the offset from the header's own bottom edge (the hairline above)
+                          down to where the scroll stage begins -- shared by the text
+                          column's own top margin and the sticky visual's own sticky `top`,
+                          so both open on the SAME baseline. Target given: content should
+                          start roughly 160-210px below the title, scaling with viewport
+                          height rather than one fixed number.
+       --ph-04-step-h     each step's own min-height FLOOR (still a floor, not a fixed
+                          height -- a step whose content genuinely needs more room still
+                          grows past it, same principle as before). Dramatically smaller
+                          than the old ~100svh-minus-header (~700-890px in practice) so text
+                          anchors near the top of its box instead of centring inside a
+                          near-empty one -- see `align-content: start` below, the actual
+                          fix. Every step still gets the SAME interval regardless of content
+                          length (short step 02 included) -- this is still what a fixed 48%
+                          GSAP reading line needs to stay predictable (scroll-steps.tsx);
+                          content length deciding scroll distance was the exact bug this
+                          principle was introduced to fix previously, and that reasoning is
+                          unchanged here, only the box's own size is smaller.
+       --ph-04-visual-h   the sticky visual's own outer stage box -- decoupled from the
+                          step's box on purpose, so it can be genuinely larger/more dominant
+                          (per the brief) independent of how compact the text column became.
+                          Still ONE stable stage shared by all three crossfade states (never
+                          resizes between them) -- same guarantee the old single-variable
+                          system made, just a bigger, separately-tuned number now.
+
+     Column widths: text is now a bounded PX RANGE (400-460px), not a percentage of the
+     canvas -- the old 35%/65% split grew the text column (and shrank the visual,
+     proportionally) the wider the fluid canvas got, which fought against "the visual should
+     read as more dominant." `column-gap` moved from clamp(24px,2.4vw,48px) to
+     clamp(60px,6vw,90px) per the brief's explicit numeric target for the gap. */
+  .ph-04-canvas {
+    --ph-04-lead-gap: clamp(160px, 18svh, 210px);
+    --ph-04-step-h: clamp(420px, 44svh, 560px);
+    --ph-04-visual-h: clamp(560px, 62svh, 740px);
+  }
   .ph-04-armed.ph-04-scroll {
     display: grid;
-    grid-template-columns: minmax(0, 35%) minmax(0, 65%);
-    column-gap: clamp(24px, 2.4vw, 48px);
+    grid-template-columns: clamp(400px, 30vw, 460px) minmax(0, 1fr);
+    column-gap: clamp(60px, 6vw, 90px);
     align-items: start;
+    /* Opens the whole grid `--ph-04-lead-gap` below wherever `.ph-04-scroll` starts in flow
+       (i.e. below `.ph-04-lede`). Collapses with the lede's own `margin-bottom: var(--beat-y)`
+       (adjacent block siblings) to `max(beat-y, lead-gap)` -- since lead-gap (160-210px) is
+       always larger than beat-y (36-60px), the effective visible gap is exactly
+       `--ph-04-lead-gap`, not a sum of the two. */
+    margin-top: var(--ph-04-lead-gap);
   }
   /* Steps 01/02/03 keep source order down the left column via nth-of-type; the three
      visuals all take the SAME cell on the right (row 1, spanning to the grid's end), which
@@ -1402,56 +1461,43 @@ figure { margin: 0; }
   .ph-04-armed .ph-04-step:nth-of-type(1) { grid-column: 1; grid-row: 1; }
   .ph-04-armed .ph-04-step:nth-of-type(2) { grid-column: 1; grid-row: 2; }
   .ph-04-armed .ph-04-step:nth-of-type(3) { grid-column: 1; grid-row: 3; }
-  /* Every step gets the SAME scroll interval, short step 02 included -- this is what a
-     fixed 48% reading line needs to stay predictable (see scroll-steps.tsx). Content
-     length used to decide scroll distance (a one-sentence step 02 took a fraction of the
-     scroll that three-paragraph step 01 did), so 02 and 03 activated far faster than 01
-     and were impossible to anticipate (Sylvia). `min-height` is a floor, not a fixed
-     height: a step that genuinely needs more room (01, at a narrow armed width where its
-     three paragraphs wrap taller) can still grow past it. The content itself is
-     untouched -- centring it vertically in the taller slot is layout, not typography.
-     Grid replaces the old flex column here so the step uses the exact same `--ph-04-stage-h`
-     the sticky visual beside it does, instead of two independently-tuned centring rules --
-     `align-content: center` (not `align-items`) is the load-bearing part: with no explicit
-     `grid-template-rows`, a plain `align-items: center` leaves each of the four children
-     (step index, label, two paragraph lines) as its own auto-height ROW, and with this
-     much leftover space in a `min-height: var(--ph-04-stage-h)` container, Grid's default
-     `align-content: normal` computes to `stretch` -- every row was inflating to an equal
-     share of the slot and centring its own line inside that inflated row, which is what
-     blew the gaps between paragraphs out to ~80px instead of the 10px `margin-bottom`
-     actually asked for (Sylvia, screenshot). `align-content: center` keeps the four rows
-     at their natural content height and centres that whole short block as one group --
-     same outcome `justify-content: center` gave the old flex column, on the grid this
-     brief asked for. */
-  .ph-04-armed .ph-04-step { min-height: var(--ph-04-stage-h); display: grid; align-content: center; }
-  /* The sticky visual: `top` starts it exactly below the sticky header (never under it,
-     never with a gap above it) and `height` matches the same `--ph-04-stage-h` the steps
-     use, so this box's own vertical centre sits at the same screen position the active
-     step's centre does. Never a per-step or per-visual offset -- one rule, uniformly
-     applied to all three `.ph-04-visual` elements; only opacity/visibility below picks
-     which one is showing. */
+  /* `align-content: start`, not `center` -- THIS is the fix for "text floating in a sea of
+     empty space": text now anchors to the top of its (now much shorter) box instead of
+     centring inside a near-full-viewport one. `min-height` stays a floor for the reason
+     explained above (comparable GSAP scroll distance per step, independent of content
+     length) -- only its VALUE shrank, the floor-not-fixed-height principle didn't change. */
+  .ph-04-armed .ph-04-step { min-height: var(--ph-04-step-h); display: grid; align-content: start; }
+  /* The sticky visual. `top` starts it `--ph-04-lead-gap` below the header's own bottom
+     edge -- the same offset the text column's `margin-top` uses, so on entry both the
+     visual's box and step 1's text open on the literal same screen position: one shared
+     composition, not two independently-tuned offsets. `height` now uses the dedicated,
+     larger `--ph-04-visual-h` instead of sharing the step's own (now much smaller) box
+     height, so the visual can be genuinely bigger and read as more dominant regardless of
+     how compact the text column became. */
   .ph-04-armed .ph-04-visual {
     grid-column: 2; grid-row: 1 / 4;
-    position: sticky; top: var(--ph-04-head-h); height: var(--ph-04-stage-h);
+    position: sticky; top: calc(var(--ph-04-head-h) + var(--ph-04-lead-gap)); height: var(--ph-04-visual-h);
     margin: 0; opacity: 0; pointer-events: none; visibility: hidden;
-    display: grid; align-items: center; justify-items: center;
+    display: grid; align-items: center; justify-items: start;
   }
   /* One stable STAGE for all three states -- the invisible positioning box above never
      changes size or moves between steps. Its HEIGHT is shared by all three (same fixed
-     clamp, ~64-68svh), so the frame never resizes vertically as the active state changes;
-     WIDTH now scales per visual on request (Sylvia): the photo reads small relative to
-     the stage as a plate/document, so it's sized up toward the maize-lifecycle band's own
-     scale, while the needs-map keeps the width it already had (it was already read as
-     "right"). `justify-items: center` above is what keeps a narrower plate centred in the
-     stage instead of pinned to its left edge now that width isn't a uniform 100%. */
+     clamp), so the frame never resizes vertically as the active state changes; WIDTH still
+     scales per visual (Sylvia): the photo reads small relative to the stage as a
+     plate/document, so it's sized up toward the maize-lifecycle band's own scale, while the
+     needs-map keeps the width it already had (it was already read as "right"). All three
+     bumped up slightly from their previous values (75/100/94 -> 80/100/97) so the visual
+     column reads as more dominant, per the brief. `justify-items: start` (kept from the
+     previous pass) pins every visual's LEFT edge to the same point in the stage regardless
+     of that width, instead of centring each one independently. */
   .ph-04-armed .ph-04-visual .ph-svg-body,
-  .ph-04-armed .ph-04-visual .ph-bags-plate { height: clamp(460px, 66svh, 700px); }
-  .ph-04-armed .ph-04-visual--photo .ph-bags-plate { width: 75%; }
+  .ph-04-armed .ph-04-visual .ph-bags-plate { height: clamp(500px, 56svh, 680px); }
+  .ph-04-armed .ph-04-visual--photo .ph-bags-plate { width: 80%; }
   .ph-04-armed .ph-04-visual--needs .ph-svg-body { width: 100%; }
-  .ph-04-armed .ph-04-visual--cycle .ph-svg-body { width: 94%; }
+  .ph-04-armed .ph-04-visual--cycle .ph-svg-body { width: 97%; }
   /* The base `.ph-bags-plate img` rule (`width:100%; height:auto; max-height:46vh`) was
-     tuned for the OLD, always-100%-wide plate; at the new 75% width its 46vh ceiling binds
-     before the width does, at typical viewport heights, undershooting the 72-78% target.
+     tuned for the OLD, always-100%-wide plate; at the new 80% width its 46vh ceiling binds
+     before the width does, at typical viewport heights, undershooting the target.
      Same technique as the two SVGs above instead: both axes fixed to the (now width-scaled)
      plate's own box and `object-fit: contain` does the aspect-preserving fit, so the photo
      actually reaches its plate's width rather than being capped by a stale vh number. */
@@ -1459,10 +1505,11 @@ figure { margin: 0; }
     width: 100%; height: 100%; max-height: none; object-fit: contain;
   }
   /* `overflow-y: hidden` only -- `.ph-svg-body`'s own `overflow-x: auto` (post-harvest.css,
-     the "legibility floor" block above) stays intact so the existing narrow-viewport
-     fallback (a horizontal scrollbar under the two large 04 diagrams' `min-width` floor)
-     is unchanged; only the newly-possible vertical overflow from a fixed-height plate is
-     guarded against here, as a backstop behind the `object-fit: contain` fix below. */
+     the "legibility floor" block above) stays intact as a generic safety net, but with the
+     `min-width: 0` overrides added there for these two visuals specifically, it should never
+     actually trigger in normal use any more: only the newly-possible vertical overflow from
+     a fixed-height plate is what this rule actually guards against, as a backstop behind the
+     `object-fit: contain` fix below. */
   .ph-04-armed .ph-04-visual .ph-svg-body { overflow-y: hidden; }
   /* Base `.ph-svg-body svg` is width:100%/height:auto (fine when the plate's own height
      is auto, wrong the instant the plate's height is a fixed clamp as above -- a tall
@@ -1480,16 +1527,11 @@ figure { margin: 0; }
     opacity: 1; pointer-events: auto; visibility: visible;
   }
 
-  /* Inactive steps read quieter, the active one at full contrast; the index numeral picks
-     up the blue accent so 01 -> 02 -> 03 reads as a single moving indicator. */
+  /* Inactive steps read quieter, the active one at full contrast. */
   .ph-04-armed .ph-04-step { opacity: 0.3; transition: opacity 300ms ease; }
-  .ph-04-armed .ph-04-step-index { transition: color 300ms ease; }
   .ph-04-armed[data-active-step="0"] .ph-04-step--0,
   .ph-04-armed[data-active-step="1"] .ph-04-step--1,
   .ph-04-armed[data-active-step="2"] .ph-04-step--2 { opacity: 1; }
-  .ph-04-armed[data-active-step="0"] .ph-04-step--0 .ph-04-step-index,
-  .ph-04-armed[data-active-step="1"] .ph-04-step--1 .ph-04-step-index,
-  .ph-04-armed[data-active-step="2"] .ph-04-step--2 .ph-04-step-index { color: var(--blue); }
 }
 
 @media (min-width: 1280px) and (prefers-reduced-motion: no-preference) {
@@ -1506,7 +1548,7 @@ figure { margin: 0; }
 @media (min-width: 1280px) and (prefers-reduced-motion: reduce) {
   /* State changes still happen (data-active-step still moves, opacity/visibility still
      switch) -- only the animated approach to that end state is removed, per the brief. */
-  .ph-04-armed .ph-04-visual, .ph-04-armed .ph-04-step, .ph-04-armed .ph-04-step-index { transition: none; }
+  .ph-04-armed .ph-04-visual, .ph-04-armed .ph-04-step { transition: none; }
 }
 
 /* Step 02 active: sharpen the needs-map's own central finding (`.ph-latent`, the two

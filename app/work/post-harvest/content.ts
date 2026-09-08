@@ -250,9 +250,9 @@ export const focus = {
    * `scroll-steps.tsx` for how the active step is tracked.
    */
   steps: [
-    { id: "existing", index: "01", visual: "bags" as const },
-    { id: "latent", index: "02", visual: "needs-map" as const },
-    { id: "shift", index: "03", visual: "maize-lifecycle" as const },
+    { id: "existing", visual: "bags" as const },
+    { id: "latent", visual: "needs-map" as const },
+    { id: "shift", visual: "maize-lifecycle" as const },
   ],
 };
 
@@ -629,7 +629,7 @@ export const sections: { n: string; id: string; title: string; label: string }[]
   { n: "01", id: "hero", title: "Post Harvest", label: "Post Harvest" },
   { n: "02", id: "context", title: "Where this happened", label: "Context" },
   { n: "03", id: "field", title: "Learning in the field", label: "Field research" },
-  { n: "04", id: "focus", title: "Finding the focus", label: "Finding the focus" },
+  { n: "04", id: "focus", title: "Finding the focus", label: "Focus" },
   { n: "05", id: "challenge", title: "Defining the challenge", label: "Challenge" },
   { n: "06", id: "concepts", title: "Developing with farmers", label: "Concept development" },
   { n: "07", id: "final-concept", title: "The Drying Tower", label: "Final concept" },

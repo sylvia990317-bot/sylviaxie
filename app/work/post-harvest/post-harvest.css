@@ -531,11 +531,12 @@ figure { margin: 0; }
    SECTION 04 SAFETY (Sylvia's highest-priority preservation rule for this pass).
    `.ph-phase` is a bare `display: grid` container: no `overflow`, `transform`, `filter`,
    `contain`, or anything else that creates a new containing block or scroll container.
-   Section 04's own sticky elements (`.ph-04-head`, `.ph-04-scene`, see the "04, three
-   editorial scenes" block further down) are positioned relative to THEIR OWN existing
-   parents (`.ph-04-canvas`, `.ph-04-zone`) -- completely unaffected by which grid cell
-   the `<section>` around them now sits in, since a grid item's `position: static`
-   descendants resolve containing blocks exactly as they would in plain block flow.
+   Section 04's own sticky elements (`.ph-04-head`, `.ph-04-sticky-stage`, see the "04,
+   one fixed storytelling stage" block further down) are positioned relative to THEIR OWN
+   existing parents (`.ph-04-canvas`, `.ph-04-scroll`) -- completely unaffected by which
+   grid cell the `<section>` around them now sits in, since a grid item's
+   `position: static` descendants resolve containing blocks exactly as they would in
+   plain block flow.
    Verified in-browser after this change: the 01 -> 02 -> 03 sequence, its sticky header,
    and its per-scene sticky hand-off all still behave identically. */
 .ph-phase {
@@ -1312,60 +1313,85 @@ figure { margin: 0; }
 .ph-fig-primary { max-width: 1040px; margin-top: var(--pair); }
 
 /* ==================================================================================
-   04, three editorial scenes. RESTRUCTURED 2026-09-09 (Sylvia: "text and visual are
-   not perfectly synchronized during scroll... do not keep trying to synchronize
-   independently moving text and a separately sticky visual... replace the parts that
-   separately control text-step positioning, visual sticky positioning, independent
-   active thresholds"). The previous version tracked "which text step is active" with
-   GSAP `ScrollTrigger` and separately pinned a sticky visual, then had to keep the two
-   in sync by hand -- see CHANGELOG.md and `scroll-steps.tsx` in git history for that
-   approach and why it kept drifting apart. There is no JS coordination left here at
-   all now: each scene is ONE `position: sticky` box -- text and visual together, same
-   element, same `top` -- so there is nothing left to desynchronize. They cannot drift
-   apart because they are not two independently-positioned things any more.
+   04, one fixed storytelling stage, three overlaid scenes.
 
-   STRUCTURE. `.ph-04-scroll`'s three children are `.ph-04-zone` wrappers (`Reveal`
-   already provides the entrance fade -- see page.tsx), one per scene, in source order,
-   which is also the complete no-JS/mobile reading order.
+   FOURTH STRUCTURAL PASS on this section, same session (Sylvia, directly: "still
+   behaving too much like normal vertical document flow... scenes need to be overlaid in
+   one sticky stage, not vertically stacked"). Every earlier pass this session (see git
+   history / this file's own history for the blow-by-blow) still gave each scene its OWN
+   slice of normal document flow -- a `.ph-04-zone` per scene, each with `min-height:
+   85svh`, each independently `position: sticky`. That is fundamentally still "vertical
+   flow with a sticky trick layered on," which is exactly why a previous scene's tail and
+   the next one's head could both still land on screen near a zone boundary, and why nothing
+   ever held one stable centred position for long. Replaced entirely:
 
-   MECHANISM, entirely CSS, no JS opt-in required (unlike the old `.ph-04-armed` class
-   gate, which existed only to guard against measuring an unarmed layout -- nothing
-   here needs measuring any more):
-     - Below 1280px: `.ph-04-zone`/`.ph-04-scene` are plain block flow, one column.
-       No sticky, no special height. Text above its own visual, three times.
-     - At 1280px and up: each `.ph-04-zone` gets a generous `min-height` (scroll room
-       for its scene to read as settled while "active"); `.ph-04-scene` inside it is
-       `position: sticky` at the SAME `top` every scene shares, so it pins near the top
-       of the viewport while the reader scrolls through its own zone, then releases
-       into the next zone's scene -- the exact same sticky release mechanism
-       `.ph-04-head` already uses to hand off into section 05, just applied per scene
-       instead of once per section. */
-/* Sticky header, desktop/tablet only (see the `@media (min-width: 1280px)` rule below --
-   the mobile/no-JS reading order stays plain document flow, header included). Scoped to
-   `.ph-04-head` alone, NOT to `.ph-v2-head` in general, so no other section's heading
-   becomes sticky by accident -- `.ph-v2-head` is shared markup across every V2 section.
-   `top: 0` + its own containing block (this `<section>`, via `.ph-04-canvas`) is what
+     - `.ph-04-scroll` is now a plain, tall (`300vh` desktop -- three scenes' worth of
+       scroll distance, per Sylvia's own "roughly one viewport segment per scene")
+       scroll-DISTANCE well. It renders no visible content of its own; its only jobs are
+       (a) giving the section enough scroll room to read through three scenes and
+       (b) being the `view-timeline` SUBJECT that scroll progress is measured against.
+     - `.ph-04-sticky-stage`, its one child, is the thing that is actually sticky: `top:
+       var(--ph-04-head-h)` (same live-measured header height as before), `height:
+       calc(100svh - var(--ph-04-head-h))` -- sized to exactly the space below the
+       header, not the whole viewport, so the active scene centres in the content area,
+       not too low against the header. It never moves once stuck.
+     - All three `.ph-04-scene`s sit inside it as CSS GRID children sharing one cell
+       (`grid-area: 1 / 1` on every one, the standard "layer children in one grid cell"
+       technique) -- not stacked in normal flow, so there is only ever ONE visual
+       position for a scene to occupy, and `place-items: center` on the stage centres
+       whichever one is active within the space below the header.
+     - A single named `view-timeline` on `.ph-04-scroll` (`--ph04-progress`) drives which
+       scene is opaque: each `.ph-04-scene` shares one crossfade `@keyframes` but is
+       assigned a different `animation-range` slice of that same timeline, so scrolling
+       through the 300vh well plays scene 1's fade in/out, then scene 2's, then scene
+       3's, entirely in CSS -- no JS, no ScrollTrigger, nothing to desynchronize.
+
+   FAIL-OPEN FALLBACK. Below 1280px, without `prefers-reduced-motion: no-preference`, or
+   in a browser without `animation-timeline` support, NONE of the above applies: this
+   overlay technique fundamentally requires the animation to tell the three overlapping
+   scenes apart, so a "no motion" fallback can't just leave them all place -- it has to
+   fall all the way back to plain stacked block flow (the same safety net every other
+   progressive enhancement on this page already uses), which is the DEFAULT, unconditional
+   state everything below starts from -- the stage/overlay/animation rules only ever ADD
+   behaviour inside the fully-gated block near the bottom of this section. */
+/* `top: 0` + its own containing block (this `<section>`, via `.ph-04-canvas`) is what
    makes it release naturally right as section 05 begins: sticky can never hold past its
-   own containing block's bottom edge, so once the scroll stage below it runs out, the
-   header scrolls away with the rest of the section -- no JS, no manual unstick. */
-.ph-04-head { position: relative; z-index: 3; padding-bottom: 14px; }
+   own containing block's bottom edge, so once `.ph-04-scroll`'s well runs out, the
+   header scrolls away with the rest of the section -- no JS, no manual unstick. See
+   `.ph-04-scroll`'s own buffer further down for why that release point still needs help
+   to land BEFORE section 05's own heading scrolls into view, on a viewport taller than
+   the header. */
+/* HEADER BAND. Originally a solid, low-contrast blue-grey tint (blended from `--paper`
+   toward `--blue`) doing a visual-separation job a hairline used to do -- SOLID, not a
+   translucent rgba, because on desktop this element is sticky and has to fully occlude
+   the scenes scrolling underneath it, which a semi-transparent background would let
+   bleed through.
+
+   Background/padding are UNCONDITIONAL, not desktop-only (2026-09-09: below the old
+   1280px gate this had no background at all, just the bare page colour behind it -- on
+   any narrower window the band was genuinely invisible, not merely subtle). Only the
+   STICKY positioning stays desktop-gated below -- mobile was never meant to stick (no
+   scroll-jacking there by design), but the background itself should read the same at
+   every width.
+
+   Now `var(--paper)`, i.e. deliberately the SAME colour as the page (2026-09-09, fourth
+   pass on this exact value, same session -- Sylvia went through `#f1f2f5` -> `#f7f8fa`
+   -> this: "背景颜色还是没改，我想要大背景的颜色" / "现在是淡蓝色", making clear the ask
+   was never "a lighter tint," it was "no tint at all"). Still SOLID (still occludes
+   scrolling scenes correctly -- opacity is what the sticky mechanism needs, not a
+   visible colour difference), it just no longer reads as a separate band; the
+   `padding`/compact type-scale sizing below is what still gives the header its own
+   presence, not a background colour any more. */
+.ph-04-head {
+  position: relative;
+  z-index: 3;
+  background: var(--paper);
+  padding: clamp(18px, 2vw, 26px) 0 clamp(14px, 1.5vw, 20px);
+}
 @media (min-width: 1280px) {
-  /* HEADER BAND, compacted (2026-09-09, Sylvia: the header was eating too much of the
-     viewport before the first scroll state, and the hairline-only separation under it read
-     as "floating" rather than a deliberate band). A solid, low-contrast blue-grey tint
-     (blended from `--paper` toward `--blue` at ~5%, kept SOLID rather than a translucent
-     rgba -- this element is sticky and has to fully occlude the scenes scrolling
-     underneath it, which a semi-transparent background would let bleed through) now does
-     the separation job the hairline used to, so the border-bottom below is gone -- one
-     division device, not two stacked on top of each other. Padding is deliberately smaller
-     than before on both edges: this band should read as compact and deliberate, not as a
-     hero block the reader has to scroll past. */
   .ph-04-head {
     position: sticky;
     top: 0;
-    background: #f1f2f5;
-    padding-top: clamp(18px, 2vw, 26px);
-    padding-bottom: clamp(14px, 1.5vw, 20px);
   }
   /* Tighter than `.ph-v2-head`'s shared 14px (2026-09-09, Sylvia): scoped to this one
      instance, not the shared rule every other section's head also uses, so only this
@@ -1375,12 +1401,12 @@ figure { margin: 0; }
 /* The lede ("We were assigned grain storage...") lives INSIDE `.ph-04-head` (2026-09-09,
    Sylvia -- see the JSX comment at its call site in page.tsx), rendered with the plain
    shared `.ph-v2-head .lede` rule every other section already uses. */
+/* Mobile/fallback default: plain stacked block flow, one column, no stage, no overlay --
+   see the section-open comment for why this is the unconditional baseline everything
+   else only adds to. */
 .ph-04-scroll { margin-top: 0; }
-
-.ph-04-zone { margin: 0 0 var(--beat-y); }
-.ph-04-zone:last-child { margin-bottom: 0; }
-
-.ph-04-scene { display: grid; grid-template-columns: 1fr; gap: var(--pair); }
+.ph-04-scene { display: grid; grid-template-columns: 1fr; gap: var(--pair); margin: 0 0 var(--beat-y); }
+.ph-04-scene:last-child { margin-bottom: 0; }
 
 .ph-04-scene-text { max-width: var(--measure); }
 .ph-04-scene-text .ph-lbl { margin: 0 0 7px; color: var(--blue); }
@@ -1403,40 +1429,114 @@ figure { margin: 0; }
 .ph-bags-plate { min-height: 100%; }
 
 @media (min-width: 1280px) {
-  .ph-04-zone {
-    /* Scroll room per scene -- generous enough that the sticky scene inside genuinely
-       reads as settled/stable before the next zone takes over, not a flicker. A plain
-       viewport-relative value: unlike the old per-step floor, this isn't tuned against
-       any OTHER element's height, because there is no other element left to match --
-       the scene is one box now. */
-    min-height: 85svh;
-    margin-bottom: 0;
+  /* The scroll-distance well. `300vh` = three scenes at roughly one viewport-height of
+     scroll each, per Sylvia's own suggestion. Renders nothing itself -- it exists so
+     there is somewhere for the reader to scroll while the stage below stays fixed, and
+     so it can be the named `view-timeline` subject every scene's `animation-range`
+     below is measured against.
+
+     `view-timeline-inset` is what makes that 0%-100% mean something exact, not a rough
+     guess (an earlier version of this rule used bare 0%-100%, i.e. plain `cover`, and
+     that was a real bug -- see the crossfade rule's own comment for the live symptom it
+     caused). A bare `cover` timeline's 0%/100% are the well's leading/trailing edges
+     touching the viewport's OPPOSITE edges -- entry and exit padding included, before
+     and after `.ph-04-sticky-stage` is actually stuck. `.ph-04-sticky-stage` is stuck
+     for exactly the scroll distance `(this well's height) - (the stage's own height)`,
+     starting `100svh - var(--ph-04-head-h)` later than bare `cover`'s 0% and ending
+     `100svh` earlier than its 100% -- both derived directly from the stage's own `top`/
+     `height` formulas below, not measured/guessed, so this self-corrects for any
+     viewport height or header height automatically. With the inset applied, 0%-100% IS
+     the stuck window, so `animation-range` below can just split it in plain thirds. */
+  .ph-04-scroll {
+    position: relative;
+    height: 300vh;
+    view-timeline-name: --ph04-progress;
+    view-timeline-axis: block;
+    view-timeline-inset: calc(100svh - var(--ph-04-head-h)) 100svh;
   }
-  .ph-04-scene {
+  /* Same buffer, same reasoning as when this lived on `.ph-04-zone:last-child`: the
+     header stays pinned (`position: sticky; top: 0`) until viewport-top passes (this
+     well's own bottom edge minus the header's height); on any viewport taller than the
+     header, section 05's heading would otherwise scroll into view from the bottom
+     before that release point, showing both section headings at once. */
+  .ph-04-scroll { margin-bottom: calc(100svh - var(--ph-04-head-h)); }
+
+  /* The fixed stage. Sticks to exactly the space below the header (`top`/`height` both
+     keyed off the same live-measured `--ph-04-head-h`) and never moves again once
+     stuck -- `place-items: center` is what centres the ACTIVE scene inside that space,
+     not the whole viewport, so the composition sits in the content area rather than
+     pushed down against a header it isn't measured against. */
+  .ph-04-sticky-stage {
     position: sticky;
-    /* Sticks toward the middle of the space below the header, not flush against it
-       (2026-09-09, Sylvia: the outgoing scene can simply scroll away/disappear, but the
-       incoming one should settle closer to the vertical centre of the viewport). `top`
-       is the MIDPOINT between the header's bottom edge and the viewport's bottom edge;
-       `translateY(-50%)` then centres the scene's own box around that point, so this
-       still works per-scene even though each one's height differs (photo/needs-map/
-       cycle). Not a literal full-viewport centre -- the header is excluded from the
-       space being centred within, so a tall scene still settles below it, not behind it. */
-    top: calc(var(--ph-04-head-h) + (100svh - var(--ph-04-head-h)) / 2);
-    transform: translateY(-50%);
+    top: var(--ph-04-head-h);
+    height: calc(100svh - var(--ph-04-head-h));
+    display: grid;
+    place-items: center;
+    overflow: hidden; /* clips the crossfade's small translateY overshoot, nothing more */
+  }
+  /* Every scene shares the stage's one grid cell (`grid-area: 1 / 1`) instead of being
+     stacked in flow -- the standard "layer children in one cell" overlay technique, and
+     the actual structural fix Sylvia asked for: there is only ever one visual position
+     for a scene to occupy, so a previous scene's tail and the next one's head can never
+     both be on screen the way stacked flow allowed. */
+  .ph-04-scene {
+    grid-area: 1 / 1;
+    width: 100%;
     /* ~42% text / ~58% visual, per the brief's explicit target range (40-45% / 55-60%). */
     grid-template-columns: minmax(360px, 42%) 1fr;
     column-gap: var(--pair);
-    /* Centered, not top-anchored (2026-09-09, Sylvia): text and visual read as one
-       composition better when the shorter column sits centered against the taller one,
-       rather than both flush to the top and the shorter one just stopping early. */
+    /* Centered, not top-anchored: text and visual read as one composition better when
+       the shorter column sits centered against the taller one. */
     align-items: center;
   }
+  /* Crossfade, in place (2026-09-09): one shared `@keyframes` (a subtle opacity fade
+     plus an 8-16px settle, per the brief -- no large movement), three different
+     `animation-range` slices of the SAME named timeline above, so scrolling through the
+     300vh well plays scene 1's fade in/out, then scene 2's, then scene 3's. Both scroll
+     directions animate correctly since a view-timeline runs both ways -- scrolling back
+     up crossfades back, it doesn't just snap.
+
+     Plain thirds here ONLY work because `.ph-04-scroll`'s own `view-timeline-inset`
+     (above) already trims 0%-100% down to exactly the stage's real stuck window -- an
+     earlier version of this rule used bare 0%-100% (no inset) with hand-tuned range
+     percentages guessing where the stuck window fell inside that untrimmed range, which
+     was a real, live bug: scene 3's guessed window landed partly AFTER the stage's own
+     sticky release point (confirmed live: `.ph-04-scene`'s computed opacity was `1`, but
+     `getBoundingClientRect()` had gone negative -- an "opaque" scene rendering
+     off-screen, behind the header, having already unstuck and scrolled away). Fixing the
+     timeline's own 0%/100% at the source is what let the ranges go back to being this
+     simple, and it self-corrects for any viewport height or header height, unlike a
+     hand-tuned percentage would.
+     `@supports`-gated: unsupported browsers (Firefox as of this writing) never reach
+     this rule at all -- see the section-open comment for why the fallback has to be the
+     unconditional plain-stacked-flow base state, not merely "no animation" (three scenes
+     sharing one grid cell with no way to tell them apart would be unreadable, not just
+     inert). `prefers-reduced-motion` gated too, same policy as every other animation on
+     this page. */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      /* Probes for `view()` support specifically (not just that `animation-timeline`
+         parses) since that's the feature this whole mechanism actually needs -- named
+         scroll-timelines and `animation-range` shipped together with it in every engine
+         that has any of this, so one working probe covers the whole feature set. */
+      .ph-04-scene {
+        opacity: 0;
+        animation: ph-04-scene-fade linear both;
+        animation-timeline: --ph04-progress;
+      }
+      .ph-04-scene:nth-of-type(1) { animation-range: 0% 38%; }
+      .ph-04-scene:nth-of-type(2) { animation-range: 31% 69%; }
+      .ph-04-scene:nth-of-type(3) { animation-range: 62% 100%; }
+      @keyframes ph-04-scene-fade {
+        0%, 100% { opacity: 0; transform: translateY(12px); }
+        18%, 82% { opacity: 1; transform: none; }
+      }
+    }
+  }
   /* Each visual keeps its OWN intrinsic aspect ratio rather than being forced into one
-     shared box (2026-09-09, Sylvia, restated from the previous pass): `object-fit:
-     contain` then has almost nothing to letterbox, and each one uses the shared
-     column's full width. The column itself -- position, max width -- is what stays
-     constant across all three scenes, not the visual's height. */
+     shared box: `object-fit: contain` then has almost nothing to letterbox, and each one
+     uses the shared column's full width. The column itself -- position, max width --
+     is what stays constant across all three scenes, not the visual's height. */
   .ph-04-scene-visual--photo { aspect-ratio: 3 / 2; }      /* pics-bag-1400.webp, 1400x936 = 1.496 */
   .ph-04-scene-visual--needs { aspect-ratio: 1040 / 617; } /* needs-map.svg's own viewBox */
   .ph-04-scene-visual--cycle { aspect-ratio: 1000 / 300; } /* maize-lifecycle.svg's own viewBox: a wide band, not a tall box */
@@ -1447,21 +1547,26 @@ figure { margin: 0; }
   }
   .ph-04-scene-visual .ph-svg-body { overflow-y: hidden; }
   .ph-04-scene-visual .ph-svg-body svg { width: 100%; height: 100%; object-fit: contain; }
+  /* Each scene's own max height, so a scene never outgrows the stage's fixed box (the
+     stage's `height` is exact, unlike the old per-zone `min-height: 85svh`, which had
+     slack to grow into). Conservative enough to leave room for both grid rows -- text
+     rarely the tall side, the visual usually is -- within a header-trimmed viewport. */
+  .ph-04-scene-visual { max-height: calc(100svh - var(--ph-04-head-h) - 48px); }
 }
 
-/* One-time polish on first scroll into view, reusing the SAME sitewide mechanism
-   `Reveal` already provides everywhere else (`.is-visible`, reveal.tsx) rather than a
-   bespoke "active state" trigger -- each `.ph-04-zone` IS a `Reveal`, so `.is-visible`
-   lands on it the moment that scene first scrolls into view, once, and never again.
-   `.is-visible .ph-latent`'s fade (needs-map's "knowledge gap" bubble) is the existing
-   sitewide rule near the top of this file; the Drying node's grow-in below is the same
-   idea, scoped to this scene. Neither depends on which scene is "currently active" any
-   more -- there is no such JS-tracked state left to depend on. */
-.ph-04-scene-visual--cycle circle[fill="#17357a"] { transition: r 300ms ease; }
-.is-visible .ph-04-scene-visual--cycle circle[fill="#17357a"] { r: 15; }
-@media (prefers-reduced-motion: reduce) {
-  .ph-04-scene-visual--cycle circle[fill="#17357a"] { transition: none; }
-}
+/* Static now, not a one-time reveal (2026-09-09, overlaid-stage pass): both of these
+   used to key off `.is-visible` landing on a per-scene `Reveal` wrapper (`.ph-04-zone`
+   IS a `Reveal`), which no longer exists -- scenes are plain grid children of
+   `.ph-04-sticky-stage` now, and the crossfade animation already owns their opacity, so
+   layering a second, unrelated one-time reveal on the same subtree isn't worth
+   re-plumbing for what were always minor decorative flourishes. Both just render in
+   their finished state directly: the needs-map's "knowledge gap" bubble
+   (`.ph-latent`, the sitewide `.is-visible .ph-latent` rule near the top of this file is
+   now unreachable from this scene and left as dead code rather than deleted, in case
+   another section wants that exact reveal-on-first-view treatment later) and the Drying
+   node's radius. */
+.ph-04-scene-visual--needs .ph-latent { opacity: 1; }
+.ph-04-scene-visual--cycle circle[fill="#17357a"] { r: 15; }
 
 @media (min-width: 900px) {
   .ph-support { grid-template-columns: 1fr 1fr; }
@@ -1617,15 +1722,20 @@ figure { margin: 0; }
 .ph-06-carousel-item[data-position="left"]   { transform: translate(-118%, -46%) scale(0.74); opacity: 0.62; z-index: 1; }
 .ph-06-carousel-item[data-position="right"]  { transform: translate(18%, -46%) scale(0.74); opacity: 0.62; z-index: 1; }
 .ph-06-carousel-final .ph-06-carousel-item:not([data-position="center"]) { opacity: 0; }
-/* A card, not a bare image: the sketch webps are near-white themselves, so a rotated
-   image alone was indistinguishable from the page behind it -- the tilt had nothing to
-   read against. `background` + `box-shadow` (not the img's own `filter: drop-shadow`,
-   which paints from the pixel content and inherited the same low-contrast problem) give
-   each frame an edge that visibly follows the 3D transform. The frame carries the rotateY,
-   not the outer item, so the caption below stays flat/horizontal rather than tilting too. */
+/* No white mat around the image any more (2026-09-09, Sylvia: "白边不要" -- the new
+   high-res sketches are already trimmed tight to their own drawing bounds, so a padded
+   white card around them just reads as a visible border). `background` + `box-shadow`
+   stay (not the img's own `filter: drop-shadow`, which paints from the pixel content and
+   inherited the same low-contrast problem the original comment here described): the
+   sketch webps are still near-white themselves, so a rotated image alone would be
+   indistinguishable from the page behind it -- the tilt needs SOMETHING to read against.
+   With `padding: 0`, `background` sits fully behind the image (invisible unless the two
+   boxes ever mismatch) and the shadow alone now carries that edge. The frame carries the
+   rotateY, not the outer item, so the caption below stays flat/horizontal rather than
+   tilting too. */
 .ph-06-carousel-frame {
   display: grid; place-items: center;
-  background: #fff; padding: clamp(14px, 1.6vw, 22px);
+  background: #fff; padding: 0;
   box-shadow: 0 20px 36px -16px rgba(20, 22, 26, 0.28);
   transition: transform 480ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 480ms ease;
 }
@@ -2065,6 +2175,24 @@ figure { margin: 0; }
      the ratio is what keeps the preview reading as visually secondary next to the
      figures, not a function of what the preview itself requires. */
   .ph-context-split { grid-template-columns: minmax(0, 65fr) minmax(220px, 35fr); }
+  /* Nudged left within its own column (2026-09-09, Sylvia): sat too close to the right
+     edge of the canvas. A negative margin, not a narrower column or a smaller gap -- the
+     65/35 split and the `--pair` gap from the left column stay exactly what they were,
+     this just shifts the preview block itself closer to that gap.
+     Raised from -20px (2026-09-09, same session: -20px was genuinely applying --
+     confirmed live via `getComputedStyle` -- but on a ~390px-wide block inside a
+     1568px canvas it read as imperceptible, which is what "一直不成功... 一点没动" was
+     actually describing: not a rendering bug, a magnitude too small to register as
+     movement at all). -60px was plainly visible; Sylvia then asked to push it another
+     100px ("再继续偏移100px"), taking it to -160px. At -160px the two GRID TRACKS
+     themselves now overlap by roughly 110px (checked live via both elements'
+     `getBoundingClientRect()`), but that isn't the same as a visible collision: the left
+     column's actual content (prose + the two figure illustrations) never fills its own
+     65fr track anywhere near that far right, so the preview box still lands with a
+     clear gap after its own text -- confirmed in a live screenshot, not assumed from the
+     track math alone. That margin has mostly run out now, though: a further push of
+     similar size would likely start crossing actual content, not just track boundary. */
+  .ph-context-right { margin-left: -160px; }
 }
 
 /* ---- the lightbox overlay (requirement-lightbox.tsx) ----

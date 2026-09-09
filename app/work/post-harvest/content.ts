@@ -378,10 +378,20 @@ export const concepts = {
     { label: "Potential bias", text: "Representation quality could influence how the ideas were understood.", emphasis: true },
     { label: "Method adjustment", text: "One person redrew all three concepts consistently before the second evaluation." },
   ],
+  /**
+   * `ratio` (width/height, 2026-09-09) is the new high-res sketches' own untouched
+   * camera aspect -- Sylvia supplied the new source photos; resized with sharp, no crop
+   * ("为什么裁切这么贴边，按原本的大小来就好，直接放上去": an earlier pass trimmed each
+   * photo tight to its drawing bounds, which read as cropped too close to the edge once
+   * the carousel frame's own white mat was also removed -- reverted to the plain
+   * untrimmed photo instead). All three happen to share one ratio because they were shot
+   * the same way, not because it's forced. `concept-carousel.tsx` reads this instead of
+   * a single hardcoded width/height for every slug.
+   */
   options: [
-    { name: "The Drying Table", slug: "table", selected: false },
-    { name: "The Drying Box", slug: "box", selected: false },
-    { name: "The Drying Tower", slug: "tower", selected: true },
+    { name: "The Drying Table", slug: "table", selected: false, ratio: 760 / 950 },
+    { name: "The Drying Box", slug: "box", selected: false, ratio: 760 / 950 },
+    { name: "The Drying Tower", slug: "tower", selected: true, ratio: 760 / 950 },
   ],
   selected: {
     eyebrow: "Selected direction",
@@ -579,11 +589,13 @@ export const status = {
   claimSolid: "We completed the construction handbook and the solar collector.",
   claimOpen: "The full tower remained unbuilt and untested.",
 
-  /* TODO(sylvia): replace with the real photograph of the built solar collector left
-     with the farmer. Until it arrives the page shows a labelled placeholder rather than
-     a broken image or a silent gap. */
   collectorPhoto: {
     built: "The metal solar collector the team built, the one part of the design that physically exists.",
+    /** Added 2026-09-09, per Sylvia directly: a close-up of the outlet with a taped
+     * strip, showing the hot air the collector actually produced during testing --
+     * stronger evidence for this section's claim than the still-unused `handover`
+     * caption below (that only proves it was delivered, not that it worked). */
+    detail: "The collector's outlet, tested with a taped strip that moved in the hot air it produced.",
     handover: "Leaving the collector in Seme, May 2024.",
   },
   completed: {

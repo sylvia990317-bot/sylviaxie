@@ -389,26 +389,30 @@ export default function PostHarvestPage() {
         <PhaseRail {...phases[1]} />
 
       {/* ============ 04 Finding the focus ============
-          REBUILT 2026-09-07 as a three-step scrollytelling sequence (Sylvia, after a
-          storyboard reference): the heading appears once, then the left column advances
-          through three narrative steps while the right column is one sticky visual stage
-          that crossfades between them. This replaced an earlier three-beats-stacked layout
-          (still visible in git history) that ran the same three pieces of content as
-          independent full-width blocks; the content itself is unchanged, only its
-          choreography.
+          Three editorial scenes, text+visual together, entirely CSS (no JS coordination
+          left for POSITIONING -- see the CSS block this refers to in post-harvest.css for
+          the full history of what predates this). `HeadHeightVar` is the one small JS
+          boundary that remains: it only measures, it positions nothing itself.
 
-          `ScrollSteps` (scroll-steps.tsx) is the only client boundary here, and it renders
-          none of this content itself -- page.tsx is a Server Component (InlineSvg reads
-          the diagram files from disk at build time, which only works server-side), so the
-          six children below are plain server-rendered markup with static classNames.
-          `ScrollSteps` only watches scroll position and reflects the active step as a
-          `data-active-step` attribute on its own wrapper; every `.is-active`-equivalent
-          rule in post-harvest.css is a `[data-active-step="N"]` attribute selector, not
-          JS-toggled classes. Without it (no JS, or IntersectionObserver missing, or a
-          narrow viewport under the desktop breakpoint) `.ph-04-scroll` never gains the
-          `ph-04-armed` class its CSS rules key off, so it stays plain block flow -- the DOM
-          order below, step/visual/step/visual/step/visual, *is* that fallback's reading
-          order and section 05's minimum test. */}
+          LAYERING, in two corrections this session (Sylvia, live): first the header and
+          the scroll scenes shared ONE sticky mechanism -- the header pinned at `top: 0`
+          for the whole section, and each scene's own sticky `top` was calculated
+          (`calc(var(--ph-04-head-h) + ...)`, PLUS a `translateY(-50%)` for centring) to
+          sit in the space below wherever the header currently was. That coupling was the
+          actual bug, and specifically the `translateY(-50%)` was: `transform` is a
+          paint-time shift applied AFTER the browser clamps a sticky box to its containing
+          block, so it is not itself clamped -- a scene could still slide up past its own
+          zone's top, exactly where the header sits, right as that zone's sticky window
+          engaged ("穿模"). First fix: made the header plain block flow (not sticky at
+          all), so it and a scene could never share screen space by construction. Sylvia
+          then asked for the header back as a persistent, always-visible band while
+          reading through the section ("Finding the focus... 这个要一直在") -- so it is
+          sticky again below, `--ph-04-head-h` (`head-height.tsx`) is back, and
+          `.ph-04-scene`'s `top` again sits below it, but WITHOUT the transform that
+          caused the original bug: a plain `top: calc(var(--ph-04-head-h) + ...)` with no
+          accompanying `translateY` cannot escape the sticky clamp, so it structurally
+          cannot render above the header regardless of viewport height -- see
+          post-harvest.css for the actual values. */}
       <section className="ph-section ph-v2" id="focus">
         {/* `.ph-04-canvas`, not the shared `.ph-canvas` every other section uses -- see its
             definition in post-harvest.css for why (large empty side margins at wide
@@ -418,25 +422,22 @@ export default function PostHarvestPage() {
           {/* `.ph-04-stage` (2026-09-08, compact-composition pass) bounds the head+lede+
               scroll composition to a deliberate max-width and centers it inside the wider,
               fluid `.ph-04-canvas` above -- see post-harvest.css for the exact number and
-              why. A plain block wrapper: no position/transform/filter/contain, so it changes
-              neither `.ph-04-head`'s sticky containing block (still `.ph-04-canvas`, via
-              this section) nor `head-height.tsx`'s measurement of `.ph-04-head` itself. Its
-              real job is structural: putting the header, lede and scroll stage under one
-              shared left edge and one shared width ceiling is what makes them read as one
-              composition instead of three independently-positioned pieces. */}
+              why. A plain block wrapper: no position/transform/filter/contain, so it
+              changes neither `.ph-04-head`'s sticky containing block (still `.ph-04-canvas`,
+              via this section) nor `head-height.tsx`'s measurement of `.ph-04-head` itself. */}
           <div className="ph-04-stage">
-            {/* `.ph-04-head` is the sticky header wrapper -- scoped to this section only (see
-                post-harvest.css). It shares `.ph-04-stage`'s horizontal container with the
-                scroll stage below on purpose, so its content stays aligned to the same
-                left edge whether it is in normal flow (mobile / no-JS) or stuck (desktop).
-                The lede now lives INSIDE it (2026-09-09, Sylvia: it should read as the
-                section's thesis/framing statement, sitting with the heading, not float as
-                its own paragraph between the header and the scroll content) -- same shared
-                `.lede` class every other section's head uses (`.ph-v2-head .lede` in
-                post-harvest.css), not a bespoke style, so it reads as "the standard section
-                intro" rather than something unique to this one. It now pins through all
-                three steps along with the eyebrow + h2, which is the point: one persistent
-                framing statement, not a paragraph that scrolls away after the first step. */}
+            {/* `.ph-04-head` is the sticky header wrapper -- scoped to this section only
+                (see post-harvest.css). It shares `.ph-04-stage`'s horizontal container
+                with the scroll stage below so its content stays aligned to the same left
+                edge whether it is in normal flow (mobile / no-JS) or stuck (desktop). The
+                lede lives INSIDE it (2026-09-09, Sylvia: it should read as the section's
+                thesis/framing statement, sitting with the heading, not float as its own
+                paragraph between the header and the scroll content) -- same shared `.lede`
+                class every other section's head uses (`.ph-v2-head .lede` in
+                post-harvest.css), not a bespoke style. It pins through all three scenes
+                along with the eyebrow + h2, which is the point Sylvia asked for directly:
+                one persistent framing statement, always visible while reading through the
+                section, not something that scrolls away after the first scene. */}
             <HeadHeightVar className="ph-04-head">
               <Reveal>
                 <div className="ph-v2-head">
@@ -447,19 +448,31 @@ export default function PostHarvestPage() {
               </Reveal>
             </HeadHeightVar>
 
-            {/* Three editorial scenes (2026-09-09, replacing the old independent-steps +
-                independent-sticky-visual architecture -- see the CSS block this refers to
-                for why). Each scene is text and visual together in ONE `.ph-04-scene` grid,
-                wrapped in the sitewide `Reveal` for its one-time fade-in entrance -- no
-                separate JS mechanism, no active-step tracking, nothing left to
-                desynchronize. Plain server-rendered markup; below the desktop breakpoint or
-                without JS this is just three ordinary blocks in reading order. */}
+            {/* One fixed storytelling stage, three overlaid scenes (2026-09-09, third
+                structural pass on this section, Sylvia directly: the per-zone sticky
+                system below still read as "normal vertical document flow" -- each scene
+                had its OWN 85vh slice of the page, so the previous scene's tail and the
+                next scene's head could both still be on screen near a zone boundary, and
+                the composition never held one stable centred position. Replaced with a
+                single stage that never moves: `.ph-04-scroll` is now a plain, tall
+                (`300vh` desktop) scroll-DISTANCE well with no visible content of its own;
+                `.ph-04-sticky-stage` inside it is the thing that's actually sticky, sized
+                to the exact space below the header; and all three `.ph-04-scene`s are
+                CSS-grid-stacked directly on top of each other inside it (`grid-area: 1/1`
+                on every scene -- the standard "layer children in one grid cell" overlay
+                technique), so there is only ever one visual position for a scene to
+                render in. A single named `view-timeline` on `.ph-04-scroll` drives which
+                scene is opaque via `animation-range` per scene -- see post-harvest.css for
+                the full mechanism and its fail-open mobile/no-motion/unsupported-browser
+                fallback (plain stacked block flow, no stage, no overlay, everything just
+                visible in reading order -- the same safety net every other progressive
+                enhancement on this page already uses). */}
             <div className="ph-04-scroll">
-              {/* Scene 1 -- the existing solution. Label, the bag's own sentence, then the
-                  finding. The photo is a close-up of printed text (the "PICS / Purdue
-                  Improved Crop Storage / 100kg" markings), so it is treated as a document: a
-                  plate with `object-fit: contain`, not a cropped photo band. */}
-              <Reveal className="ph-04-zone">
+              <div className="ph-04-sticky-stage">
+                {/* Scene 1 -- the existing solution. Label, the bag's own sentence, then the
+                    finding. The photo is a close-up of printed text (the "PICS / Purdue
+                    Improved Crop Storage / 100kg" markings), so it is treated as a document:
+                    a plate with `object-fit: contain`, not a cropped photo band. */}
                 <div className="ph-04-scene">
                   <div className="ph-04-scene-text">
                     <p className="ph-lbl">{focus.bags.label}</p>
@@ -476,15 +489,12 @@ export default function PostHarvestPage() {
                     </div>
                   </figure>
                 </div>
-              </Reveal>
 
-              {/* Scene 2 -- the latent need. Label sourced from the needs-map diagram's own
-                  title rather than new copy -- see `focus.captions.needsLabel` in content.ts.
-                  `.ph-latent` (the SVG's own central-bubble class) gets its one-time
-                  emphasis fade from the sitewide `.is-visible .ph-latent` rule, the same
-                  mechanism `Reveal` drives everywhere else on the page -- see
-                  post-harvest.css. */}
-              <Reveal className="ph-04-zone">
+                {/* Scene 2 -- the latent need. Label sourced from the needs-map diagram's
+                    own title rather than new copy -- see `focus.captions.needsLabel` in
+                    content.ts. `.ph-latent` (the SVG's own central-bubble class) still gets
+                    its one-time emphasis fade from the sitewide `.is-visible .ph-latent`
+                    rule -- see post-harvest.css. */}
                 <div className="ph-04-scene">
                   <div className="ph-04-scene-text">
                     <p className="ph-lbl">{focus.captions.needsLabel}</p>
@@ -492,12 +502,9 @@ export default function PostHarvestPage() {
                   </div>
                   <InlineSvg name="needs-map" className="ph-04-scene-visual ph-04-scene-visual--needs" />
                 </div>
-              </Reveal>
 
-              {/* Scene 3 -- the shift. Keeps the lifecycle's own caption ahead of the
-                  redirect sentence, so both pieces of existing copy survive. The Drying node
-                  in the drawing grows in once, on first reveal -- see post-harvest.css. */}
-              <Reveal className="ph-04-zone">
+                {/* Scene 3 -- the shift. Keeps the lifecycle's own caption ahead of the
+                    redirect sentence, so both pieces of existing copy survive. */}
                 <div className="ph-04-scene">
                   <div className="ph-04-scene-text">
                     <p className="ph-lbl">{focus.redirect.label}</p>
@@ -506,7 +513,7 @@ export default function PostHarvestPage() {
                   </div>
                   <InlineSvg name="maize-lifecycle" className="ph-04-scene-visual ph-04-scene-visual--cycle" />
                 </div>
-              </Reveal>
+              </div>
             </div>
           </div>
         </div>
@@ -990,13 +997,25 @@ export default function PostHarvestPage() {
                 </div>
                 <figure className="ph-done-figs">
                   {/* The collector is the one part of the design that physically exists,
-                      so it is the evidence this band is built on. */}
-                  <Image
-                    src="/post-harvest/photo/collector-built-1400.webp"
-                    alt="The metal solar collector the team built, a long corrugated panel resting on a log outdoors in Seme"
-                    width={1400} height={936} sizes="(max-width: 899px) 88vw, 30vw"
-                  />
-                  <figcaption className="ph-cap">{status.collectorPhoto.built}</figcaption>
+                      so it is the evidence this band is built on. Two photos now
+                      (2026-09-09): the built object itself, then a close-up proving it
+                      actually worked -- see `status.collectorPhoto` in content.ts. */}
+                  <figure>
+                    <Image
+                      src="/post-harvest/photo/collector-built-1400.webp"
+                      alt="The metal solar collector the team built, a long corrugated panel resting on a log outdoors in Seme"
+                      width={1400} height={936} sizes="(max-width: 899px) 88vw, 30vw"
+                    />
+                    <figcaption className="ph-cap">{status.collectorPhoto.built}</figcaption>
+                  </figure>
+                  <figure>
+                    <Image
+                      src="/post-harvest/photo/collector-detail-1200.webp"
+                      alt="Close-up of the solar collector's black outlet pipe with a strip of tape taped across it, fluttering to show hot air moving through"
+                      width={1200} height={802} sizes="(max-width: 899px) 88vw, 30vw"
+                    />
+                    <figcaption className="ph-cap">{status.collectorPhoto.detail}</figcaption>
+                  </figure>
                 </figure>
               </div>
             </Reveal>

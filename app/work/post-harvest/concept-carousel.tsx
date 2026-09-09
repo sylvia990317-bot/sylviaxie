@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 
-export type ConceptOption = { name: string; slug: string; selected: boolean };
+export type ConceptOption = { name: string; slug: string; selected: boolean; ratio: number };
 
 /**
  * Section 06's concept carousel. Client component (page.tsx is a Server Component) because
@@ -64,7 +64,7 @@ export default function ConceptCarousel({
                     src={`/post-harvest/concept/concept-${o.slug}-${isCenter ? 760 : 440}.webp`}
                     alt={`Hand-drawn concept sketch: ${o.name}`}
                     width={isCenter ? 760 : 440}
-                    height={isCenter ? 620 : 360}
+                    height={Math.round((isCenter ? 760 : 440) / o.ratio)}
                     sizes={isCenter ? "(max-width: 899px) 78vw, 40vw" : "(max-width: 899px) 40vw, 18vw"}
                     priority={isCenter}
                   />

@@ -5,6 +5,301 @@ verified), moved out of `CLAUDE.md` to keep the auto-loaded project instructions
 This file is **not** auto-loaded into context — read it only when you need the historical
 rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
 
+### Post Harvest: section 05's requirement-list preview -- a "move it left" nudge that was applying but too small to see (this session)
+
+Sylvia, pasting `.ph-context-right`'s own rendered markup: "我之前叫你往左移动...这个，但是
+一直不成功，你说已经生效了，但是我实际看是一点没动" (I asked you to move this left before,
+but it never worked -- you said it had taken effect, but I actually see it hasn't moved at
+all). Not a repeat of this session's Turbopack HMR staleness (that pattern was checked for
+and ruled out first): `getComputedStyle` confirmed live that `margin-left: -20px` -- an
+earlier pass's fix, still in the stylesheet with its own dated comment -- genuinely was
+applying. The actual problem was magnitude: -20px on a ~390px-wide block inside a 1568px
+canvas is real movement, but small enough to be indistinguishable from noise without a
+side-by-side diff, which is what "生效了但是一点没动" was describing from the outside.
+Raised to `-60px`, confirmed via a before/after screenshot at the same scroll position
+that the block visibly shifted left this time (checked live that it doesn't crowd the left
+column's own text at this viewport width -- a large gap remains between the two columns
+even after the shift, since the grid track's own boundary sits well right of where the
+left column's actual content ends). Not verified at the narrow end of this rule's own
+`min-width: 1000px` gate, where the column gap (`--pair`) shrinks toward its 32px floor
+and -60px would eat further into it -- flagged rather than silently assumed safe, same as
+this session's other unverified-narrow-viewport notes (`resize_window` still doesn't
+change this tab's actual viewport width).
+
+**Follow-up, same session: "再继续偏移100px" (keep pushing it another 100px).** Raised to
+`-160px`. At this magnitude the two GRID TRACKS themselves now overlap by roughly 110px
+(measured live via `getBoundingClientRect()` on both columns), but re-verified with an
+actual screenshot rather than trusting the track math alone: the left column's real
+content (prose plus the two figure illustrations) never reaches that far right within its
+own 65fr track, so the preview box still lands with a clear gap after it, no visible
+collision. Noted directly in the rule's own comment that the safety margin has mostly run
+out at this point -- a further push of similar size would likely start crossing actual
+content, not just empty track space.
+
+### Post Harvest: section 04 rebuilt a fifth time -- one fixed storytelling stage, three CSS-overlaid scenes, instead of per-scene sticky zones (this session)
+
+The fullest rewrite of section 04 this session, and the last of five structural passes on
+it (see the entries below this one for the first four, same session). Sylvia's brief was
+explicit and structural, not another offset tweak: "still behaving too much like normal
+vertical document flow... scenes need to be overlaid in one sticky stage, not vertically
+stacked... Do not solve this with more vertical margins or step heights," with an ASCII
+sketch of the intended tree (`section > header, scroll-wrapper > sticky-stage > scene-1,
+scene-2, scene-3`).
+
+**What was still wrong.** Every earlier pass this session (the header-overlap fix, the
+header/scene layering fix, the crossfade addition, the header-persistent revert) kept the
+same underlying architecture: one `.ph-04-zone` per scene, each with its own
+`min-height: 85svh`, each independently `position: sticky`. That is still fundamentally
+"vertical flow with a sticky trick layered on top" -- three separate slices of document
+flow, not one fixed stage -- which is exactly why a previous scene's tail and the next
+one's head could both still land on screen near a zone boundary.
+
+**Rebuilt structure**, in both files:
+- `page.tsx`: `.ph-04-zone` is gone. The three `Reveal`-wrapped zones became three plain
+  `.ph-04-scene` divs, all direct children of one new `.ph-04-sticky-stage`, itself the
+  only child of `.ph-04-scroll`.
+- `post-harvest.css`: `.ph-04-scroll` is now a plain 300vh scroll-distance well (three
+  scenes at roughly one viewport-height each, per Sylvia's own suggested pacing) that
+  renders nothing itself. `.ph-04-sticky-stage` is the thing that's actually sticky --
+  `top`/`height` both keyed off the same live-measured `--ph-04-head-h` used elsewhere,
+  so it sticks to exactly the space below the header, `place-items: center` centring
+  whichever scene is active in that space (not the whole viewport). Every `.ph-04-scene`
+  shares the stage's one grid cell (`grid-area: 1 / 1`, the standard "layer children in
+  one cell" overlay technique) instead of being stacked in flow -- there is now only ever
+  ONE visual position for a scene to occupy, which is the actual structural fix.
+
+**Which scene is opaque** is driven by a single named CSS `view-timeline`
+(`--ph04-progress`, declared on `.ph-04-scroll`) with each scene claiming a different
+`animation-range` slice of it and sharing one crossfade `@keyframes` (opacity + an 8-16px
+`translateY` settle, per the brief's explicit "subtle transitions only" instruction) --
+still entirely CSS, no JS, no ScrollTrigger.
+
+**A real bug caught and fixed while tuning this, not a style choice**: a bare
+`view-timeline`'s 0%-100% (`cover`) spans from the well's leading edge touching the
+viewport's trailing edge to its trailing edge touching the viewport's leading edge --
+i.e. it includes the entry/exit padding before/after the stage is actually stuck, roughly
+a viewport-height on each side. A first attempt hand-tuned `animation-range` percentages
+to guess where the real "stuck window" fell inside that untrimmed range; verified live
+that the guess was wrong -- at 96% through the well, scene 3's computed `opacity` was
+correctly `1`, but its `getBoundingClientRect()` had gone negative: the stage had already
+released from sticky and scrolled away, so an "opaque" scene was rendering off-screen,
+behind the header. Fixed at the source instead of re-guessing percentages:
+`view-timeline-inset: calc(100svh - var(--ph-04-head-h)) 100svh` on `.ph-04-scroll` trims
+the timeline's own 0%/100% down to exactly the stage's real stuck window -- both inset
+values derived directly from the stage's own `top`/`height` formulas (not measured or
+guessed), so they self-correct for any viewport or header height. With the inset applied,
+`animation-range` could go back to plain thirds (`0% 38%` / `31% 69%` / `62% 100%`).
+
+**Fail-open fallback**, same policy as every other progressive enhancement on this page:
+below 1280px, without `prefers-reduced-motion: no-preference`, or in a browser without
+`animation-timeline` support (gated via `@supports (animation-timeline: view())`), NONE
+of the stage/overlay/timeline machinery applies -- `.ph-04-scene` falls all the way back
+to plain stacked block flow, the unconditional base state everything else only adds to.
+This had to be the fallback, not merely "no animation," because the overlay technique
+fundamentally requires the animation to tell three grid-cell-sharing scenes apart; leaving
+them all in place with no way to distinguish them would be unreadable, not just inert.
+
+**Two small decorative details lost their trigger and were fixed inline**: the needs-map's
+"knowledge gap" bubble emphasis and the Drying node's radius grow-in both used to key off
+`.is-visible` landing on the now-deleted per-scene `Reveal` wrapper. Rather than re-plumb
+a one-time reveal onto a subtree whose opacity the crossfade animation already owns, both
+just render in their finished state directly now (`.ph-latent { opacity: 1 }`, the circle
+`r: 15` unconditionally) -- they were always minor flourishes, not load-bearing.
+
+**A dev-environment red herring, called out so it isn't mistaken for a code bug later**:
+mid-debugging, `.ph-04-sticky-stage`'s `display: grid` and `.ph-04-scene`'s
+`grid-template-columns` appeared not to be applying at all (computed style showed the old
+single-column values) despite the source file being correct and `document.styleSheets`
+showing the right rule in the right cascade position. Root cause was Turbopack dev-server
+HMR serving two stale CSS chunks side by side; a full `location.reload()` (not just
+re-navigating) cleared it. Also confirmed live: `window.scrollTo()` respects this page's
+global `scroll-behavior: smooth`, so a script that reads scroll position or screenshots
+immediately after calling it can catch a mid-animation frame -- `{behavior: 'instant'}`
+is what actually jumps synchronously, which is what made the rest of this session's
+verification reliable.
+
+Verified live in the browser, scrolling with the actual mouse wheel (not scripted jumps,
+after the above finding): scene 1 appears alone in the fixed position below the header,
+crossfades cleanly into scene 2 in the exact same spot (both partially visible mid-
+transition, which is the correct crossfade behaviour, not a bug), then into scene 3, with
+no vertical push, no stale content lingering, and the section 04 -> 05 handoff still clean.
+
+**Small follow-up in the same pass, two rounds**: Sylvia, pasting the header's own
+rendered markup -- "背景颜色没改，我想变成浅色的背景" (the background colour hasn't
+changed, I want it to become a light-coloured background). Confirmed live first that the
+colour genuinely was applying (`getComputedStyle` read back the expected `#f1f2f5` before
+touching anything -- consistent with the Turbopack HMR staleness above being the likely
+reason it looked unchanged), then lightened it regardless since the ask was also a real
+preference, not only a bug report: `#f1f2f5` -> `#f7f8fa`, a shallower ~2% blend toward
+`--blue` instead of ~5%.
+
+That still wasn't it: "背景颜色还是没改，我想要大背景的颜色" / "现在是淡蓝色" (still hasn't
+changed, I want the SAME colour as the big/main background / it's currently pale blue) --
+making clear the ask was never "a lighter tint," it was "no tint at all." `background:
+var(--paper)` instead of any blue-blended hex value: the header band is now deliberately
+the exact same colour as the page (confirmed live, `getComputedStyle` read back
+`rgb(251, 251, 250)` after a hard reload, matching `--paper` exactly). Still `SOLID`, not
+transparent -- opacity is what the sticky mechanism actually needs to occlude scrolling
+scenes correctly, a visible colour difference was never load-bearing for that.
+
+### Post Harvest: section 04's sticky header could overlap section 05's own heading (this session)
+
+Flagged live by Sylvia, pasting the rendered `.ph-04-head` markup and asking "怎么下面的
+内容穿模了" (why is the content below poking through). Reproduced: scroll to roughly the
+middle of section 04's scrollytelling stage on a desktop viewport and both "[ FOCUS ]
+Finding the focus" (still pinned via `position: sticky; top: 0` on `.ph-04-head`) and
+"[ CHALLENGE ] Defining the challenge" (section 05's own heading) were visible on screen
+at once.
+
+Root cause, confirmed via live `getBoundingClientRect()` math, not guessed: `.ph-04-head`
+can only release once viewport-top passes `(its containing block's bottom - the header's
+own height)` -- that threshold is independent of viewport height. Section 05's own
+heading scrolling into view from the BOTTOM of the viewport is not independent of it
+though: it becomes visible once viewport-top passes `(section 05's top - viewport
+height)`. With only a ~48px gap between section 04's stage and section 05 (no deliberate
+buffer -- `.ph-04-zone:last-child { margin-bottom: 0 }` was written on purpose, to avoid
+trailing dead scroll space), any viewport taller than the header (177px, live-measured) hits the
+second threshold before the first, so section 05's heading was scrolling into view well
+before section 04's header had released. Confirmed live at a 652px-tall viewport: at
+scrollY 5850 both "Finding the focus" (still fully pinned at the viewport top) and
+"Defining the challenge" (already showing near the bottom of the same viewport) were on
+screen together -- a genuine overlap window of roughly 400-450px of scroll distance, not
+a one-frame flicker.
+
+Fixed with a buffer, not a JS unstick: `.ph-04-zone:last-child { margin-bottom: calc(100svh
+- var(--ph-04-head-h)) }`, gated the same `@media (min-width: 1280px)` block the sticky
+mechanism itself lives in (mobile never stickies this header at all, so needs no buffer).
+`--ph-04-head-h` is the SAME live-measured custom property (`head-height.tsx`'s
+`ResizeObserver`) `.ph-04-scene`'s own `top` already depends on a few lines up -- not a
+new measurement, reusing the one that already exists. The formula is exactly "the most
+additional scroll distance a viewport taller than the header could possibly need before
+the header's release point is reached," so it holds for any viewport height, not just the
+one this was tested at. Verified live after the fix: at the same scroll position that
+previously showed both headings, only section 04's is visible, and section 05's own
+heading only appears after the sticky header has fully scrolled away.
+
+**SUPERSEDED a few minutes later, same session -- see the next entry.** The buffer fixed
+the specific symptom reported (section 04's header vs. section 05's heading) but left the
+underlying coupling in place: the header and every scene still shared one sticky
+coordinate system. Sylvia reported a second, related overlap ("下面的文字和图片怎么直接
+出现了，还穿过了了focus的标题") minutes later, and on inspection this fix's own
+`.ph-04-zone:last-child` buffer had become dead weight -- the entry below removes it.
+
+### Post Harvest: section 04's header and its scroll scenes shared one sticky coordinate system -- restructured so they cannot overlap by construction (this session)
+
+Same session, minutes after the entry above. Sylvia reported a second overlap, this time
+between the header and a SCENE rather than the next section: "下面的文字和图片怎么直接出现
+了，还穿过了了focus的标题" (why did the text and image below just directly appear, and pass
+through the Focus title), then, once she had the exact structural ask ready, specified it
+directly rather than leaving it to guesswork: header and scene must be two structurally
+separate blocks that cannot occupy the same space "by construction," not by z-index or a
+tuned offset -- with an explicit ASCII diagram of the intended tree (header block, then a
+separate scroll-scene block below it).
+
+Root cause: `.ph-04-head` (`position: sticky; top: 0`) and every `.ph-04-scene` (also
+`position: sticky`) were positioned in the SAME coordinate system -- each scene's `top`
+was `calc(var(--ph-04-head-h) + (100svh - var(--ph-04-head-h)) / 2)`, i.e. "centred in
+whatever space is currently left below wherever the header happens to be." Two
+independently-timed sticky elements sharing one derived coordinate will drift out of sync
+on some viewport height; when they did, a scene rendered behind/through the still-pinned
+header band. The previous entry's buffer papered over one symptom of this (section 05's
+heading) without touching the actual coupling, which is why a second, different-shaped
+overlap surfaced right after.
+
+Fix, structural rather than a tighter offset:
+- `.ph-04-head` is now **plain block flow, not sticky at all** (`position` unset, no
+  `top`). It occupies its own space above the scroll scenes and scrolls away normally --
+  it has completely left the viewport before a scene's own sticky behaviour ever engages,
+  so the two literally cannot occupy the same screen space, independent of viewport
+  height or timing. `HeadHeightVar`/`head-height.tsx` (the `ResizeObserver` that measured
+  the header for the old coupled formula) is gone -- deleted, not left unused -- along
+  with `--ph-04-head-h` and the buffer from the previous entry, none of which anything
+  reads any more.
+- `.ph-04-scene` stays sticky, still bounded by its own `.ph-04-zone` parent (the sticky
+  containing block was always correct here -- a scene genuinely cannot render outside its
+  own zone's box). What changed is `top`: it was `top: 50svh; transform: translateY(-50%)`
+  in this fix's FIRST attempt (verified broken live -- see below), now a plain
+  `top: clamp(48px, 9vh, 110px)` with no accompanying transform.
+- **Why the first attempt (centring via `translateY(-50%)`) still failed, caught by
+  re-testing at the exact scroll position from the original report rather than assuming
+  the header-side fix alone was sufficient**: `transform` is a paint-time visual shift,
+  applied AFTER the browser has already resolved and clamped the sticky box to its
+  containing block. It is NOT itself subject to that clamp. So `translateY(-50%)` could
+  still slide a scene's rendered position up past its own zone's top edge -- exactly
+  where the header sits -- right as that zone's sticky window first engaged, which is the
+  identical "renders through the header" bug, just moved from the header side of the
+  coupling to the scene side of it. Removing the transform and using a plain `top` offset
+  instead has no such escape hatch: the sticky clamp is the ONLY thing positioning the
+  box, so it structurally cannot render above `.ph-04-zone`'s own top. Trades exact
+  vertical centring (each scene's height differs slightly) for that guarantee, which is
+  what was asked for ("the layout itself should prevent the header and scene from
+  occupying the same space," not a z-index trick).
+
+Verified live in the browser at the exact scroll position the original report was taken
+at: header and scene now render as two clearly separated blocks with a visible gap, in
+both directions -- scrolling INTO section 04 (header, then the PICS bag scene appears
+cleanly below it, not overlapping) and scrolling OUT into section 05 (no reprise of the
+first entry's overlap either, since a non-sticky header can never re-engage). `tsc
+--noEmit` clean; no other file referenced the deleted component.
+
+**Follow-up, same session: Sylvia asked for a crossfade between scenes ("我想要 fade in
+和fade out 的animation，现在的不喜欢" -- didn't like the hard cut the sticky release/catch
+produced), then, separately, for the header back as a persistent band ("顶部那个，Finding
+the focus... 这个要一直在").** Two changes, the second directly reversing part of the
+structural fix above -- documented here rather than folded silently into the entry above,
+since the "why" for going plain-block-flow no longer fully applies once the header is
+sticky again and needs re-explaining.
+
+*Crossfade*: `.ph-04-zone` (the plain, normally-scrolling block a scene's sticky
+positioning lives inside -- its own movement through the viewport is simple to reason
+about, unlike a stuck element's) gets a CSS scroll-driven animation, not JS:
+`animation: ph-04-fade linear both; animation-timeline: view();`, with
+`@keyframes ph-04-fade { 0%,100% { opacity:0 } 20%,80% { opacity:1 } }` -- fades in over
+the first fifth of the zone's scroll-through, holds full opacity through the middle (the
+zone's own generous `min-height` is what gives that middle duration something to hold
+across), fades out over the last fifth, in both scroll directions since a view-timeline
+runs both ways. Gated behind `@supports (animation-timeline: view())` (Firefox doesn't
+support it as of this writing -- falls back to flat full opacity, not broken/invisible
+content) and `@media (prefers-reduced-motion: no-preference)` (scroll-driven opacity is
+still motion, same policy as every other animation on this page).
+
+*Header back to sticky*: reverted the "plain block flow" half of the previous entry --
+`.ph-04-head` is `position: sticky; top: 0` again, `head-height.tsx`/`HeadHeightVar`/
+`--ph-04-head-h` are all back (recreated, not un-deleted), and `.ph-04-zone:last-child`'s
+buffer is back too (needed again now that the header re-engages for the whole section).
+Critically, `.ph-04-scene`'s `top` did NOT revert to the original coupled formula that
+caused the very first bug in this thread (`calc(var(--ph-04-head-h) + (100svh -
+var(--ph-04-head-h)) / 2)` plus a centring `transform: translateY(-50%)`) -- it kept the
+lesson from the entry above: `top: calc(var(--ph-04-head-h) + 24px)`, still no transform.
+Since nothing here escapes the sticky containing-block clamp, the scene structurally
+cannot render above the header regardless of viewport height, same guarantee as before,
+just recombined with a sticky header instead of a non-sticky one. Verified live: header
+stays pinned and legible through all three scenes, the section 04 -> 05 handoff is still
+clean (buffer doing its job again), and the crossfade is visibly a fade, not a snap, in
+both scroll directions -- confirmed watching one scene's image visibly translucent while
+the next scene's content was already showing beneath the still-pinned header.
+
+**Follow-up, same session: "这个变成和背景一样的颜色" (this became the same colour as the
+background), pasting the header's own rendered markup.** Confirmed by reading the rule,
+not by reproducing the exact viewport: `.ph-04-head`'s grey band background (`#f1f2f5`)
+had only ever been set inside `@media (min-width: 1280px)` -- the base rule below that
+breakpoint carried no `background` at all, just `position: relative; z-index: 3;
+padding-bottom: 14px`, so on any window narrower than 1280px (this project's own mobile/
+tablet cutoff for section 04's sticky mechanism) the band was never merely subtle, it
+had no background whatsoever and sat flush against the plain page colour behind it --
+exactly "the same colour as the background." This gap predates every fix in this
+thread; it was never touched because every repro up to this point happened to be tested
+at a desktop width above 1280px. Fixed by moving `background` and the band's padding to
+the UNCONDITIONAL base `.ph-04-head` rule, so the visual band now renders identically at
+every width; only `position: sticky; top: 0` (the part that only makes sense once a
+per-scene sticky mechanism exists to hand off to, which mobile never runs) stays gated
+inside the 1280px media query. This session's `resize_window` tool calls did not actually
+change the tab's `window.innerWidth` at any point (a standing limitation noted earlier in
+this same file), so the narrow-viewport case itself was not directly screenshotted --
+verified by reading the resulting cascade instead (the background is now the first
+property `.ph-04-head` sets, unconditionally, with nothing later in the file overriding
+it back to none below 1280px), and the desktop case re-confirmed unaffected live.
+
 ### Post Harvest: section 06 ("Developing with farmers") rebuilt against a reference mockup (this session)
 
 `public/post-harvest/photo/"concept development reference.png"`, a mockup Sylvia supplied

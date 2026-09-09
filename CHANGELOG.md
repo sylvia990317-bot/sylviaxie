@@ -26,8 +26,7 @@ items, "potential bias" in the site's blue focus/finding colour); (2) a large ce
 carousel, the Drying Tower dominant at `flex-basis: 42%` between the Drying Table and
 Drying Box at `27%`, opacity/scale reduced on the two sides, the track deliberately wider
 than its own clipped box (`margin: 0 -9%` on the end items) so the side sketches bleed to
-the edge the way the reference does, decorative (non-interactive) arrows at both ends since
-all three concepts are already shown at once; (3) a compact
+the edge the way the reference does, arrows at both ends; (3) a compact
 `DRYING TABLE → CONSISTENT REDRAWING → DRYING TOWER` response line with `FIRST RESPONSE` /
 `SECOND RESPONSE` sub-labels; (4) the resolved `SELECTED DIRECTION` / `THE DRYING TOWER`
 statement with its own `02 / 03` index. The fieldwork photo is the same portrait asset the
@@ -45,6 +44,104 @@ change the tab's actual `window.innerWidth` -- same tool limitation noted in the
 below -- so the sub-620px mobile stack and sub-900px photo/process stack were reasoned
 through against this file's existing breakpoint conventions but not screenshotted; flagged
 for a manual check same as that entry's tablet breakpoints).
+
+**Follow-up in the same session: the arrows didn't do anything, and the 3D tilt on the
+side concepts wasn't visible ("为什么现在那两个箭头无法被点击，然后图片也没有perspective").**
+Both were real gaps, not just a perception issue. The arrows were `<span aria-hidden>`,
+genuinely decorative -- reasoned at the time as fine since all three concepts were already
+on screen, but the reference's arrows implied interaction and there was no reason not to
+give them one. Pulled the carousel into a new client component (`concept-carousel.tsx`,
+`page.tsx` is a Server Component): `useState` tracks which option is centred, the two
+arrows rotate it, and all three `<li>`s stay mounted in fixed DOM order the whole render --
+only each one's `data-position` (`left`/`center`/`right`) changes, with CSS `order` moving
+it into its visual flex slot -- so cycling never remounts an `<Image>` and the swap
+transitions instead of jumping.
+
+The perspective gap was a real rendering issue: `.ph-06-carousel-frame` already carried
+`perspective`/`rotateY` (confirmed applied via a computed `matrix3d(...)` read in DevTools),
+but the concept webps are themselves near-white, so a rotated image had no contrast against
+the `--paper` (`#fbfbfa`) background behind it to read the tilt against -- the frame's own
+edge, not just the drawing, needed to be visible. Fixed by giving `.ph-06-carousel-frame` an
+actual white card surface (`background: #fff`) and a `box-shadow` (which paints on the
+transformed layer and correctly follows the rotated parallelogram, unlike the img's earlier
+`filter: drop-shadow`, which draws from pixel content and inherited the same low-contrast
+problem) -- confirmed visibly tilted afterward via a zoomed screenshot of one flanking
+card's edge. Angle raised 26deg -> 30deg alongside the fix. Both arrow clicks (forward and
+back, wrapping at both ends) verified live in the browser.
+
+**Second follow-up, same session: the click "鬼畜的跳一下" (a jarring snap on every click),
+still couldn't see the tilt, and a stray edge was cutting through the shadow
+("有个奇怪的边框截断了阴影部分").** All three were real, and the first two traced to the
+same root cause. That first fix still moved items between slots with flexbox `order`
+(transitioning `flex-basis` alongside it) -- `order` is not itself animatable, it swaps
+instantly, so every click snapped the row into its new arrangement a frame before the
+flex-basis/transform transition had anything to interpolate from. That reads exactly as a
+jump. Rebuilt again: every `.ph-06-carousel-item` is `position: absolute` inside the track
+now, and `data-position` only ever changes a `transform`/`opacity` pair -- both
+continuously animatable -- so cycling is a genuine slide with zero layout re-flow.
+
+The "still can't see it" and "stray border" complaints were two symptoms of the same
+oversized card: `.ph-06-carousel-item` had a forced `width: min(560px, 60%)`, far wider
+than the sketch's own ~5:4 aspect at any sane height, so the image (capped by
+`max-height`) rendered small and centred in a mostly-blank white card -- a big flat card
+barely reads as tilted even at a real angle, because most of what's rotating is empty
+space. Removed the forced width (an absolutely positioned grid shrinks to its content by
+default) so each card now hugs its own sketch tightly, and swapped the img's forced
+`width: 100%` for `width: auto; max-width: 100%` so it stops stretching to fill that
+oversized box. The stray border was `.ph-06-carousel-track`'s `overflow: hidden`: with
+that wide a card and a short (900px) `perspective`, the hard clip cut straight through
+each frame's own `box-shadow` at a dead-straight rectangular line, reading as an
+unintended frame sitting on top of the shadow rather than an edge crop. Removed --
+side cards now read as bleeding off-canvas because they sit mostly behind the dominant
+centre one (z-index), not because anything clips them. Angle brought back down from
+50deg/900px (a second attempt, tried and rejected in the same pass -- at the old oversized
+width it produced warped, not just tilted, geometry) to 34deg/1400px. Verified in-browser:
+both cards read as clearly tilted now, no stray edge on the shadow, and clicking either
+arrow (including the wrap-around at both ends) is a smooth slide with no snap.
+
+**Third follow-up, same session: "图片太小了，看不清" (the image is too small to read
+clearly).** Real regression from the second follow-up's own fix: shrinking
+`.ph-06-carousel-item` down to fit its content (to kill the oversized blank-card problem
+above) also shrank the ceiling the centred image could grow to -- `max-width` on the shared
+item class capped out at `min(480px, 46vw)` for every position, dominant or not, and the
+browser tab this was checked in happened to be a short window (639px tall), so the
+`vh`-based `max-height` clamps were also bottoming out. Gave the centre position its own,
+much larger cap (`max-width: min(820px, 68vw)` on `.ph-06-carousel-item[data-position=
+"center"]`, `max-height: clamp(280px, 52vh, 560px)` on its image, up from a shared
+`min(480px,46vw)`/`36vh`), and raised the px floors in both the track's height clamp and
+the side images' own `max-height` clamp so a short browser window doesn't silently
+re-shrink everything back down. Verified in-browser: the centre sketch is now clearly the
+largest, legible element in the row, with no overlap into the response line below it.
+
+**Fourth follow-up, same session: "现在这些草图下面太多没有用的内容了... 参考halogrip的
+[ 05 / CONCEPT EXPLORATION ]的结构，就是简单说一下每个concept的名字。然后当click到那个
+selected direction的时候别的草图消失下面还会有字说那是selected direction".** A structural
+ask, not another sizing pass. HALOGRIP already has exactly this pattern one route over
+(`app/work/halogrip/concept-carousel.tsx`): a deck where cycling to its last card fades
+the others out and swaps in a "SELECTED DIRECTION" callout, with one quiet name label
+under the deck the rest of the time -- not per-card labels, and not a permanent
+process-line/statement pair sitting under it regardless of which card is showing.
+
+Removed entirely: the `DRYING TABLE -> CONSISTENT REDRAWING -> DRYING TOWER` process line
+(`.ph-06-response`, `concepts.response` in content.ts) and the always-visible
+`SELECTED DIRECTION` block beneath the carousel (`.ph-06-selected`,
+`concepts.selected.name`/`.index`). In their place, one `.ph-06-carousel-copy` block
+rendered by `concept-carousel.tsx` itself, mirroring HALOGRIP's structure: plain state
+shows just the centred concept's name (`<h3>`) and an `NN / total` counter; nothing under
+each individual card. `concepts.options` in content.ts is now ordered table -> box ->
+tower (was table -> tower -> box) since the selected concept has to be last in the array
+for "reaching the end" to mean anything -- `concept-carousel.tsx` derives which position is
+"final" from `options[center].selected`, same as HALOGRIP derives it from
+`index === LAST`. On arrival at that final concept, `.ph-06-carousel-final` (a class the
+component adds to its own root) does two things: fades the two flanking cards to
+`opacity: 0` (they don't just settle into their usual dimmed slot, they disappear, per the
+brief) and swaps the copy block to `concepts.selected.eyebrow` ("Selected direction") plus
+`concepts.selected.note`, still passed down as props rather than hard-coded in the
+component -- content stays centralised in content.ts, only the reveal mechanics moved into
+the client component. Verified in-browser: cycling Table -> Box -> Tower shows a plain
+name+counter under each of the first two, and arriving at the Tower fades Table/Box out
+and reveals the selected-direction copy; cycling backward off the Tower brings the other
+two back and the copy reverts to plain.
 
 ### Post Harvest: section 04's spatial composition rebuilt in two passes, then section 05's "define problem" area redesigned against a reference mockup (this session)
 

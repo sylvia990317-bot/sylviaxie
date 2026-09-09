@@ -9,7 +9,7 @@ import { useEffect, useRef } from "react";
  * or height, instead of a hand-tuned `clamp()` guess that drifts out of sync with the
  * header's own type scale the moment either changes.
  *
- * Same fail-open shape as reveal.tsx/scroll-steps.tsx: the header is laid out and legible
+ * Same fail-open shape as reveal.tsx: the header is laid out and legible
  * with no JS (this only measures an already-visible element, never hides content), and
  * `:root`'s own fallback default for `--ph-04-head-h` (post-harvest.css) covers the brief
  * instant before this effect's first measurement commits.

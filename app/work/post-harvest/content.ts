@@ -262,19 +262,6 @@ export const focus = {
     label: "The turn",
     text: "So we moved upstream. Storage was the brief, but the losses were already decided one stage earlier, while the maize was drying.",
   },
-  /**
-   * Section 04 as a three-step scrollytelling sequence (2026-09-07, Sylvia: revised from
-   * the three-beats-stacked layout after reviewing a storyboard). Purely an ordering list --
-   * every string a step renders is read from `bags` / `body` / `captions` / `redirect`
-   * above, never redefined here, so there is exactly one copy of each sentence in the file.
-   * `page.tsx` maps this to left-column text + a right-column visual per step; see
-   * `scroll-steps.tsx` for how the active step is tracked.
-   */
-  steps: [
-    { id: "existing", visual: "bags" as const },
-    { id: "latent", visual: "needs-map" as const },
-    { id: "shift", visual: "maize-lifecycle" as const },
-  ],
 };
 
 /**
@@ -358,17 +345,27 @@ export const challenge = {
  *
  * Rebuilt (2026-09-09) to match a reference layout Sylvia supplied directly
  * (public/post-harvest/photo/"concept development reference.png"): a small fieldwork
- * photo beside the evaluation sequence that caused the method change, a large centred
- * carousel with the Drying Tower dominant between its two runners-up, a compact
- * response line, and the selected-direction statement beneath it. Replaces the earlier
- * two-column layout (tall photo, rounds list, annotation-code legend, three-equal-card
- * strip) entirely -- that version is still in git history if any of it is wanted back.
+ * photo beside the evaluation sequence that caused the method change, then a carousel of
+ * the three concepts. Replaces the earlier two-column layout (tall photo, rounds list,
+ * annotation-code legend, three-equal-card strip) entirely -- that version is still in git
+ * history if any of it is wanted back.
  *
- * The three-step sequence below is one connected argument, not three cards: a method
- * problem (inconsistent drawing styles) surfaced a possible bias, which changed how the
- * second evaluation was run. "Potential bias" carries the emphasis colour (the site's
- * blue = focus/finding convention, same as section 08's), the same job `evaluationLabel`
- * and the annotation legend used to do.
+ * The carousel's own copy was simplified a second time (2026-09-09, same session, per
+ * Sylvia directly: "太多没有用的内容了... 参考halogrip的[ 05 / CONCEPT EXPLORATION ]的结构"):
+ * the first version ran a compact "DRYING TABLE -> CONSISTENT REDRAWING -> DRYING TOWER"
+ * process line plus a separate always-visible selected-direction statement beneath the
+ * carousel. Both are gone. `options[].name` is now the only copy under each concept
+ * (concept-carousel.tsx renders it plainly, mirroring HALOGRIP's own
+ * `app/work/halogrip/concept-carousel.tsx`, which names every concept the same quiet way
+ * and only calls out the last one). `selected` now holds just the one line that appears
+ * when the carousel is cycled to the Drying Tower and the other two concepts fade out --
+ * same "reaching the end reveals the decision" beat HALOGRIP's deck uses, not a permanent
+ * fixture under the carousel. `options` is ordered table -> box -> tower on purpose: the
+ * selected concept has to be last for that reveal to land on arrival, not mid-cycle.
+ *
+ * The three-step sequence above the carousel (first evaluation / potential bias / method
+ * adjustment) is unchanged -- Sylvia's "too much" note was about the carousel's own copy,
+ * not this row.
  */
 export const concepts = {
   heading: "Developing with farmers",
@@ -383,20 +380,12 @@ export const concepts = {
   ],
   options: [
     { name: "The Drying Table", slug: "table", selected: false },
-    { name: "The Drying Tower", slug: "tower", selected: true },
     { name: "The Drying Box", slug: "box", selected: false },
-  ],
-  /** The compact process line beneath the carousel: which round each concept belongs to. */
-  response: [
-    { label: "Drying Table", sub: "First response" },
-    { label: "Consistent redrawing" },
-    { label: "Drying Tower", sub: "Second response" },
+    { name: "The Drying Tower", slug: "tower", selected: true },
   ],
   selected: {
     eyebrow: "Selected direction",
-    name: "The Drying Tower",
     note: "Strongest response after all three concepts were redrawn and evaluated consistently.",
-    index: "02 / 03",
   },
 };
 

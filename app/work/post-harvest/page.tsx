@@ -5,7 +5,6 @@ import { Geist, Geist_Mono, Bodoni_Moda } from "next/font/google";
 import "./post-harvest.css";
 import Reveal from "./reveal";
 import InlineSvg from "./inline-svg";
-import ScrollSteps from "./scroll-steps";
 import HeadHeightVar from "./head-height";
 import {
   project, meta, context, field, participants, focus, challenge,
@@ -430,71 +429,85 @@ export default function PostHarvestPage() {
                 post-harvest.css). It shares `.ph-04-stage`'s horizontal container with the
                 scroll stage below on purpose, so its content stays aligned to the same
                 left edge whether it is in normal flow (mobile / no-JS) or stuck (desktop).
-                Only the eyebrow + h2 live inside it (Sylvia): the lede is a separate,
-                NOT-sticky paragraph right below, so it reads once at the section's entrance
-                and then scrolls away normally instead of staying pinned through all three
-                steps -- there is exactly one "Finding the focus" in the DOM either way, so
-                nothing here duplicates the title. */}
+                The lede now lives INSIDE it (2026-09-09, Sylvia: it should read as the
+                section's thesis/framing statement, sitting with the heading, not float as
+                its own paragraph between the header and the scroll content) -- same shared
+                `.lede` class every other section's head uses (`.ph-v2-head .lede` in
+                post-harvest.css), not a bespoke style, so it reads as "the standard section
+                intro" rather than something unique to this one. It now pins through all
+                three steps along with the eyebrow + h2, which is the point: one persistent
+                framing statement, not a paragraph that scrolls away after the first step. */}
             <HeadHeightVar className="ph-04-head">
               <Reveal>
                 <div className="ph-v2-head">
                   <p className="ph-chapter-label">{chapterLabel("focus")}</p>
                   <h2>{focus.heading}</h2>
+                  <p className="lede">{focus.lead}</p>
                 </div>
               </Reveal>
             </HeadHeightVar>
-            <Reveal>
-              <p className="ph-04-lede">{focus.lead}</p>
-            </Reveal>
 
-            <ScrollSteps className="ph-04-scroll">
-              {/* Step 01 -- the existing solution. Same text as the old `.ph-bags` block:
-                  label, the bag's own sentence, then both paragraphs on why farmers had
-                  stopped trusting it. */}
-              <div className="ph-04-step ph-04-step--0">
-                <p className="ph-lbl">{focus.bags.label}</p>
-                <p>{focus.bags.text}</p>
-                <p>{focus.body}</p>
-              </div>
-
-              {/* The photo is a close-up of printed text (the "PICS / Purdue Improved Crop
-                  Storage / 100kg" markings), so it is treated as a document: a white plate
-                  with `object-fit: contain`, not a cropped photo band -- unchanged from the
-                  previous layout. */}
-              <figure className="ph-04-visual ph-04-visual--photo">
-                <div className="ph-bags-plate">
-                  <Image
-                    src="/post-harvest/photo/pics-bag-1400.webp"
-                    alt="Close up of a PICS bag in Seme, printed with Purdue Improved Crop Storage and a 100 kg capacity mark"
-                    width={1400} height={936} sizes="(max-width: 1279px) 92vw, 62vw"
-                  />
+            {/* Three editorial scenes (2026-09-09, replacing the old independent-steps +
+                independent-sticky-visual architecture -- see the CSS block this refers to
+                for why). Each scene is text and visual together in ONE `.ph-04-scene` grid,
+                wrapped in the sitewide `Reveal` for its one-time fade-in entrance -- no
+                separate JS mechanism, no active-step tracking, nothing left to
+                desynchronize. Plain server-rendered markup; below the desktop breakpoint or
+                without JS this is just three ordinary blocks in reading order. */}
+            <div className="ph-04-scroll">
+              {/* Scene 1 -- the existing solution. Label, the bag's own sentence, then the
+                  finding. The photo is a close-up of printed text (the "PICS / Purdue
+                  Improved Crop Storage / 100kg" markings), so it is treated as a document: a
+                  plate with `object-fit: contain`, not a cropped photo band. */}
+              <Reveal className="ph-04-zone">
+                <div className="ph-04-scene">
+                  <div className="ph-04-scene-text">
+                    <p className="ph-lbl">{focus.bags.label}</p>
+                    <p>{focus.bags.text}</p>
+                    <p>{focus.body}</p>
+                  </div>
+                  <figure className="ph-04-scene-visual ph-04-scene-visual--photo">
+                    <div className="ph-bags-plate">
+                      <Image
+                        src="/post-harvest/photo/pics-bag-1400.webp"
+                        alt="Close up of a PICS bag in Seme, printed with Purdue Improved Crop Storage and a 100 kg capacity mark"
+                        width={1400} height={936} sizes="(max-width: 1279px) 92vw, 48vw"
+                      />
+                    </div>
+                  </figure>
                 </div>
-              </figure>
+              </Reveal>
 
-              {/* Step 02 -- the latent need. Now carries its own `.ph-lbl` heading (added on
-                  request), same class/spacing as steps 01/03's labels, sourced from the
-                  needs-map diagram's own title rather than new copy -- see
-                  `focus.captions.needsLabel` in content.ts. When this step is active,
-                  `.ph-latent` (the SVG's own central-bubble class, already animated by
-                  `.is-visible .ph-latent` elsewhere on the page) gets emphasised further and
-                  the surrounding grey bubbles are dimmed -- see post-harvest.css. */}
-              <div className="ph-04-step ph-04-step--1">
-                <p className="ph-lbl">{focus.captions.needsLabel}</p>
-                <p>{focus.captions.needs}</p>
-              </div>
-              <InlineSvg name="needs-map" className="ph-04-visual ph-04-visual--needs" />
+              {/* Scene 2 -- the latent need. Label sourced from the needs-map diagram's own
+                  title rather than new copy -- see `focus.captions.needsLabel` in content.ts.
+                  `.ph-latent` (the SVG's own central-bubble class) gets its one-time
+                  emphasis fade from the sitewide `.is-visible .ph-latent` rule, the same
+                  mechanism `Reveal` drives everywhere else on the page -- see
+                  post-harvest.css. */}
+              <Reveal className="ph-04-zone">
+                <div className="ph-04-scene">
+                  <div className="ph-04-scene-text">
+                    <p className="ph-lbl">{focus.captions.needsLabel}</p>
+                    <p>{focus.captions.needs}</p>
+                  </div>
+                  <InlineSvg name="needs-map" className="ph-04-scene-visual ph-04-scene-visual--needs" />
+                </div>
+              </Reveal>
 
-              {/* Step 03 -- the shift. Keeps the lifecycle's own caption ahead of the
-                  redirect sentence, so both pieces of existing copy survive. When active,
-                  the Drying node in the maize-lifecycle drawing is emphasised over the
-                  Storage node it was originally briefed against -- see post-harvest.css. */}
-              <div className="ph-04-step ph-04-step--2">
-                <p className="ph-lbl">{focus.redirect.label}</p>
-                <p>{focus.captions.cycle}</p>
-                <p>{focus.redirect.text}</p>
-              </div>
-              <InlineSvg name="maize-lifecycle" className="ph-04-visual ph-04-visual--cycle" />
-            </ScrollSteps>
+              {/* Scene 3 -- the shift. Keeps the lifecycle's own caption ahead of the
+                  redirect sentence, so both pieces of existing copy survive. The Drying node
+                  in the drawing grows in once, on first reveal -- see post-harvest.css. */}
+              <Reveal className="ph-04-zone">
+                <div className="ph-04-scene">
+                  <div className="ph-04-scene-text">
+                    <p className="ph-lbl">{focus.redirect.label}</p>
+                    <p>{focus.captions.cycle}</p>
+                    <p>{focus.redirect.text}</p>
+                  </div>
+                  <InlineSvg name="maize-lifecycle" className="ph-04-scene-visual ph-04-scene-visual--cycle" />
+                </div>
+              </Reveal>
+            </div>
           </div>
         </div>
       </section>
@@ -627,22 +640,26 @@ export default function PostHarvestPage() {
 
       {/* ============ 06 Developing with farmers ============
           Rebuilt (2026-09-09) against a reference layout Sylvia supplied directly -- see
-          the comment above `concepts` in content.ts. Four beats, top to bottom:
+          the comment above `concepts` in content.ts. Three beats, top to bottom:
 
             1. ph-06-top       small wide fieldwork photo (a cropped re-frame of the same
                                portrait asset the old layout ran full-height -- see the
                                object-position note on `.ph-06-photo img` in the CSS) beside
                                the first-evaluation / potential-bias / method-adjustment
                                sequence, read as one connected argument, not three cards.
-            2. ConceptCarousel the three concepts, Drying Tower centred and dominant, table
-                               and box de-emphasised on either side. A client component
-                               (concept-carousel.tsx): its arrows are real, not decorative --
-                               clicking either rotates which concept is centred.
-            3. ph-06-response  the compact table -> tower process line under the carousel.
-            4. ph-06-selected  the resolved selected-direction statement.
+            2. ConceptCarousel the three concepts, one centred and dominant at a time. A
+                               client component (concept-carousel.tsx), same structural
+                               pattern as HALOGRIP's own `app/work/halogrip/
+                               concept-carousel.tsx`: each concept just gets its name below
+                               it, and cycling to the last one (the Drying Tower, `selected:
+                               true`) fades the other two out entirely and swaps in the
+                               selected-direction line -- not a permanent fixture under the
+                               carousel, a state the carousel itself reaches.
 
           Superseded: the two-column lead (tall photo + rounds list + annotation-code
-          legend + three-equal-card strip). Still in git history. */}
+          legend + three-equal-card strip), then a compact response-line + always-visible
+          selected-direction block under the carousel (Sylvia: "太多没有用的内容了"). Both
+          still in git history. */}
       <section className="ph-section ph-v2" id="concepts">
         <div className="ph-canvas">
           <Reveal>
@@ -676,30 +693,7 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
-            <ConceptCarousel options={concepts.options} />
-          </Reveal>
-
-          <Reveal>
-            <ol className="ph-06-response">
-              {concepts.response.map((step, i) => (
-                <li key={step.label}>
-                  {i > 0 ? <span className="ph-06-response-arrow" aria-hidden="true">→</span> : null}
-                  <span className="ph-06-response-step">
-                    <b>{step.label}</b>
-                    {step.sub ? <em>{step.sub}</em> : null}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </Reveal>
-
-          <Reveal>
-            <div className="ph-06-selected">
-              <p className="ph-lbl">{concepts.selected.eyebrow}</p>
-              <h3>{concepts.selected.name}</h3>
-              <p>{concepts.selected.note}</p>
-              <p className="ph-mono">{concepts.selected.index}</p>
-            </div>
+            <ConceptCarousel options={concepts.options} selectedEyebrow={concepts.selected.eyebrow} selectedNote={concepts.selected.note} />
           </Reveal>
         </div>
       </section>

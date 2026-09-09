@@ -5,6 +5,138 @@ verified), moved out of `CLAUDE.md` to keep the auto-loaded project instructions
 This file is **not** auto-loaded into context — read it only when you need the historical
 rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
 
+### Post Harvest: section 06 ("Developing with farmers") rebuilt against a reference mockup (this session)
+
+`public/post-harvest/photo/"concept development reference.png"`, a mockup Sylvia supplied
+directly, with an explicit brief: keep the chapter nav and section header, but rework the
+DOM/CSS rather than adjust the existing dense grid/card structure. Files touched:
+`content.ts` (`concepts` export rewritten), `page.tsx` (`#concepts` markup replaced
+end-to-end), `post-harvest.css` (`.ph-06-lead`/`.ph-06-col`/`.ph-rounds-v2`/
+`.ph-eval-bar-v2`/`.ph-picked-note`/`.ph-conclusion` and the section's `data-picked`
+strip/animation rules removed; new `.ph-06-top`/`.ph-06-process`/`.ph-06-carousel`/
+`.ph-06-response`/`.ph-06-selected` rules added). The old two-column layout (tall portrait
+photo on the left, a rounds list, an annotation-code legend SVG, and a three-equal-card
+strip with a "picked" blue frame) is gone entirely -- still recoverable from git history if
+any of it turns out to be wanted back.
+
+Four beats now, matching the reference top to bottom: (1) a small wide fieldwork photo
+beside a connected first-evaluation / potential-bias / method-adjustment sequence (one
+argument, not three cards -- a shared top rule plus small `→` pseudo-elements between
+items, "potential bias" in the site's blue focus/finding colour); (2) a large centred
+carousel, the Drying Tower dominant at `flex-basis: 42%` between the Drying Table and
+Drying Box at `27%`, opacity/scale reduced on the two sides, the track deliberately wider
+than its own clipped box (`margin: 0 -9%` on the end items) so the side sketches bleed to
+the edge the way the reference does, decorative (non-interactive) arrows at both ends since
+all three concepts are already shown at once; (3) a compact
+`DRYING TABLE → CONSISTENT REDRAWING → DRYING TOWER` response line with `FIRST RESPONSE` /
+`SECOND RESPONSE` sub-labels; (4) the resolved `SELECTED DIRECTION` / `THE DRYING TOWER`
+statement with its own `02 / 03` index. The fieldwork photo is the same portrait asset the
+old layout ran full-height, not a new export -- re-framed wide here with
+`object-fit: cover; object-position: 50% 64%`, pushed down toward the hands and the sketch
+sheet rather than the shoulder and tablet above them. Copy for the three-step sequence and
+the selected-direction note came directly from the brief; the lead sentence's em dash was
+swapped for a comma to hold this file's own "no em dashes in visible strings" rule, and the
+three concept names were shortened to "The Drying Table" / "The Drying Tower" / "The Drying
+Box" to match the reference's captions (dropping "with a toolkit" from the first -- a naming
+choice, not a sourced claim, so no evidence tag was affected).
+
+Verified in-browser at a desktop viewport (this session's `resize_window` calls did not
+change the tab's actual `window.innerWidth` -- same tool limitation noted in the entry
+below -- so the sub-620px mobile stack and sub-900px photo/process stack were reasoned
+through against this file's existing breakpoint conventions but not screenshotted; flagged
+for a manual check same as that entry's tablet breakpoints).
+
+### Post Harvest: section 04's spatial composition rebuilt in two passes, then section 05's "define problem" area redesigned against a reference mockup (this session)
+
+Two separate asks on `/work/post-harvest`. Files touched: `app/work/post-harvest/page.tsx`,
+`content.ts`, `post-harvest.css`, plus one new client component
+(`requirement-lightbox.tsx`) -- no other route touched.
+
+**1. Section 04 ("Finding the focus") -- first pass rejected, second pass rebuilt the
+spatial system.** First pass (requested fixes: the eyebrow/title read as duplicated,
+`01`/`02`/`03` step numbers unwanted, the sticky visual "floated" relative to the text)
+only removed the step-index elements and switched the sticky visual's
+`justify-items: center` to `start` -- alignment-only. Rejected: "The previous change was
+too minimal... The section still feels like several small elements floating in a very
+large blank viewport." Root cause, found on the second pass: a single shared variable,
+`--ph-04-stage-h: calc(100svh - header-height)`, sized BOTH the text step's box and the
+sticky visual's box, so two or three lines of text sat `align-content: center`'d inside a
+box nearly a full viewport tall -- that centering-in-a-too-tall-box is what read as
+"floating." Fixed by decoupling into three purpose-built variables on `.ph-04-canvas`:
+`--ph-04-lead-gap` (`clamp(160px, 18svh, 210px)`, shared by the text column's `margin-top`
+and the sticky visual's `top` offset, so both open on the same screen baseline),
+`--ph-04-step-h` (`clamp(420px, 44svh, 560px)`, a much shorter floor, paired with
+`align-content: start` instead of `center` -- the actual fix), and `--ph-04-visual-h`
+(`clamp(560px, 62svh, 740px)`, independently larger so the visual reads more dominant).
+Text column moved from a `35%` share of the fluid canvas to a bounded
+`clamp(400px, 30vw, 460px)`; column gap widened to `clamp(60px, 6vw, 90px)`. A new
+`.ph-04-stage` wrapper (`max-width: 1450px`, centered) now wraps the header/lede/scroll
+stage inside `.ph-04-canvas`, deliberately capped narrower than `.ph-04-canvas`'s own
+1680px ceiling -- 1450px was chosen (not the first draft's 1600px) specifically so the cap
+has zero visible effect at 1440px (canvas already narrower there) but visibly centers the
+composition at 1728px, since those were the two widths asked for review. A thin
+`border-bottom: 1px solid var(--line)` was added under the sticky header as a structural
+anchor (no card/box). GSAP scroll-trigger mechanics, crossfades, and content were
+untouched throughout, per explicit instruction.
+
+**2. Two real bugs found and fixed alongside the layout work, both pre-dating this
+session.** (a) The "Finding the focus" eyebrow-plus-heading duplication the user flagged
+in Chinese ("甚至Finding the focus这个重复两次的标题也没有改善") wasn't a rendering bug --
+`content.ts`'s `sections` registry (driving the `[ LABEL ]` eyebrow) has its own documented
+rule that `label` must be a short noun distinct from `title` ("CHALLENGE" vs "Defining the
+challenge"), which every row honoured except section 04's, where both were literally
+"Finding the focus". Fixed by changing `label` to `"Focus"`. (b) The two large 04 diagrams
+(needs-map, maize-lifecycle) never displayed in full ("两张图片还是没一次显示全") --
+`post-harvest.css`'s sitewide `.ph-svg-body svg { min-width: 760px }` was never actually
+overridden for these two despite a comment claiming they were exempt (`width: 100%` in the
+armed breakpoint rule does not clear a separately-set `min-width`), so the floor was
+silently forcing a horizontal scrollbar. Fixed with two `min-width: 0` overrides, same
+technique already used for the section 05/09 checklist drawings.
+
+**3. Section 05 ("Defining the challenge") "define problem" area redesigned against
+`public/post-harvest/photo/define problem reference.png`, a mockup Sylvia supplied.**
+Four changes, all copy/structure given directly in the brief:
+- The three-threats-plus-a-narrower-Weevils-inset row (`.ph-threat-foot`, 3fr/1.15fr, a
+  `border-left` divider before Weevils) rebuilt as one `.ph-strip-4` (all four sharing the
+  exact same `.ph-strip-frame` markup -- Weevils' drawing just reads smaller inside an
+  identical frame, matching the scale difference its own caption states). Content.ts's
+  separate `weevil` object folded into the `threats` array as a fourth entry; its long
+  paragraph kept as an unwired `detail` field rather than deleted outright.
+- New `.ph-priorities` strip added directly under "What the design needed to do": four
+  columns (`DESIGN PRIORITY` mono label + a bold blue serif heading), same width/order as
+  the problem row above, thin `rgba(23,53,122,.28)` verticals between columns only. The
+  Chickens -> Keep animals out connection is carried entirely by shared column position,
+  no arrows or restated labels, per the brief.
+- Lower composition rebuilt as a 65/35 split (`.ph-context-split`, ≥1000px). Left:
+  "A WIDER DESIGN CONTEXT" + new copy ("intentions... rather than validated outcomes") +
+  the two existing farmer-figure illustrations enlarged from `clamp(120px,16vh,168px)` to
+  `clamp(150px,18vh,220px)` (there were two competing height rules at the same
+  specificity; both updated). Right: the requirement-list checklist demoted to a small,
+  capped-height (`clamp(160px, 15vw, 232px)`) preview that opens full-size in a new
+  lightbox (`requirement-lightbox.tsx`) on click -- `createPortal`-rendered onto
+  `document.body`, Escape/click-outside/body-scroll-lock, focus returned to the trigger on
+  close, same conventions as `handbook-reader.tsx`'s overlay but without that component's
+  multi-entrance bus (this lightbox has exactly one trigger, so a portal alone was enough).
+- Removed entirely: the "farmers carry ~15kg, 400kg harvest, dozens of trips" paragraph,
+  its bridge sentence, and the old "Carried by hand, and by wheelbarrow..." caption --
+  all implied the final concept addressed carrying/transport, which was never validated.
+  The requirement list's own content (the actual checklist items) was left untouched, only
+  how prominently it's presented changed.
+- One bug caught in browser testing before shipping: the lightbox's first close-button
+  design was `position: fixed; top: 20px; right: 20px`, which is the exact spot the site's
+  own persistent "Close project" pill (`.ph-back`) already occupies on every route -- the
+  two collided, with `.ph-back` painting on top regardless of z-index (different stacking
+  contexts). Fixed by moving Close into the dialog's own normal-flow layout (a bar directly
+  above the stage, right-aligned, same width as the card) instead of a second fixed
+  viewport-corner control.
+
+**Known limitation, disclosed to Sylvia rather than silently skipped:** the tablet
+(640-899px) 2x2 breakpoints for `.ph-strip-4`/`.ph-priorities` were written and reasoned
+through but not visually confirmed -- this session's browser tool's `resize_window` calls
+were not actually changing the tab's `window.innerWidth` (confirmed by reading it directly:
+stayed at 1536 regardless of the requested width), so narrow viewports could not be
+screenshotted. Flagged for a manual check.
+
 ### Post Harvest: Section 02 rebuilt against a mockup, then a narrative phase rail added across the whole page (this session)
 
 Five separate asks, worked through in sequence on `/work/post-harvest`. Files touched

@@ -12,6 +12,8 @@ import {
   concepts, finalConcept, mechanism, status, reflection, chapterLabel, phases,
 } from "./content";
 import HandbookReader, { HandbookOpen, HandbookPhotoOpen } from "./handbook-reader";
+import RequirementLightbox from "./requirement-lightbox";
+import ConceptCarousel from "./concept-carousel";
 
 /* Route-scoped fonts, same pattern HALOGRIP uses: none of these reach `/` or any other
    route. Geist carries readable text; Bodoni Moda carries display, section numerals and
@@ -358,11 +360,17 @@ export default function PostHarvestPage() {
               </div>
 
               <div className="ph-03-method-foot">
-                <InlineSvg name="field-timeline" caption={field.captions.timeline} />
+                <div className="ph-03-run">
+                  {field.run.map((beat) => (
+                    <div key={beat.label}>
+                      <p className="ph-lbl">{beat.label}</p>
+                      <p className="ph-body">{beat.text}</p>
+                    </div>
+                  ))}
+                </div>
                 <div className="ph-fieldnote">
-                  <p>{field.documentation}</p>
-                  {/* TODO(sylvia): open question B, confirm this attribution before publishing. */}
-                  <p><strong>{field.contribution}</strong></p>
+                  <p className="ph-lbl">My role</p>
+                  <p>{field.role}</p>
                 </div>
               </div>
             </div>
@@ -446,9 +454,7 @@ export default function PostHarvestPage() {
               <div className="ph-04-step ph-04-step--0">
                 <p className="ph-lbl">{focus.bags.label}</p>
                 <p>{focus.bags.text}</p>
-                {focus.body.map((t) => (
-                  <p key={t.slice(0, 20)}>{t}</p>
-                ))}
+                <p>{focus.body}</p>
               </div>
 
               {/* The photo is a close-up of printed text (the "PICS / Purdue Improved Crop
@@ -533,35 +539,33 @@ export default function PostHarvestPage() {
                 <figcaption className="ph-cap">{challenge.captions.chickenPhoto}</figcaption>
               </figure>
 
-              <div className="ph-threat-foot">
-                <ul className="ph-strip ph-strip-3">
-                  {challenge.threats.map((t) => (
-                    <li key={t.slug}>
-                      <div className="ph-strip-frame">
-                        <Image
-                          src={`/post-harvest/vignette/vignette-${t.slug}-600.webp`}
-                          alt={`Line drawing: ${t.note.toLowerCase()}, on a heap of maize spread on a tarp`}
-                          width={t.w} height={t.h} sizes="(max-width: 767px) 30vw, 200px"
-                        />
-                      </div>
-                      <h4>{t.name}</h4>
-                      <p>{t.note}</p>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="ph-weevil-inset">
-                  <div className="ph-rail-box">
-                    <Image
-                      src={`/post-harvest/vignette/vignette-${challenge.weevil.slug}-600.webp`}
-                      alt="Line drawing of maize weevils on individual kernels, drawn close up"
-                      width={challenge.weevil.w} height={challenge.weevil.h} sizes="132px"
-                    />
-                  </div>
-                  <h4>{challenge.weevil.name}</h4>
-                  <p>{challenge.weevil.note}</p>
-                </div>
-              </div>
+              {/* One consistent four-column grid (define-problem-reference pass,
+                  2026-09-08): Weevils used to sit in a separately-styled, narrower inset
+                  behind a divider (still visible in git history as `.ph-weevil-inset` /
+                  `.ph-rail-box`, now unused and removed below). All four items now share
+                  the exact same `.ph-strip-frame` markup, so the frame -- width, height,
+                  aspect ratio, border, padding -- is identical across all four; only the
+                  drawing inside Weevils' frame reads smaller, same as the scale
+                  difference its caption already states in words. */}
+              <ul className="ph-strip ph-strip-4">
+                {challenge.threats.map((t) => (
+                  <li key={t.slug}>
+                    <div className="ph-strip-frame">
+                      <Image
+                        src={`/post-harvest/vignette/vignette-${t.slug}-600.webp`}
+                        alt={
+                          t.slug === "weevils"
+                            ? "Line drawing of maize weevils on individual kernels, drawn close up"
+                            : `Line drawing: ${t.note.toLowerCase()}, on a heap of maize spread on a tarp`
+                        }
+                        width={t.w} height={t.h} sizes="(max-width: 767px) 44vw, 200px"
+                      />
+                    </div>
+                    <h4>{t.name}</h4>
+                    <p>{t.note}</p>
+                  </li>
+                ))}
+              </ul>
             </div>
           </Reveal>
 
@@ -572,24 +576,43 @@ export default function PostHarvestPage() {
                 <h3>{challenge.beats.needs}</h3>
               </div>
 
-              <div className="ph-v2-needs">
-                <div className="ph-carry-unit">
-                  <p className="ph-body">{challenge.arithmetic}</p>
-                  <p className="ph-body">{challenge.arithmeticBridge}</p>
-                  <figure>
-                    <div className="ph-carry-figs">
-                      <Image src="/post-harvest/figure/figure-carrying-750.webp" alt="Traced illustration of a person carrying baskets of produce, one balanced on the head" width={750} height={1487} sizes="120px" />
-                      <Image src="/post-harvest/figure/figure-wheelbarrow-348.webp" alt="Traced illustration of a person pushing a loaded wheelbarrow" width={348} height={510} sizes="120px" />
-                    </div>
-                    <figcaption className="ph-cap" style={{ marginTop: 12 }}>{challenge.captions.figures}</figcaption>
-                  </figure>
+              {/* Four design priorities, same order and same four-column width as the
+                  problem row above -- that shared alignment IS the Chickens -> Keep
+                  animals out connection, not an arrow or a restated label. */}
+              <ul className="ph-priorities">
+                {challenge.priorities.map((p) => (
+                  <li key={p.heading}>
+                    <p className="ph-lbl">{challenge.priorityLabel}</p>
+                    <p className="ph-priority-heading">{p.heading}</p>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="ph-context-split">
+                <div className="ph-context-left">
+                  <p className="ph-lbl">{challenge.context.label}</p>
+                  <p className="ph-body">{challenge.context.text}</p>
+
+                  <div className="ph-carry-figs">
+                    <Image src="/post-harvest/figure/figure-carrying-750.webp" alt="Traced illustration of a person carrying baskets of produce, one balanced on the head" width={750} height={1487} sizes="220px" />
+                    <Image src="/post-harvest/figure/figure-wheelbarrow-348.webp" alt="Traced illustration of a person pushing a loaded wheelbarrow" width={348} height={510} sizes="220px" />
+                  </div>
+                  <p className="ph-cap">{challenge.captions.figures}</p>
                 </div>
 
-                <InlineSvg
-                  name="req-checklist-blank-wide"
-                  className="ph-v2-checklist"
-                  caption={challenge.captions.checklist}
-                />
+                <div className="ph-context-right">
+                  <p className="ph-lbl">{challenge.requirementFramework.label}</p>
+                  <p className="ph-lbl ph-req-meta">{challenge.requirementFramework.meta}</p>
+
+                  <RequirementLightbox
+                    dialogLabel="Requirement list, full view"
+                    triggerLabel="Requirement list preview"
+                    viewLabel={challenge.requirementFramework.viewLabel}
+                    caption={challenge.captions.checklist}
+                    preview={<InlineSvg name="req-checklist-blank-wide" className="ph-req-preview-svg" />}
+                    full={<InlineSvg name="req-checklist-blank-wide" className="ph-req-full-svg" />}
+                  />
+                </div>
               </div>
             </div>
           </Reveal>
@@ -603,21 +626,23 @@ export default function PostHarvestPage() {
         <PhaseRail {...phases[2]} />
 
       {/* ============ 06 Developing with farmers ============
-          DOMINANT: the farmer reading the sketch. The three concepts are one small
-          comparison strip, and the tower is marked inside that strip.
+          Rebuilt (2026-09-09) against a reference layout Sylvia supplied directly -- see
+          the comment above `concepts` in content.ts. Four beats, top to bottom:
 
-          The enlarged repeat of the tower sketch is REMOVED. It showed the same drawing
-          twice, the second time at four times the size, which gave the section two
-          competing focal points and said nothing the marked frame does not.
+            1. ph-06-top       small wide fieldwork photo (a cropped re-frame of the same
+                               portrait asset the old layout ran full-height -- see the
+                               object-position note on `.ph-06-photo img` in the CSS) beside
+                               the first-evaluation / potential-bias / method-adjustment
+                               sequence, read as one connected argument, not three cards.
+            2. ConceptCarousel the three concepts, Drying Tower centred and dominant, table
+                               and box de-emphasised on either side. A client component
+                               (concept-carousel.tsx): its arrows are real, not decorative --
+                               clicking either rotates which concept is centred.
+            3. ph-06-response  the compact table -> tower process line under the carousel.
+            4. ph-06-selected  the resolved selected-direction statement.
 
-          The photograph is PORTRAIT and stays portrait. It was previously shown as a
-          purpose-made 3:2 crop (`sketch-review-wide`) so it could run the full canvas as
-          a landscape band — that was a layout convenience, not a reading of the picture.
-          The frame is vertical: the sheet, both hands and the standing farmer only fit
-          top-to-bottom, and the wide crop amputated the top of the sheet and the person
-          holding it. The section is now a two-column lead instead: the tall photograph on
-          the left, and the rounds / evaluation / comparison stacked beside it, so the
-          picture keeps its own proportion without leaving a column of dead space. */}
+          Superseded: the two-column lead (tall photo + rounds list + annotation-code
+          legend + three-equal-card strip). Still in git history. */}
       <section className="ph-section ph-v2" id="concepts">
         <div className="ph-canvas">
           <Reveal>
@@ -629,51 +654,51 @@ export default function PostHarvestPage() {
           </Reveal>
 
           <Reveal>
-            <div className="ph-06-lead">
-              <figure className="ph-dominant ph-dominant-tall">
+            <div className="ph-06-top">
+              <figure className="ph-06-photo">
                 <Image
                   src="/post-harvest/photo/sketch-review-1600.webp"
                   alt="Two hands holding a hand-drawn sketch of the drying tower, one pointing at the shelves and its dimensions"
-                  width={1600} height={2400} sizes="(max-width: 1099px) 92vw, 34vw"
+                  width={1600} height={2400} sizes="(max-width: 899px) 92vw, 30vw"
                 />
                 <figcaption className="ph-cap">{concepts.captions.review}</figcaption>
               </figure>
 
-              <div className="ph-06-col">
-                <ol className="ph-rounds-v2">
-                  {concepts.rounds.map((r) => (
-                    <li key={r.n}><b>{r.n}</b><span>{r.text}</span></li>
-                  ))}
-                </ol>
+              <ol className="ph-06-process">
+                {concepts.process.map((step) => (
+                  <li key={step.label} data-emphasis={step.emphasis || undefined}>
+                    <p className="ph-lbl">{step.label}</p>
+                    <p>{step.text}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </Reveal>
 
-                <div className="ph-eval-bar-v2">
-                  <p className="ph-lbl">{concepts.evaluationLabel}</p>
-                  <InlineSvg name="sketch-legend" className="ph-legend" />
-                </div>
-                {/* The three are read, then the choice resolves: the picked card's blue
-                    frame and note arrive last, so the selection reads as a decision rather
-                    than a conclusion handed over up front. */}
-                <Reveal tag="ul" className="ph-strip ph-strip-3">
-                  {concepts.options.map((o, i) => (
-                    <li key={o.slug} data-picked={o.selected || undefined} style={{ "--i": i } as React.CSSProperties}>
-                      <div className="ph-strip-frame">
-                        <Image
-                          src={`/post-harvest/concept/concept-${o.slug}-760.webp`}
-                          alt={`Hand-drawn concept sketch: ${o.name}`}
-                          width={760} height={620} sizes="(max-width: 1099px) 88vw, 22vw"
-                        />
-                      </div>
-                      <h4>{o.name}</h4>
-                      {o.selected ? <p className="ph-picked-note">{concepts.selectedNote}</p> : null}
-                    </li>
-                  ))}
-                </Reveal>
+          <Reveal>
+            <ConceptCarousel options={concepts.options} />
+          </Reveal>
 
-                {/* The outcome sits at the foot of the column it concludes, and pins to
-                    the photograph's bottom edge so the tall picture does not leave the
-                    right-hand column trailing off into empty page. */}
-                <p className="ph-conclusion">{concepts.conclusion}</p>
-              </div>
+          <Reveal>
+            <ol className="ph-06-response">
+              {concepts.response.map((step, i) => (
+                <li key={step.label}>
+                  {i > 0 ? <span className="ph-06-response-arrow" aria-hidden="true">→</span> : null}
+                  <span className="ph-06-response-step">
+                    <b>{step.label}</b>
+                    {step.sub ? <em>{step.sub}</em> : null}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </Reveal>
+
+          <Reveal>
+            <div className="ph-06-selected">
+              <p className="ph-lbl">{concepts.selected.eyebrow}</p>
+              <h3>{concepts.selected.name}</h3>
+              <p>{concepts.selected.note}</p>
+              <p className="ph-mono">{concepts.selected.index}</p>
             </div>
           </Reveal>
         </div>

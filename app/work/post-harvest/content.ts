@@ -128,20 +128,43 @@ export const context = {
  * 03. Learning in the field.
  *
  * Photography leads. The team walking in and sitting with farmers is the evidence of
- * field participation; the five portraits support it rather than replacing it. Only two
- * pieces of prose survive: Sylvia's own contribution, and the camera anecdote, which is
- * the one observation no picture in the set actually shows.
+ * field participation; the five portraits support it rather than replacing it.
+ *
+ * `run` (2026-09-09, per Sylvia directly) is the actual method narrative: two primary
+ * beats (informal first visits, then the patterns that shaped a structured interview
+ * guide). `role` is a short, quieter attribution note rendered alongside it in
+ * `.ph-fieldnote` -- deliberately compact, not a second retelling of `run`'s content.
+ * The camera anecdote that used to sit here (2026-09-09) was cut: Sylvia felt it read
+ * as contextless next to the real method narrative and added too little.
  */
 export const field = {
   heading: "Learning in the field",
   lead: "Three visits over five weeks. Apollo, a local handcraft and agriculture expert, introduced us to the community.",
-  // TODO(sylvia): confirm this attribution. It comes from the current portfolio deck
-  // (Desktop - 15/13.pdf) in Sylvia's own words, but is not in the booklet. Open question B.
-  contribution:
-    "I wrote the interview questions and ran the interviews. My groupmates took notes.",
-  /** One short human observation, used as narrative rather than method description. */
-  documentation:
-    "We once set the camera directly in front of a farmer. Her body language told us to move it back.",
+  /**
+   * The two primary "how it ran" beats (2026-09-09, per Sylvia directly, replacing the
+   * six-date field-timeline.svg, which she felt carried little practical meaning).
+   * Labels are headings, not sentences, so no full stop -- same convention as
+   * `beats.people`/`beats.method` below.
+   */
+  run: [
+    {
+      label: "We started broad",
+      text: "Our first visits were informal. We walked between homesteads in Seme and talked with farmers about their everyday routines, crops, storage and the problems they encountered along the way.",
+    },
+    {
+      label: "Patterns gradually emerged",
+      text: "Although many farmers grew similar crops, their circumstances differed considerably. Access to water, animals, tools and storage varied from household to household. As recurring issues became clearer, I turned them into a more structured interview guide for the following visits.",
+    },
+  ] as { label: string; text: string }[],
+  /**
+   * Secondary, quieter than `run` above -- kept short on purpose (2026-09-09, per
+   * Sylvia) since the structured-interview-guide detail is already told in `run`, not
+   * repeated here. Confirmed by Sylvia directly in session, replacing the earlier
+   * pending-confirmation wording sourced only to a portfolio deck
+   * (`docs/kenya-content-plan.md`, "Open question B", now resolved).
+   */
+  role:
+    "I led the farmer interviews, while my teammates documented the sessions and took notes.",
   /**
    * Two beats (2026-09-07): the five farmers, then how the fieldwork ran. `portraits`
    * below heads the first beat, so only the second needs a new string. Same device
@@ -156,7 +179,6 @@ export const field = {
   captions: {
     walking: "Walking in to a homestead in Seme with Apollo.",
     team: "Sitting with farmers. Interviews began structured, then loosened as we learned what to ask.",
-    timeline: "Six dates from the booklet. The blue band is the field period.",
   },
   quote: {
     text:
@@ -201,12 +223,14 @@ export const participants: {
  * weevil problem). A photograph of a PICS bag in Seme was found and is now shown
  * (pics-bag-1400.webp); this stale note previously said none existed.
  *
- * The storage concept taken into the first evaluation is real (report p.24: "We still
- * decided to provide one of the concepts for storage in idea evaluation with the
- * farmers, and the thought was confirmed") but no sketch of it survives either, so it is
- * phrased as a method check and never as something the reader is about to see.
- * TODO(sylvia): if a round-one storage sketch survives, it would turn that method check
- * from told into shown.
+ * `body` was trimmed to one paragraph (2026-09-09, per Sylvia, layout pass on the
+ * scrollytelling stage): the second paragraph this step used to carry ("the group was
+ * not uniform... a storage concept was carried into the first farmer evaluation to test
+ * that conclusion") is a real, sourced claim (report p.24: "We still decided to provide
+ * one of the concepts for storage in idea evaluation with the farmers, and the thought
+ * was confirmed"), but it's a secondary methodological aside next to this step's actual
+ * thesis (the knowledge gap), and nothing later in section 04 depends on it appearing
+ * here. Cut, not rewritten -- if it needs a home later, the quote above is its source.
  */
 export const focus = {
   heading: "Finding the focus",
@@ -218,10 +242,7 @@ export const focus = {
     caption: "A PICS bag in Seme. The printing on it reads Purdue Improved Crop Storage, 100 kg.",
     page: 15,
   },
-  body: [
-    "Most farmers believed the bags lost their potency after a season or two, so they were not using them as intended. Theresa followed the instructions, and she was the only one of the five without a weevil problem. The gap was knowledge, not hardware.",
-    "The group was not uniform either: farmers who already had a storage room did not need another one. We still put a storage concept into the first farmer evaluation to test that conclusion, and the response confirmed it.",
-  ],
+  body: "Most farmers believed the bags lost their potency after a season or two, so they were not using them as intended. Theresa followed the instructions, and she was the only one of the five without a weevil problem. The gap was knowledge, not hardware.",
   captions: {
     /** Step 02's own `.ph-lbl` heading, same role as `bags.label` / `redirect.label` for
      * steps 01/03 -- added on request, reusing the needs-map diagram's own title
@@ -259,81 +280,123 @@ export const focus = {
 /**
  * 05. Defining the challenge.
  *
- * The four vignettes state the problem and the photograph proves one of them. The
- * requirement list, drawn blank, replaces the five-bullet priority list: requirements
- * read as a specification rather than as a paragraph. The only prose kept is the
- * carrying arithmetic, because it is a number.
+ * The four vignettes state the problem and the photograph proves one of them. Each
+ * vignette maps 1:1 to a design priority directly beneath it (define-problem-reference
+ * pass, 2026-09-08) -- that connection is carried by the shared four-column alignment
+ * between `threats` and `priorities` (same order, same width, same gaps), not by an
+ * arrow or a restated label. Weevils is a plain fourth column now, not a scaled-down
+ * inset behind a divider -- it was never actually a different KIND of problem, just a
+ * different DRAWING SCALE (kernel-level, since it's already inside the grain rather than
+ * arriving at the tarp), and that distinction reads fine from the drawing and its own
+ * caption alone. The requirement list, drawn blank, is a supporting research artifact:
+ * presented small, opens full-size on click, and is deliberately not the largest object
+ * in this part of the section -- the priorities and the two farmer figures are.
  */
 export const challenge = {
   heading: "Defining the challenge",
   lead: "Maize is spread on a tarp on the ground to dry in the sun, and has to come back indoors every evening.",
-  /** The one paragraph an image cannot carry: quantities. */
-  arithmetic:
-    "Farmers told us they carry roughly 15 kilograms at a time. A 400 kilogram harvest means dozens of trips out each morning and back each night, across several days of the season.",
-  arithmeticPage: 31,
-  /** The bridge from the carrying fact to the requirement checklist beside it (added on
-   * request: the two used to sit next to each other with no sentence connecting them). */
-  arithmeticBridge: "That daily handling is part of what the requirement list had to account for.",
   /** Two beats, each a single visual argument that fits one viewport. */
   beats: {
     threats: "What threatens maize while it dries",
     needs: "What the design needed to do",
   },
-  /**
-   * The 3 + 1 set. The first three are whole-scene threats that arrive at the tarp; the
-   * fourth is drawn at kernel scale because it is already inside the grain.
-   *
-   * The scale change is now carried by the composition and the caption: the three sit in
-   * one rail at one size, the weevil is a smaller inset below it. There is no
-   * "SCALE BREAK" label, which read as an internal design note rather than page copy.
-   */
   threatsLabel: "Four problems found",
   /* `w`/`h` are each drawing's true pixel size. They differ, because the originals were
      drawn freehand at different extents, so they must be declared per item: a shared
-     placeholder ratio makes the layout size its columns from the images and overflow. */
+     placeholder ratio makes the layout size its columns from the images and overflow.
+     Weevils keeps its own true size too -- its outer frame matches the other three
+     exactly (same `.ph-strip-frame`), only the drawing inside reads smaller, same as the
+     scale difference the caption already states in words. */
   threats: [
     { slug: "chicken", name: "Chickens", note: "Eating and contaminating the crop", w: 1200, h: 761 },
     { slug: "theft", name: "Theft", note: "The reason it cannot be left out overnight", w: 1200, h: 981 },
     { slug: "rain", name: "Rain", note: "Arriving without warning", w: 1200, h: 1065 },
+    {
+      slug: "weevils", name: "Weevils", note: "Already inside the grain", w: 1200, h: 867,
+      /* The longer version, kept as an optional detail rather than the default caption --
+         it explained the scale change well but was the one item breaking the four-column
+         rhythm the other three keep. Not wired to any interaction yet (no hover/click
+         affordance exists on this row); kept here as the fuller research note in case a
+         future pass adds one. */
+      detail: "Drawn at the scale of a single kernel, because this one does not arrive at the tarp. It is already inside the grain, and a door that locks does not stop it.",
+    },
   ],
-  weevil: {
-    slug: "weevils", name: "Weevils", w: 1200, h: 867,
-    /* Carries the scale change in words, so no label has to announce it. */
-    note: "Drawn at the scale of a single kernel, because this one does not arrive at the tarp. It is already inside the grain, and a door that locks does not stop it.",
+  /** One design priority per threat above, same order and same four-column alignment --
+   *  that shared position is the connection, not a restated label or an arrow. */
+  priorityLabel: "Design priority",
+  priorities: [
+    { heading: "Keep animals out" },
+    { heading: "Protect from theft" },
+    { heading: "Keep rain out" },
+    { heading: "Eradicate weevils" },
+  ],
+  /** The wider framework, left column of the lower composition -- design intentions the
+   *  team held, not outcomes the final concept was shown to achieve. */
+  context: {
+    label: "A wider design context",
+    text: "The broader framework also considered one-person use and familiar working practices. These remained design intentions rather than validated outcomes.",
   },
   captions: {
     chickenPhoto: "Maize drying on a tarp in Seme, with the first of those four problems walking across it.",
-    figures: "Carried by hand, and by wheelbarrow where the paths allow.",
-    checklist: "Set before any concept work. Section 09 returns to this same list with the team's own marks.",
+    /** Sits under the two farmer figures now, not the carrying arithmetic paragraph
+     *  (removed, 2026-09-08: it implied the final concept solved carrying/transport,
+     *  which was never validated -- see the figures' own caption instead). The figures
+     *  illustrate familiar local practice, not proof of improved carrying. */
+    figures: "Familiar tools and one-person use informed the wider framework.",
+    checklist: "Created before concept work to guide exploration.",
+  },
+  /** The requirement-list preview, right column of the lower composition. */
+  requirementFramework: {
+    label: "The broader requirement framework",
+    meta: "Booklet p.26",
+    viewLabel: "View full list ↗",
   },
 };
 
 /**
  * 06. Developing with farmers.
  *
- * Two states, in order. First the three concepts at equal weight, which is how the
- * farmers saw them. Only after the outcome line does the tower become dominant. The
- * legend declares the colour code that is already in all three drawings, which is what
- * makes them comparable, and it is the same code section 08 uses.
+ * Rebuilt (2026-09-09) to match a reference layout Sylvia supplied directly
+ * (public/post-harvest/photo/"concept development reference.png"): a small fieldwork
+ * photo beside the evaluation sequence that caused the method change, a large centred
+ * carousel with the Drying Tower dominant between its two runners-up, a compact
+ * response line, and the selected-direction statement beneath it. Replaces the earlier
+ * two-column layout (tall photo, rounds list, annotation-code legend, three-equal-card
+ * strip) entirely -- that version is still in git history if any of it is wanted back.
+ *
+ * The three-step sequence below is one connected argument, not three cards: a method
+ * problem (inconsistent drawing styles) surfaced a possible bias, which changed how the
+ * second evaluation was run. "Potential bias" carries the emphasis colour (the site's
+ * blue = focus/finding convention, same as section 08's), the same job `evaluationLabel`
+ * and the annotation legend used to do.
  */
 export const concepts = {
   heading: "Developing with farmers",
-  lead: "We took the concepts back to the farmers twice.",
-  rounds: [
-    { n: "Round one", text: "Ideas shown to three farmers, each of us sketching in our own hand. They preferred a drying table." },
-    { n: "Round two", text: "Three concepts, all redrawn by one person, so the farmers judged ideas and not drawings." },
-  ],
-  evaluationLabel: "As the farmers saw them",
-  options: [
-    { name: "The drying table with a toolkit", slug: "table", selected: false },
-    { name: "The drying tower", slug: "tower", selected: true },
-    { name: "The drying box", slug: "box", selected: false },
-  ],
-  conclusion: "The Drying Tower received the strongest response, so we developed it further.",
-  selectedNote: "Strongest response in the second evaluation",
+  lead: "Two evaluations revealed a problem in how the ideas were presented, and changed how we tested them.",
   captions: {
-    review: "A farmer reading one of the concept sketches, second evaluation round.",
-    legend: "The same annotation code runs through all three sketches.",
+    review: "A farmer reading one of the concept sketches.",
+  },
+  process: [
+    { label: "First evaluation", text: "Different team members presented concepts in different drawing styles." },
+    { label: "Potential bias", text: "Representation quality could influence how the ideas were understood.", emphasis: true },
+    { label: "Method adjustment", text: "One person redrew all three concepts consistently before the second evaluation." },
+  ],
+  options: [
+    { name: "The Drying Table", slug: "table", selected: false },
+    { name: "The Drying Tower", slug: "tower", selected: true },
+    { name: "The Drying Box", slug: "box", selected: false },
+  ],
+  /** The compact process line beneath the carousel: which round each concept belongs to. */
+  response: [
+    { label: "Drying Table", sub: "First response" },
+    { label: "Consistent redrawing" },
+    { label: "Drying Tower", sub: "Second response" },
+  ],
+  selected: {
+    eyebrow: "Selected direction",
+    name: "The Drying Tower",
+    note: "Strongest response after all three concepts were redrawn and evaluated consistently.",
+    index: "02 / 03",
   },
 };
 

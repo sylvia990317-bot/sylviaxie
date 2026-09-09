@@ -246,9 +246,13 @@ export const focus = {
   captions: {
     /** Step 02's own `.ph-lbl` heading, same role as `bags.label` / `redirect.label` for
      * steps 01/03 -- added on request, reusing the needs-map diagram's own title
-     * ("Expressed vs latent need · Booklet p.21") rather than writing new copy. */
+     * ("Expressed vs latent need") rather than writing new copy. */
     needsLabel: "Expressed vs latent need",
-    needs: "Needs from the interviews, sorted into what farmers said and what they did not. Booklet p.21.",
+    /** No "Booklet p.21" here or in the diagram's own corner label (2026-09-09, Sylvia:
+     * readers never see the physical booklet and have no way to know one exists, so a
+     * page citation to it is meaningless to them -- source, p.21, still lives in this
+     * comment for anyone maintaining the copy, just not in anything rendered). */
+    needs: "Needs from the interviews, sorted into what farmers said and what they did not.",
     cycle: "Drying is one stage of six, and the stage where the harvest is most exposed.",
   },
   /**
@@ -332,10 +336,12 @@ export const challenge = {
     figures: "Familiar tools and one-person use informed the wider framework.",
     checklist: "Created before concept work to guide exploration.",
   },
-  /** The requirement-list preview, right column of the lower composition. */
+  /** The requirement-list preview, right column of the lower composition.
+   * `meta` ("Booklet p.26") removed (2026-09-09, Sylvia): readers never see the physical
+   * booklet, so a page citation to it means nothing to them -- source, p.26, is still
+   * documented at this object's other citation sites in this file. */
   requirementFramework: {
     label: "The broader requirement framework",
-    meta: "Booklet p.26",
     viewLabel: "View full list ↗",
   },
 };
@@ -606,11 +612,13 @@ export const status = {
     ],
   },
 
-  /** Caption for the marked checklist. Deliberately outside the drawing. */
+  /** Caption for the marked checklist. Deliberately outside the drawing.
+   * Booklet p.38. No longer rendered as "Booklet p.38." after the caption (2026-09-09,
+   * Sylvia: readers never see the physical booklet, so a page citation to it means
+   * nothing to them) -- kept here as the source note instead. */
   checklist: {
     label: "The list, marked by the team",
     caption: "Thirteen of eighteen requirements marked. Five were left unmarked.",
-    page: 38,
   },
 
   /** Approved decision 3: separate, clearly titled, and never in the team's voice. */

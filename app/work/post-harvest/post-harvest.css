@@ -1695,7 +1695,9 @@ figure { margin: 0; }
    cards out completely and is what the copy's selected-direction eyebrow/note key off --
    see `[data-position="center"]`'s sibling rule and `.ph-06-carousel-copy` below. */
 .ph-06-carousel { margin-top: clamp(48px, 5vw, 76px); }
-.ph-06-carousel-row { display: flex; align-items: center; gap: clamp(6px, 1.4vw, 18px); }
+/* Gap shrunk (2026-09-09, Sylvia: arrows bigger and closer to the image) -- see
+   `.ph-06-arrow`'s own size bump just below for the matching half of this change. */
+.ph-06-carousel-row { display: flex; align-items: center; gap: clamp(4px, 0.8vw, 12px); }
 .ph-06-carousel-track {
   position: relative; flex: 1 1 auto; min-width: 0;
   height: clamp(420px, 54vh, 640px);
@@ -1744,10 +1746,13 @@ figure { margin: 0; }
 [data-position="center"] .ph-06-carousel-frame { transform: none; box-shadow: 0 26px 48px -18px rgba(20, 22, 26, 0.3); }
 .ph-06-carousel-frame img { display: block; width: auto; max-width: 100%; height: auto; max-height: clamp(170px, 32vh, 340px); object-fit: contain; }
 [data-position="center"] .ph-06-carousel-frame img { max-height: clamp(280px, 52vh, 560px); }
+/* Bigger, per Sylvia (2026-09-09) -- 30-40px was reading as fiddly next to the now much
+   larger, sharper sketch photos. Glyph size scaled up to match, so it stays centred in
+   the circle rather than looking lost in the extra room. */
 .ph-06-arrow {
-  flex: none; width: clamp(30px, 2.6vw, 40px); height: clamp(30px, 2.6vw, 40px);
+  flex: none; width: clamp(38px, 3.2vw, 48px); height: clamp(38px, 3.2vw, 48px);
   display: grid; place-items: center; border: 1px solid var(--line); border-radius: 999px;
-  padding: 0; font-size: 16px; line-height: 1; color: var(--muted); background: transparent;
+  padding: 0; font-size: 19px; line-height: 1; color: var(--muted); background: transparent;
   cursor: pointer; transition: border-color 150ms linear, color 150ms linear;
   position: relative; z-index: 4;
 }
@@ -2135,7 +2140,6 @@ figure { margin: 0; }
 .ph-context-left .ph-cap { margin-top: 4px; }
 
 .ph-context-right { display: grid; gap: 4px; align-content: start; }
-.ph-req-meta { margin-top: -2px; }
 /* The trigger is the plate itself, sized DOWN from the page's usual document-plate scale:
    a fixed, fairly short height (not the 46-58vh the dominant photograph/full checklist
    get elsewhere) is what keeps this read as "a small artifact that opens", not the

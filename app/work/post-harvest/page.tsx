@@ -622,7 +622,6 @@ export default function PostHarvestPage() {
 
                 <div className="ph-context-right">
                   <p className="ph-lbl">{challenge.requirementFramework.label}</p>
-                  <p className="ph-lbl ph-req-meta">{challenge.requirementFramework.meta}</p>
 
                   <RequirementLightbox
                     dialogLabel="Requirement list, full view"
@@ -1029,7 +1028,7 @@ export default function PostHarvestPage() {
               <InlineSvg
                 name="req-checklist-scored-wide"
                 className="ph-fig-primary"
-                caption={`${status.checklist.caption} Booklet p.${status.checklist.page}.`}
+                caption={status.checklist.caption}
               />
             </div>
           </Reveal>

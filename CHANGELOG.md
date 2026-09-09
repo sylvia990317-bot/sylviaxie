@@ -5,3688 +5,485 @@ verified), moved out of `CLAUDE.md` to keep the auto-loaded project instructions
 This file is **not** auto-loaded into context — read it only when you need the historical
 rationale behind an existing decision. New entries go here, not in `CLAUDE.md`.
 
-### Post Harvest: section 05's requirement-list preview -- a "move it left" nudge that was applying but too small to see (this session)
+*(Condensed 2026-09-09: this file had grown to ~3700 lines, mostly live-debugging
+narration. Rewritten to keep the decisions/rationale and cut the process transcripts —
+see git history for the full verbose version if ever needed.)*
 
-Sylvia, pasting `.ph-context-right`'s own rendered markup: "我之前叫你往左移动...这个，但是
-一直不成功，你说已经生效了，但是我实际看是一点没动" (I asked you to move this left before,
-but it never worked -- you said it had taken effect, but I actually see it hasn't moved at
-all). Not a repeat of this session's Turbopack HMR staleness (that pattern was checked for
-and ruled out first): `getComputedStyle` confirmed live that `margin-left: -20px` -- an
-earlier pass's fix, still in the stylesheet with its own dated comment -- genuinely was
-applying. The actual problem was magnitude: -20px on a ~390px-wide block inside a 1568px
-canvas is real movement, but small enough to be indistinguishable from noise without a
-side-by-side diff, which is what "生效了但是一点没动" was describing from the outside.
-Raised to `-60px`, confirmed via a before/after screenshot at the same scroll position
-that the block visibly shifted left this time (checked live that it doesn't crowd the left
-column's own text at this viewport width -- a large gap remains between the two columns
-even after the shift, since the grid track's own boundary sits well right of where the
-left column's actual content ends). Not verified at the narrow end of this rule's own
-`min-width: 1000px` gate, where the column gap (`--pair`) shrinks toward its 32px floor
-and -60px would eat further into it -- flagged rather than silently assumed safe, same as
-this session's other unverified-narrow-viewport notes (`resize_window` still doesn't
-change this tab's actual viewport width).
+## Post Harvest
 
-**Follow-up, same session: "再继续偏移100px" (keep pushing it another 100px).** Raised to
-`-160px`. At this magnitude the two GRID TRACKS themselves now overlap by roughly 110px
-(measured live via `getBoundingClientRect()` on both columns), but re-verified with an
-actual screenshot rather than trusting the track math alone: the left column's real
-content (prose plus the two figure illustrations) never reaches that far right within its
-own 65fr track, so the preview box still lands with a clear gap after it, no visible
-collision. Noted directly in the rule's own comment that the safety margin has mostly run
-out at this point -- a further push of similar size would likely start crossing actual
-content, not just empty track space.
+### Section 05: requirement-list preview nudged left, twice (this session)
+Sylvia: a "move left" ask from earlier hadn't visibly worked. Root cause wasn't a bug —
+`.ph-context-right { margin-left: -20px }` was genuinely applying, just too small a shift
+to register on a ~390px block in a 1568px canvas. Raised to `-60px` (confirmed visibly
+shifted, no crowding), then to `-160px` on a follow-up ask ("再继续偏移100px"). At -160px
+the two grid TRACKS overlap by ~110px, but the left column's real content (prose + two
+figure illustrations) never fills its own track that far right, so there's still no visible
+collision — confirmed with a live screenshot, not track math alone. Noted in the rule's own
+comment that the margin has mostly run out; a similar further push would likely start
+crossing real content. Not verified at the narrow end of this rule's `min-width: 1000px`
+gate, where the column gap shrinks toward its 32px floor.
 
-### Post Harvest: section 04 rebuilt a fifth time -- one fixed storytelling stage, three CSS-overlaid scenes, instead of per-scene sticky zones (this session)
+### Section 04: rebuilt as one fixed storytelling stage with CSS-overlaid scenes (this session, five passes)
+The most-iterated section this session. Original architecture: one `.ph-04-zone` per scene
+(text+visual), each `min-height: 85svh`, each independently `position: sticky`, with a
+persistent sticky `.ph-04-head` above. Sylvia went through several real, distinct bugs in
+this system before asking for a structural rebuild instead of more patches:
 
-The fullest rewrite of section 04 this session, and the last of five structural passes on
-it (see the entries below this one for the first four, same session). Sylvia's brief was
-explicit and structural, not another offset tweak: "still behaving too much like normal
-vertical document flow... scenes need to be overlaid in one sticky stage, not vertically
-stacked... Do not solve this with more vertical margins or step heights," with an ASCII
-sketch of the intended tree (`section > header, scroll-wrapper > sticky-stage > scene-1,
-scene-2, scene-3`).
+1. **Header could overlap section 05's own heading.** `.ph-04-head` releases once
+   viewport-top passes `(containing block bottom − header height)`, independent of viewport
+   height; section 05's heading becomes visible once viewport-top passes `(section 05 top −
+   viewport height)` — on any viewport taller than the header, the second threshold hits
+   first, so both headings showed at once ("怎么下面的内容穿模了"). Fixed with a buffer:
+   `.ph-04-zone:last-child { margin-bottom: calc(100svh - var(--ph-04-head-h)) }`.
+2. **Header and scenes shared one sticky coordinate system**, which was the deeper bug:
+   each scene's `top` was `calc(header-height + (100svh - header-height)/2)` **plus** a
+   centring `transform: translateY(-50%)`. `transform` is a paint-time shift applied AFTER
+   the browser clamps a sticky box to its containing block — it is NOT itself clamped — so
+   a scene could slide up past its own zone's top, behind the still-pinned header
+   ("下面的文字和图片怎么直接出现了，还穿过了了focus的标题"). First fix made the header
+   plain block flow (not sticky at all) so the two could never share space. Sylvia then
+   asked for the header back as a persistent band ("这个要一直在"); it went sticky again,
+   but the scene's `top` kept the actual lesson — a plain `top` offset with **no**
+   accompanying transform, since nothing there can escape the sticky clamp.
+3. **Crossfade added** ("我想要 fade in 和fade out 的animation，现在的不喜欢" — didn't like
+   the hard cut between scenes) via `animation-timeline: view()`, gated behind
+   `@supports`/`prefers-reduced-motion` with a flat-opacity fallback.
+4. **Final structural rebuild**, per an explicit brief ("scenes need to be overlaid in one
+   sticky stage, not vertically stacked... do not solve this with more vertical margins or
+   step heights", with an ASCII tree of the intended structure). `.ph-04-zone` is gone.
+   `.ph-04-scroll` is now a plain 300vh scroll-distance well (no visible content of its
+   own — three scenes' worth of scroll, ~1 viewport-height each). `.ph-04-sticky-stage`
+   inside it is the thing that's actually sticky (`top`/`height` keyed off the live-measured
+   `--ph-04-head-h`, `place-items: center`). Every `.ph-04-scene` shares the stage's one
+   grid cell (`grid-area: 1 / 1` — the standard "layer children in one cell" technique), so
+   there is only ever one visual position for a scene to occupy. Which scene is opaque is
+   driven by one named `view-timeline` (`--ph04-progress` on `.ph-04-scroll`) with each
+   scene claiming a different `animation-range`. Real bug caught while tuning this: a bare
+   `view-timeline`'s 0%-100% (`cover`) includes the entry/exit padding before/after the
+   stage is actually stuck (roughly a viewport-height each side) — a first attempt hand-
+   tuned `animation-range` percentages against the untrimmed range and scene 3's window
+   landed partly AFTER the stage's real release point (opacity computed `1`, but
+   `getBoundingClientRect()` had gone negative — rendering off-screen, behind the header).
+   Fixed at the source: `view-timeline-inset: calc(100svh - var(--ph-04-head-h)) 100svh`
+   on `.ph-04-scroll` trims the timeline's own 0%/100% to exactly the stage's real stuck
+   window (both values derived from the stage's own `top`/`height` formulas, so they
+   self-correct for any viewport/header height), after which `animation-range` could go
+   back to plain thirds.
+5. Fail-open fallback, same policy as everywhere else on this page: below 1280px, without
+   `prefers-reduced-motion: no-preference`, or without `animation-timeline` support
+   (`@supports`), NONE of the stage/overlay/timeline machinery applies — scenes fall back
+   to plain stacked block flow. Had to be the full fallback, not just "no animation": three
+   scenes sharing one grid cell with no way to tell them apart would be unreadable.
 
-**What was still wrong.** Every earlier pass this session (the header-overlap fix, the
-header/scene layering fix, the crossfade addition, the header-persistent revert) kept the
-same underlying architecture: one `.ph-04-zone` per scene, each with its own
-`min-height: 85svh`, each independently `position: sticky`. That is still fundamentally
-"vertical flow with a sticky trick layered on top" -- three separate slices of document
-flow, not one fixed stage -- which is exactly why a previous scene's tail and the next
-one's head could both still land on screen near a zone boundary.
+Two decorative details (`needs-map`'s "knowledge gap" bubble, the Drying node's radius
+grow-in) lost their `.is-visible`-on-`Reveal` trigger when the per-scene `Reveal` wrapper
+was removed — both now just render in their finished state unconditionally, not worth
+re-plumbing a one-time reveal for.
 
-**Rebuilt structure**, in both files:
-- `page.tsx`: `.ph-04-zone` is gone. The three `Reveal`-wrapped zones became three plain
-  `.ph-04-scene` divs, all direct children of one new `.ph-04-sticky-stage`, itself the
-  only child of `.ph-04-scroll`.
-- `post-harvest.css`: `.ph-04-scroll` is now a plain 300vh scroll-distance well (three
-  scenes at roughly one viewport-height each, per Sylvia's own suggested pacing) that
-  renders nothing itself. `.ph-04-sticky-stage` is the thing that's actually sticky --
-  `top`/`height` both keyed off the same live-measured `--ph-04-head-h` used elsewhere,
-  so it sticks to exactly the space below the header, `place-items: center` centring
-  whichever scene is active in that space (not the whole viewport). Every `.ph-04-scene`
-  shares the stage's one grid cell (`grid-area: 1 / 1`, the standard "layer children in
-  one cell" overlay technique) instead of being stacked in flow -- there is now only ever
-  ONE visual position for a scene to occupy, which is the actual structural fix.
+**Dev-environment gotcha worth remembering**: mid-debugging, a correct CSS change appeared
+not to be applying at all (computed style showed old values) — root cause was Turbopack
+dev-server HMR serving two stale CSS chunks side by side; a full `location.reload()` (not
+just re-navigating) cleared it. Also: `window.scrollTo()` respects this page's global
+`scroll-behavior: smooth`, so a script reading scroll position or screenshotting
+immediately after calling it can catch a mid-animation frame — `{behavior: 'instant'}` is
+what jumps synchronously.
 
-**Which scene is opaque** is driven by a single named CSS `view-timeline`
-(`--ph04-progress`, declared on `.ph-04-scroll`) with each scene claiming a different
-`animation-range` slice of it and sharing one crossfade `@keyframes` (opacity + an 8-16px
-`translateY` settle, per the brief's explicit "subtle transitions only" instruction) --
-still entirely CSS, no JS, no ScrollTrigger.
+**Header background**, same session: went through `#f1f2f5` → `#f7f8fa` (Sylvia: "背景颜色
+没改，我想变成浅色的背景") → `var(--paper)` (Sylvia: "背景颜色还是没改，我想要大背景的颜色" /
+"现在是淡蓝色" — the ask was never "lighter," it was "no tint at all, same as the page").
+Still `background`-solid (not transparent) — opacity is what the sticky mechanism needs to
+occlude scrolling content correctly, a visible colour difference was never load-bearing.
 
-**A real bug caught and fixed while tuning this, not a style choice**: a bare
-`view-timeline`'s 0%-100% (`cover`) spans from the well's leading edge touching the
-viewport's trailing edge to its trailing edge touching the viewport's leading edge --
-i.e. it includes the entry/exit padding before/after the stage is actually stuck, roughly
-a viewport-height on each side. A first attempt hand-tuned `animation-range` percentages
-to guess where the real "stuck window" fell inside that untrimmed range; verified live
-that the guess was wrong -- at 96% through the well, scene 3's computed `opacity` was
-correctly `1`, but its `getBoundingClientRect()` had gone negative: the stage had already
-released from sticky and scrolled away, so an "opaque" scene was rendering off-screen,
-behind the header. Fixed at the source instead of re-guessing percentages:
-`view-timeline-inset: calc(100svh - var(--ph-04-head-h)) 100svh` on `.ph-04-scroll` trims
-the timeline's own 0%/100% down to exactly the stage's real stuck window -- both inset
-values derived directly from the stage's own `top`/`height` formulas (not measured or
-guessed), so they self-correct for any viewport or header height. With the inset applied,
-`animation-range` could go back to plain thirds (`0% 38%` / `31% 69%` / `62% 100%`).
+Also this pass: the background band's `background`/padding moved from inside
+`@media (min-width: 1280px)` to the unconditional base rule — below that width the header
+had literally no background at all (not just subtle), which is what "变成和背景一样的颜色"
+was describing on a narrower window.
 
-**Fail-open fallback**, same policy as every other progressive enhancement on this page:
-below 1280px, without `prefers-reduced-motion: no-preference`, or in a browser without
-`animation-timeline` support (gated via `@supports (animation-timeline: view())`), NONE
-of the stage/overlay/timeline machinery applies -- `.ph-04-scene` falls all the way back
-to plain stacked block flow, the unconditional base state everything else only adds to.
-This had to be the fallback, not merely "no animation," because the overlay technique
-fundamentally requires the animation to tell three grid-cell-sharing scenes apart; leaving
-them all in place with no way to distinguish them would be unreadable, not just inert.
-
-**Two small decorative details lost their trigger and were fixed inline**: the needs-map's
-"knowledge gap" bubble emphasis and the Drying node's radius grow-in both used to key off
-`.is-visible` landing on the now-deleted per-scene `Reveal` wrapper. Rather than re-plumb
-a one-time reveal onto a subtree whose opacity the crossfade animation already owns, both
-just render in their finished state directly now (`.ph-latent { opacity: 1 }`, the circle
-`r: 15` unconditionally) -- they were always minor flourishes, not load-bearing.
-
-**A dev-environment red herring, called out so it isn't mistaken for a code bug later**:
-mid-debugging, `.ph-04-sticky-stage`'s `display: grid` and `.ph-04-scene`'s
-`grid-template-columns` appeared not to be applying at all (computed style showed the old
-single-column values) despite the source file being correct and `document.styleSheets`
-showing the right rule in the right cascade position. Root cause was Turbopack dev-server
-HMR serving two stale CSS chunks side by side; a full `location.reload()` (not just
-re-navigating) cleared it. Also confirmed live: `window.scrollTo()` respects this page's
-global `scroll-behavior: smooth`, so a script that reads scroll position or screenshots
-immediately after calling it can catch a mid-animation frame -- `{behavior: 'instant'}`
-is what actually jumps synchronously, which is what made the rest of this session's
-verification reliable.
-
-Verified live in the browser, scrolling with the actual mouse wheel (not scripted jumps,
-after the above finding): scene 1 appears alone in the fixed position below the header,
-crossfades cleanly into scene 2 in the exact same spot (both partially visible mid-
-transition, which is the correct crossfade behaviour, not a bug), then into scene 3, with
-no vertical push, no stale content lingering, and the section 04 -> 05 handoff still clean.
-
-**Small follow-up in the same pass, two rounds**: Sylvia, pasting the header's own
-rendered markup -- "背景颜色没改，我想变成浅色的背景" (the background colour hasn't
-changed, I want it to become a light-coloured background). Confirmed live first that the
-colour genuinely was applying (`getComputedStyle` read back the expected `#f1f2f5` before
-touching anything -- consistent with the Turbopack HMR staleness above being the likely
-reason it looked unchanged), then lightened it regardless since the ask was also a real
-preference, not only a bug report: `#f1f2f5` -> `#f7f8fa`, a shallower ~2% blend toward
-`--blue` instead of ~5%.
-
-That still wasn't it: "背景颜色还是没改，我想要大背景的颜色" / "现在是淡蓝色" (still hasn't
-changed, I want the SAME colour as the big/main background / it's currently pale blue) --
-making clear the ask was never "a lighter tint," it was "no tint at all." `background:
-var(--paper)` instead of any blue-blended hex value: the header band is now deliberately
-the exact same colour as the page (confirmed live, `getComputedStyle` read back
-`rgb(251, 251, 250)` after a hard reload, matching `--paper` exactly). Still `SOLID`, not
-transparent -- opacity is what the sticky mechanism actually needs to occlude scrolling
-scenes correctly, a visible colour difference was never load-bearing for that.
-
-### Post Harvest: section 04's sticky header could overlap section 05's own heading (this session)
-
-Flagged live by Sylvia, pasting the rendered `.ph-04-head` markup and asking "怎么下面的
-内容穿模了" (why is the content below poking through). Reproduced: scroll to roughly the
-middle of section 04's scrollytelling stage on a desktop viewport and both "[ FOCUS ]
-Finding the focus" (still pinned via `position: sticky; top: 0` on `.ph-04-head`) and
-"[ CHALLENGE ] Defining the challenge" (section 05's own heading) were visible on screen
-at once.
-
-Root cause, confirmed via live `getBoundingClientRect()` math, not guessed: `.ph-04-head`
-can only release once viewport-top passes `(its containing block's bottom - the header's
-own height)` -- that threshold is independent of viewport height. Section 05's own
-heading scrolling into view from the BOTTOM of the viewport is not independent of it
-though: it becomes visible once viewport-top passes `(section 05's top - viewport
-height)`. With only a ~48px gap between section 04's stage and section 05 (no deliberate
-buffer -- `.ph-04-zone:last-child { margin-bottom: 0 }` was written on purpose, to avoid
-trailing dead scroll space), any viewport taller than the header (177px, live-measured) hits the
-second threshold before the first, so section 05's heading was scrolling into view well
-before section 04's header had released. Confirmed live at a 652px-tall viewport: at
-scrollY 5850 both "Finding the focus" (still fully pinned at the viewport top) and
-"Defining the challenge" (already showing near the bottom of the same viewport) were on
-screen together -- a genuine overlap window of roughly 400-450px of scroll distance, not
-a one-frame flicker.
-
-Fixed with a buffer, not a JS unstick: `.ph-04-zone:last-child { margin-bottom: calc(100svh
-- var(--ph-04-head-h)) }`, gated the same `@media (min-width: 1280px)` block the sticky
-mechanism itself lives in (mobile never stickies this header at all, so needs no buffer).
-`--ph-04-head-h` is the SAME live-measured custom property (`head-height.tsx`'s
-`ResizeObserver`) `.ph-04-scene`'s own `top` already depends on a few lines up -- not a
-new measurement, reusing the one that already exists. The formula is exactly "the most
-additional scroll distance a viewport taller than the header could possibly need before
-the header's release point is reached," so it holds for any viewport height, not just the
-one this was tested at. Verified live after the fix: at the same scroll position that
-previously showed both headings, only section 04's is visible, and section 05's own
-heading only appears after the sticky header has fully scrolled away.
-
-**SUPERSEDED a few minutes later, same session -- see the next entry.** The buffer fixed
-the specific symptom reported (section 04's header vs. section 05's heading) but left the
-underlying coupling in place: the header and every scene still shared one sticky
-coordinate system. Sylvia reported a second, related overlap ("下面的文字和图片怎么直接
-出现了，还穿过了了focus的标题") minutes later, and on inspection this fix's own
-`.ph-04-zone:last-child` buffer had become dead weight -- the entry below removes it.
-
-### Post Harvest: section 04's header and its scroll scenes shared one sticky coordinate system -- restructured so they cannot overlap by construction (this session)
-
-Same session, minutes after the entry above. Sylvia reported a second overlap, this time
-between the header and a SCENE rather than the next section: "下面的文字和图片怎么直接出现
-了，还穿过了了focus的标题" (why did the text and image below just directly appear, and pass
-through the Focus title), then, once she had the exact structural ask ready, specified it
-directly rather than leaving it to guesswork: header and scene must be two structurally
-separate blocks that cannot occupy the same space "by construction," not by z-index or a
-tuned offset -- with an explicit ASCII diagram of the intended tree (header block, then a
-separate scroll-scene block below it).
-
-Root cause: `.ph-04-head` (`position: sticky; top: 0`) and every `.ph-04-scene` (also
-`position: sticky`) were positioned in the SAME coordinate system -- each scene's `top`
-was `calc(var(--ph-04-head-h) + (100svh - var(--ph-04-head-h)) / 2)`, i.e. "centred in
-whatever space is currently left below wherever the header happens to be." Two
-independently-timed sticky elements sharing one derived coordinate will drift out of sync
-on some viewport height; when they did, a scene rendered behind/through the still-pinned
-header band. The previous entry's buffer papered over one symptom of this (section 05's
-heading) without touching the actual coupling, which is why a second, different-shaped
-overlap surfaced right after.
-
-Fix, structural rather than a tighter offset:
-- `.ph-04-head` is now **plain block flow, not sticky at all** (`position` unset, no
-  `top`). It occupies its own space above the scroll scenes and scrolls away normally --
-  it has completely left the viewport before a scene's own sticky behaviour ever engages,
-  so the two literally cannot occupy the same screen space, independent of viewport
-  height or timing. `HeadHeightVar`/`head-height.tsx` (the `ResizeObserver` that measured
-  the header for the old coupled formula) is gone -- deleted, not left unused -- along
-  with `--ph-04-head-h` and the buffer from the previous entry, none of which anything
-  reads any more.
-- `.ph-04-scene` stays sticky, still bounded by its own `.ph-04-zone` parent (the sticky
-  containing block was always correct here -- a scene genuinely cannot render outside its
-  own zone's box). What changed is `top`: it was `top: 50svh; transform: translateY(-50%)`
-  in this fix's FIRST attempt (verified broken live -- see below), now a plain
-  `top: clamp(48px, 9vh, 110px)` with no accompanying transform.
-- **Why the first attempt (centring via `translateY(-50%)`) still failed, caught by
-  re-testing at the exact scroll position from the original report rather than assuming
-  the header-side fix alone was sufficient**: `transform` is a paint-time visual shift,
-  applied AFTER the browser has already resolved and clamped the sticky box to its
-  containing block. It is NOT itself subject to that clamp. So `translateY(-50%)` could
-  still slide a scene's rendered position up past its own zone's top edge -- exactly
-  where the header sits -- right as that zone's sticky window first engaged, which is the
-  identical "renders through the header" bug, just moved from the header side of the
-  coupling to the scene side of it. Removing the transform and using a plain `top` offset
-  instead has no such escape hatch: the sticky clamp is the ONLY thing positioning the
-  box, so it structurally cannot render above `.ph-04-zone`'s own top. Trades exact
-  vertical centring (each scene's height differs slightly) for that guarantee, which is
-  what was asked for ("the layout itself should prevent the header and scene from
-  occupying the same space," not a z-index trick).
-
-Verified live in the browser at the exact scroll position the original report was taken
-at: header and scene now render as two clearly separated blocks with a visible gap, in
-both directions -- scrolling INTO section 04 (header, then the PICS bag scene appears
-cleanly below it, not overlapping) and scrolling OUT into section 05 (no reprise of the
-first entry's overlap either, since a non-sticky header can never re-engage). `tsc
---noEmit` clean; no other file referenced the deleted component.
-
-**Follow-up, same session: Sylvia asked for a crossfade between scenes ("我想要 fade in
-和fade out 的animation，现在的不喜欢" -- didn't like the hard cut the sticky release/catch
-produced), then, separately, for the header back as a persistent band ("顶部那个，Finding
-the focus... 这个要一直在").** Two changes, the second directly reversing part of the
-structural fix above -- documented here rather than folded silently into the entry above,
-since the "why" for going plain-block-flow no longer fully applies once the header is
-sticky again and needs re-explaining.
-
-*Crossfade*: `.ph-04-zone` (the plain, normally-scrolling block a scene's sticky
-positioning lives inside -- its own movement through the viewport is simple to reason
-about, unlike a stuck element's) gets a CSS scroll-driven animation, not JS:
-`animation: ph-04-fade linear both; animation-timeline: view();`, with
-`@keyframes ph-04-fade { 0%,100% { opacity:0 } 20%,80% { opacity:1 } }` -- fades in over
-the first fifth of the zone's scroll-through, holds full opacity through the middle (the
-zone's own generous `min-height` is what gives that middle duration something to hold
-across), fades out over the last fifth, in both scroll directions since a view-timeline
-runs both ways. Gated behind `@supports (animation-timeline: view())` (Firefox doesn't
-support it as of this writing -- falls back to flat full opacity, not broken/invisible
-content) and `@media (prefers-reduced-motion: no-preference)` (scroll-driven opacity is
-still motion, same policy as every other animation on this page).
-
-*Header back to sticky*: reverted the "plain block flow" half of the previous entry --
-`.ph-04-head` is `position: sticky; top: 0` again, `head-height.tsx`/`HeadHeightVar`/
-`--ph-04-head-h` are all back (recreated, not un-deleted), and `.ph-04-zone:last-child`'s
-buffer is back too (needed again now that the header re-engages for the whole section).
-Critically, `.ph-04-scene`'s `top` did NOT revert to the original coupled formula that
-caused the very first bug in this thread (`calc(var(--ph-04-head-h) + (100svh -
-var(--ph-04-head-h)) / 2)` plus a centring `transform: translateY(-50%)`) -- it kept the
-lesson from the entry above: `top: calc(var(--ph-04-head-h) + 24px)`, still no transform.
-Since nothing here escapes the sticky containing-block clamp, the scene structurally
-cannot render above the header regardless of viewport height, same guarantee as before,
-just recombined with a sticky header instead of a non-sticky one. Verified live: header
-stays pinned and legible through all three scenes, the section 04 -> 05 handoff is still
-clean (buffer doing its job again), and the crossfade is visibly a fade, not a snap, in
-both scroll directions -- confirmed watching one scene's image visibly translucent while
-the next scene's content was already showing beneath the still-pinned header.
-
-**Follow-up, same session: "这个变成和背景一样的颜色" (this became the same colour as the
-background), pasting the header's own rendered markup.** Confirmed by reading the rule,
-not by reproducing the exact viewport: `.ph-04-head`'s grey band background (`#f1f2f5`)
-had only ever been set inside `@media (min-width: 1280px)` -- the base rule below that
-breakpoint carried no `background` at all, just `position: relative; z-index: 3;
-padding-bottom: 14px`, so on any window narrower than 1280px (this project's own mobile/
-tablet cutoff for section 04's sticky mechanism) the band was never merely subtle, it
-had no background whatsoever and sat flush against the plain page colour behind it --
-exactly "the same colour as the background." This gap predates every fix in this
-thread; it was never touched because every repro up to this point happened to be tested
-at a desktop width above 1280px. Fixed by moving `background` and the band's padding to
-the UNCONDITIONAL base `.ph-04-head` rule, so the visual band now renders identically at
-every width; only `position: sticky; top: 0` (the part that only makes sense once a
-per-scene sticky mechanism exists to hand off to, which mobile never runs) stays gated
-inside the 1280px media query. This session's `resize_window` tool calls did not actually
-change the tab's `window.innerWidth` at any point (a standing limitation noted earlier in
-this same file), so the narrow-viewport case itself was not directly screenshotted --
-verified by reading the resulting cascade instead (the background is now the first
-property `.ph-04-head` sets, unconditionally, with nothing later in the file overriding
-it back to none below 1280px), and the desktop case re-confirmed unaffected live.
-
-### Post Harvest: section 06 ("Developing with farmers") rebuilt against a reference mockup (this session)
-
+### Section 06 ("Developing with farmers") rebuilt against a reference mockup, then simplified twice (this session)
 `public/post-harvest/photo/"concept development reference.png"`, a mockup Sylvia supplied
-directly, with an explicit brief: keep the chapter nav and section header, but rework the
-DOM/CSS rather than adjust the existing dense grid/card structure. Files touched:
-`content.ts` (`concepts` export rewritten), `page.tsx` (`#concepts` markup replaced
-end-to-end), `post-harvest.css` (`.ph-06-lead`/`.ph-06-col`/`.ph-rounds-v2`/
-`.ph-eval-bar-v2`/`.ph-picked-note`/`.ph-conclusion` and the section's `data-picked`
-strip/animation rules removed; new `.ph-06-top`/`.ph-06-process`/`.ph-06-carousel`/
-`.ph-06-response`/`.ph-06-selected` rules added). The old two-column layout (tall portrait
-photo on the left, a rounds list, an annotation-code legend SVG, and a three-equal-card
-strip with a "picked" blue frame) is gone entirely -- still recoverable from git history if
-any of it turns out to be wanted back.
-
-Four beats now, matching the reference top to bottom: (1) a small wide fieldwork photo
-beside a connected first-evaluation / potential-bias / method-adjustment sequence (one
-argument, not three cards -- a shared top rule plus small `→` pseudo-elements between
-items, "potential bias" in the site's blue focus/finding colour); (2) a large centred
-carousel, the Drying Tower dominant at `flex-basis: 42%` between the Drying Table and
-Drying Box at `27%`, opacity/scale reduced on the two sides, the track deliberately wider
-than its own clipped box (`margin: 0 -9%` on the end items) so the side sketches bleed to
-the edge the way the reference does, arrows at both ends; (3) a compact
-`DRYING TABLE → CONSISTENT REDRAWING → DRYING TOWER` response line with `FIRST RESPONSE` /
-`SECOND RESPONSE` sub-labels; (4) the resolved `SELECTED DIRECTION` / `THE DRYING TOWER`
-statement with its own `02 / 03` index. The fieldwork photo is the same portrait asset the
-old layout ran full-height, not a new export -- re-framed wide here with
-`object-fit: cover; object-position: 50% 64%`, pushed down toward the hands and the sketch
-sheet rather than the shoulder and tablet above them. Copy for the three-step sequence and
-the selected-direction note came directly from the brief; the lead sentence's em dash was
-swapped for a comma to hold this file's own "no em dashes in visible strings" rule, and the
-three concept names were shortened to "The Drying Table" / "The Drying Tower" / "The Drying
-Box" to match the reference's captions (dropping "with a toolkit" from the first -- a naming
-choice, not a sourced claim, so no evidence tag was affected).
-
-Verified in-browser at a desktop viewport (this session's `resize_window` calls did not
-change the tab's actual `window.innerWidth` -- same tool limitation noted in the entry
-below -- so the sub-620px mobile stack and sub-900px photo/process stack were reasoned
-through against this file's existing breakpoint conventions but not screenshotted; flagged
-for a manual check same as that entry's tablet breakpoints).
-
-**Follow-up in the same session: the arrows didn't do anything, and the 3D tilt on the
-side concepts wasn't visible ("为什么现在那两个箭头无法被点击，然后图片也没有perspective").**
-Both were real gaps, not just a perception issue. The arrows were `<span aria-hidden>`,
-genuinely decorative -- reasoned at the time as fine since all three concepts were already
-on screen, but the reference's arrows implied interaction and there was no reason not to
-give them one. Pulled the carousel into a new client component (`concept-carousel.tsx`,
-`page.tsx` is a Server Component): `useState` tracks which option is centred, the two
-arrows rotate it, and all three `<li>`s stay mounted in fixed DOM order the whole render --
-only each one's `data-position` (`left`/`center`/`right`) changes, with CSS `order` moving
-it into its visual flex slot -- so cycling never remounts an `<Image>` and the swap
-transitions instead of jumping.
-
-The perspective gap was a real rendering issue: `.ph-06-carousel-frame` already carried
-`perspective`/`rotateY` (confirmed applied via a computed `matrix3d(...)` read in DevTools),
-but the concept webps are themselves near-white, so a rotated image had no contrast against
-the `--paper` (`#fbfbfa`) background behind it to read the tilt against -- the frame's own
-edge, not just the drawing, needed to be visible. Fixed by giving `.ph-06-carousel-frame` an
-actual white card surface (`background: #fff`) and a `box-shadow` (which paints on the
-transformed layer and correctly follows the rotated parallelogram, unlike the img's earlier
-`filter: drop-shadow`, which draws from pixel content and inherited the same low-contrast
-problem) -- confirmed visibly tilted afterward via a zoomed screenshot of one flanking
-card's edge. Angle raised 26deg -> 30deg alongside the fix. Both arrow clicks (forward and
-back, wrapping at both ends) verified live in the browser.
-
-**Second follow-up, same session: the click "鬼畜的跳一下" (a jarring snap on every click),
-still couldn't see the tilt, and a stray edge was cutting through the shadow
-("有个奇怪的边框截断了阴影部分").** All three were real, and the first two traced to the
-same root cause. That first fix still moved items between slots with flexbox `order`
-(transitioning `flex-basis` alongside it) -- `order` is not itself animatable, it swaps
-instantly, so every click snapped the row into its new arrangement a frame before the
-flex-basis/transform transition had anything to interpolate from. That reads exactly as a
-jump. Rebuilt again: every `.ph-06-carousel-item` is `position: absolute` inside the track
-now, and `data-position` only ever changes a `transform`/`opacity` pair -- both
-continuously animatable -- so cycling is a genuine slide with zero layout re-flow.
-
-The "still can't see it" and "stray border" complaints were two symptoms of the same
-oversized card: `.ph-06-carousel-item` had a forced `width: min(560px, 60%)`, far wider
-than the sketch's own ~5:4 aspect at any sane height, so the image (capped by
-`max-height`) rendered small and centred in a mostly-blank white card -- a big flat card
-barely reads as tilted even at a real angle, because most of what's rotating is empty
-space. Removed the forced width (an absolutely positioned grid shrinks to its content by
-default) so each card now hugs its own sketch tightly, and swapped the img's forced
-`width: 100%` for `width: auto; max-width: 100%` so it stops stretching to fill that
-oversized box. The stray border was `.ph-06-carousel-track`'s `overflow: hidden`: with
-that wide a card and a short (900px) `perspective`, the hard clip cut straight through
-each frame's own `box-shadow` at a dead-straight rectangular line, reading as an
-unintended frame sitting on top of the shadow rather than an edge crop. Removed --
-side cards now read as bleeding off-canvas because they sit mostly behind the dominant
-centre one (z-index), not because anything clips them. Angle brought back down from
-50deg/900px (a second attempt, tried and rejected in the same pass -- at the old oversized
-width it produced warped, not just tilted, geometry) to 34deg/1400px. Verified in-browser:
-both cards read as clearly tilted now, no stray edge on the shadow, and clicking either
-arrow (including the wrap-around at both ends) is a smooth slide with no snap.
-
-**Third follow-up, same session: "图片太小了，看不清" (the image is too small to read
-clearly).** Real regression from the second follow-up's own fix: shrinking
-`.ph-06-carousel-item` down to fit its content (to kill the oversized blank-card problem
-above) also shrank the ceiling the centred image could grow to -- `max-width` on the shared
-item class capped out at `min(480px, 46vw)` for every position, dominant or not, and the
-browser tab this was checked in happened to be a short window (639px tall), so the
-`vh`-based `max-height` clamps were also bottoming out. Gave the centre position its own,
-much larger cap (`max-width: min(820px, 68vw)` on `.ph-06-carousel-item[data-position=
-"center"]`, `max-height: clamp(280px, 52vh, 560px)` on its image, up from a shared
-`min(480px,46vw)`/`36vh`), and raised the px floors in both the track's height clamp and
-the side images' own `max-height` clamp so a short browser window doesn't silently
-re-shrink everything back down. Verified in-browser: the centre sketch is now clearly the
-largest, legible element in the row, with no overlap into the response line below it.
-
-**Fourth follow-up, same session: "现在这些草图下面太多没有用的内容了... 参考halogrip的
-[ 05 / CONCEPT EXPLORATION ]的结构，就是简单说一下每个concept的名字。然后当click到那个
-selected direction的时候别的草图消失下面还会有字说那是selected direction".** A structural
-ask, not another sizing pass. HALOGRIP already has exactly this pattern one route over
-(`app/work/halogrip/concept-carousel.tsx`): a deck where cycling to its last card fades
-the others out and swaps in a "SELECTED DIRECTION" callout, with one quiet name label
-under the deck the rest of the time -- not per-card labels, and not a permanent
-process-line/statement pair sitting under it regardless of which card is showing.
-
-Removed entirely: the `DRYING TABLE -> CONSISTENT REDRAWING -> DRYING TOWER` process line
-(`.ph-06-response`, `concepts.response` in content.ts) and the always-visible
-`SELECTED DIRECTION` block beneath the carousel (`.ph-06-selected`,
-`concepts.selected.name`/`.index`). In their place, one `.ph-06-carousel-copy` block
-rendered by `concept-carousel.tsx` itself, mirroring HALOGRIP's structure: plain state
-shows just the centred concept's name (`<h3>`) and an `NN / total` counter; nothing under
-each individual card. `concepts.options` in content.ts is now ordered table -> box ->
-tower (was table -> tower -> box) since the selected concept has to be last in the array
-for "reaching the end" to mean anything -- `concept-carousel.tsx` derives which position is
-"final" from `options[center].selected`, same as HALOGRIP derives it from
-`index === LAST`. On arrival at that final concept, `.ph-06-carousel-final` (a class the
-component adds to its own root) does two things: fades the two flanking cards to
-`opacity: 0` (they don't just settle into their usual dimmed slot, they disappear, per the
-brief) and swaps the copy block to `concepts.selected.eyebrow` ("Selected direction") plus
-`concepts.selected.note`, still passed down as props rather than hard-coded in the
-component -- content stays centralised in content.ts, only the reveal mechanics moved into
-the client component. Verified in-browser: cycling Table -> Box -> Tower shows a plain
-name+counter under each of the first two, and arriving at the Tower fades Table/Box out
-and reveals the selected-direction copy; cycling backward off the Tower brings the other
-two back and the copy reverts to plain.
-
-### Post Harvest: section 04's spatial composition rebuilt in two passes, then section 05's "define problem" area redesigned against a reference mockup (this session)
-
-Two separate asks on `/work/post-harvest`. Files touched: `app/work/post-harvest/page.tsx`,
-`content.ts`, `post-harvest.css`, plus one new client component
-(`requirement-lightbox.tsx`) -- no other route touched.
-
-**1. Section 04 ("Finding the focus") -- first pass rejected, second pass rebuilt the
-spatial system.** First pass (requested fixes: the eyebrow/title read as duplicated,
-`01`/`02`/`03` step numbers unwanted, the sticky visual "floated" relative to the text)
-only removed the step-index elements and switched the sticky visual's
-`justify-items: center` to `start` -- alignment-only. Rejected: "The previous change was
-too minimal... The section still feels like several small elements floating in a very
-large blank viewport." Root cause, found on the second pass: a single shared variable,
-`--ph-04-stage-h: calc(100svh - header-height)`, sized BOTH the text step's box and the
-sticky visual's box, so two or three lines of text sat `align-content: center`'d inside a
-box nearly a full viewport tall -- that centering-in-a-too-tall-box is what read as
-"floating." Fixed by decoupling into three purpose-built variables on `.ph-04-canvas`:
-`--ph-04-lead-gap` (`clamp(160px, 18svh, 210px)`, shared by the text column's `margin-top`
-and the sticky visual's `top` offset, so both open on the same screen baseline),
-`--ph-04-step-h` (`clamp(420px, 44svh, 560px)`, a much shorter floor, paired with
-`align-content: start` instead of `center` -- the actual fix), and `--ph-04-visual-h`
-(`clamp(560px, 62svh, 740px)`, independently larger so the visual reads more dominant).
-Text column moved from a `35%` share of the fluid canvas to a bounded
-`clamp(400px, 30vw, 460px)`; column gap widened to `clamp(60px, 6vw, 90px)`. A new
-`.ph-04-stage` wrapper (`max-width: 1450px`, centered) now wraps the header/lede/scroll
-stage inside `.ph-04-canvas`, deliberately capped narrower than `.ph-04-canvas`'s own
-1680px ceiling -- 1450px was chosen (not the first draft's 1600px) specifically so the cap
-has zero visible effect at 1440px (canvas already narrower there) but visibly centers the
-composition at 1728px, since those were the two widths asked for review. A thin
-`border-bottom: 1px solid var(--line)` was added under the sticky header as a structural
-anchor (no card/box). GSAP scroll-trigger mechanics, crossfades, and content were
-untouched throughout, per explicit instruction.
-
-**2. Two real bugs found and fixed alongside the layout work, both pre-dating this
-session.** (a) The "Finding the focus" eyebrow-plus-heading duplication the user flagged
-in Chinese ("甚至Finding the focus这个重复两次的标题也没有改善") wasn't a rendering bug --
-`content.ts`'s `sections` registry (driving the `[ LABEL ]` eyebrow) has its own documented
-rule that `label` must be a short noun distinct from `title` ("CHALLENGE" vs "Defining the
-challenge"), which every row honoured except section 04's, where both were literally
-"Finding the focus". Fixed by changing `label` to `"Focus"`. (b) The two large 04 diagrams
-(needs-map, maize-lifecycle) never displayed in full ("两张图片还是没一次显示全") --
-`post-harvest.css`'s sitewide `.ph-svg-body svg { min-width: 760px }` was never actually
-overridden for these two despite a comment claiming they were exempt (`width: 100%` in the
-armed breakpoint rule does not clear a separately-set `min-width`), so the floor was
-silently forcing a horizontal scrollbar. Fixed with two `min-width: 0` overrides, same
-technique already used for the section 05/09 checklist drawings.
-
-**3. Section 05 ("Defining the challenge") "define problem" area redesigned against
-`public/post-harvest/photo/define problem reference.png`, a mockup Sylvia supplied.**
-Four changes, all copy/structure given directly in the brief:
-- The three-threats-plus-a-narrower-Weevils-inset row (`.ph-threat-foot`, 3fr/1.15fr, a
-  `border-left` divider before Weevils) rebuilt as one `.ph-strip-4` (all four sharing the
-  exact same `.ph-strip-frame` markup -- Weevils' drawing just reads smaller inside an
-  identical frame, matching the scale difference its own caption states). Content.ts's
-  separate `weevil` object folded into the `threats` array as a fourth entry; its long
-  paragraph kept as an unwired `detail` field rather than deleted outright.
-- New `.ph-priorities` strip added directly under "What the design needed to do": four
-  columns (`DESIGN PRIORITY` mono label + a bold blue serif heading), same width/order as
-  the problem row above, thin `rgba(23,53,122,.28)` verticals between columns only. The
-  Chickens -> Keep animals out connection is carried entirely by shared column position,
-  no arrows or restated labels, per the brief.
-- Lower composition rebuilt as a 65/35 split (`.ph-context-split`, ≥1000px). Left:
-  "A WIDER DESIGN CONTEXT" + new copy ("intentions... rather than validated outcomes") +
-  the two existing farmer-figure illustrations enlarged from `clamp(120px,16vh,168px)` to
-  `clamp(150px,18vh,220px)` (there were two competing height rules at the same
-  specificity; both updated). Right: the requirement-list checklist demoted to a small,
-  capped-height (`clamp(160px, 15vw, 232px)`) preview that opens full-size in a new
-  lightbox (`requirement-lightbox.tsx`) on click -- `createPortal`-rendered onto
-  `document.body`, Escape/click-outside/body-scroll-lock, focus returned to the trigger on
-  close, same conventions as `handbook-reader.tsx`'s overlay but without that component's
-  multi-entrance bus (this lightbox has exactly one trigger, so a portal alone was enough).
-- Removed entirely: the "farmers carry ~15kg, 400kg harvest, dozens of trips" paragraph,
-  its bridge sentence, and the old "Carried by hand, and by wheelbarrow..." caption --
-  all implied the final concept addressed carrying/transport, which was never validated.
-  The requirement list's own content (the actual checklist items) was left untouched, only
-  how prominently it's presented changed.
-- One bug caught in browser testing before shipping: the lightbox's first close-button
-  design was `position: fixed; top: 20px; right: 20px`, which is the exact spot the site's
-  own persistent "Close project" pill (`.ph-back`) already occupies on every route -- the
-  two collided, with `.ph-back` painting on top regardless of z-index (different stacking
-  contexts). Fixed by moving Close into the dialog's own normal-flow layout (a bar directly
-  above the stage, right-aligned, same width as the card) instead of a second fixed
-  viewport-corner control.
-
-**Known limitation, disclosed to Sylvia rather than silently skipped:** the tablet
-(640-899px) 2x2 breakpoints for `.ph-strip-4`/`.ph-priorities` were written and reasoned
-through but not visually confirmed -- this session's browser tool's `resize_window` calls
-were not actually changing the tab's `window.innerWidth` (confirmed by reading it directly:
-stayed at 1536 regardless of the requested width), so narrow viewports could not be
-screenshotted. Flagged for a manual check.
-
-### Post Harvest: Section 02 rebuilt against a mockup, then a narrative phase rail added across the whole page (this session)
-
-Five separate asks, worked through in sequence on `/work/post-harvest`. Files touched
-throughout: `app/work/post-harvest/page.tsx`, `content.ts`, `post-harvest.css` -- no other
-route, and HALOGRIP untouched.
-
-**1. Section 02 ("Where this happened") rebuilt against `post-harvest-chapter-prototype
-.html` and a ChatGPT mockup image**, per Sylvia's brief: "one continuous narrative" instead
-of the old card grid. New structure, in `page.tsx`: chapter head -> location band (the
-two-stage `seme-locator.svg` beside the road photograph, its shared diagram card dropped
-so it sits directly on the page since the SVG's own background already matches `--paper`)
--> evidence rail (`up to 30%` / `122,000`, ranked not stacked, read on one horizontal
-strip) -> documentary pair (grain, then planting photos, roughly 7/5). All facts, photos,
-and captions preserved verbatim -- this was a layout pass, not a content rewrite. Old
-`.ph-v2-ctx`/`.ph-v2-stats`/`.ph-v2-mosaic` classes and their several scattered `@media`
-overrides (accumulated across earlier sessions) deleted outright rather than left dead.
-
-**2. Two refinements, requested after review:** the road photograph's height clamp shifted
-+75px across its whole curve (taller box, same width -- less vertical cropping, not more,
-fixing the person at its centre reading cut too tight); and a subtle cobalt connector line
-added from the locator's Seme marker to the road photo's left edge, fixed-pixel-positioned
-off the marker's known SVG coordinates (desktop only, ≥900px, where the two sit side by
-side).
-
-**3. "为什么这么糊啊" (why is it so blurry) -- traced to a bug, not the export.** The
-`road-to-seme-2000.webp` file itself was already one of Sylvia's own good re-exports (0.16
-B/px, in the same tier as her other good exports, confirmed by opening it directly). The
-`<Image sizes="...">` hint on it was `62vw`, which undershot the actual rendered column
-width by 5-10% at typical 1400-1600px desktop viewports -- Next served a smaller srcset
-candidate than the box needed, and the browser stretched it. Fixed to
-`sizes="(max-width: 899px) 92vw, min(1104px, 70vw)"`, computed against the location band's
-real column math (`--canvas` cap, map column's own 320px ceiling, the gap) rather than
-guessed. No original ARW exists in `design-source/kenya-photo-originals/` for this
-particular photo (only three unrelated RAWs plus one JPEG that turned out to be the
-grain-bowl photo) -- flagged to Sylvia rather than invented.
-
-**4. Header realigned to the location band's own grid, in two passes.** First pass gave
-the header its own 4fr/5fr column split at 75% width -- rejected ("现在...用了跟下面地图
-/道路组合不一样的列网格...感觉很散乱"), because it didn't share the map/road composition's
-actual columns. Second pass: header now reuses `.ph-v2-location`'s exact
-`grid-template-columns`/`column-gap`, no separate max-width, with the dateline pulled out
-of its old `.lede` wrapper so eyebrow+dateline share row 1 and title+paragraph share row 2
-(CSS grid rows are bands shared across columns, so pure `grid-row`/`grid-column`
-placement lines the two pairs up without touching DOM/mobile reading order). Verified with
-`getBoundingClientRect()`, not a screenshot guess: title/eyebrow left edge exactly equals
-the map's, dateline/paragraph left edge exactly equals the road photo's. A later, narrower
-ask (title needs to stay one line above 1200px) was solved with one scoped rule --
-`white-space: nowrap` + `max-width: none` on `#context .ph-v2-head h2` only above
-1200px -- letting the title's own text overflow into the column gap rather than widening
-the grid track itself (confirmed the overflow, ~26px, lands nowhere near the paragraph
-column's start).
-
-**5. Narrative phase rail added, the largest piece of this session.** Structural reference:
-`public/media/post-harvest-chapter-prototype.html`'s `.phase`/`.phase-rail` two-level
-sticky technique, reworked into Post Harvest's own visual system (no new colours, no
-copied HALOGRIP identity). Five semantic phases (Discover/Reframe/Develop/Deliver/Reflect,
-new `phases` array in `content.ts`) group the existing ten numbered sections -- section
-numbers, ids, and anchors untouched, `sections`/`chapterLabel()` untouched at first pass.
-Deliver is two physical wrappers, `ph-phase-deliver-dark` (Final Concept alone, rail
-inverted to ivory/white against `--blue`) and `ph-phase-deliver-light` (08-09, rail
-repeated dark-on-light, no hairline between the two halves since they're one phase, not
-two).
-
-**Section 04's animation was the explicit, highest-priority constraint** ("Do not modify
-the existing animation or scrolling behaviour inside Section 04"). `.ph-phase` is a bare
-`display: grid` container -- no `overflow`/`transform`/`filter`/`contain` -- so section
-04's own sticky elements (`.ph-04-head`, `.ph-04-visual`) keep resolving their containing
-blocks to their existing parents (`.ph-04-canvas`, `.ph-04-scroll`) exactly as before; its
-DOM in `page.tsx` and its CSS block are byte-for-byte unchanged. Verified in-browser after
-the wrap, not assumed: `data-active-step` still advances 0->1->2 on scroll, the sticky
-header and crossfading visual stage both still work, `getComputedStyle` confirms
-`.ph-04-head`/`.ph-04-visual` are both still `position: sticky`.
-
-**A real bug caught during that same verification, not by inspection alone:** the rail's
-outer span was written `grid-row: 1 / -1`, which only resolves against the grid's
-*explicit* row definition -- and `.ph-phase` never declares `grid-template-rows`, so `-1`
-was silently collapsing to the first implicit row. Measured: the Reframe phase's rail was
-2661px tall, exactly section 04's own height, not the ~4574px the whole two-section phase
-needed -- meaning the rail was releasing one section early on every multi-section phase.
-Fixed to `grid-row: 1 / span 99` (clamps safely to however many rows a phase actually has);
-re-verified every phase's rail height now matches its wrapper's height, and that only ever
-one rail is stuck at a time across phase boundaries (checked all six simultaneously via
-`getBoundingClientRect()`).
-
-**Then Sylvia flagged the result itself: "好多数字好奇怪"** (a lot of the numbers now look
-strange). Root cause, confirmed by reading the rendered CSS: the new phase number
-(`.ph-phase-no`, e.g. "02") and the existing section chapter label (`.ph-chapter-label`,
-e.g. "[ 04 / FINDING THE FOCUS ]") are byte-identical in font-family, font-size, and
-letter-spacing, differing only by colour -- so two independent counters (5 phases vs. 10
-sections) sitting close together read as one skipping sequence. Went through plan mode for
-this fix specifically (AskUserQuestion on three options -- Roman numerals / drop the phase
-number / push CSS differentiation harder -- was rejected outright by Sylvia in favour of
-her own direct answer): **kept the phase rail's numbers, dropped the number from the
-section chapter label instead.** `chapterLabel(id)` in `content.ts` now returns `s.label`
-alone (`"Context"`, not `"02 / Context"`); the `sections` array's own `n` field, `page.tsx`,
-and all of `post-harvest.css` (brackets/uppercasing already lived in CSS, not the string)
-are untouched. Verified via DOM text content, not a screenshot: every `.ph-chapter-label`
-across sections 02-10 now reads its bare label; hero's eyebrows, which reuse the same CSS
-class but never called `chapterLabel()`, are unaffected.
-
-**Deployment, mid-session:** `vercel --prod --yes` failed with "Not authorized" even though
-`vercel whoami` succeeded -- the local CLI token had gone stale for the deploy-scoped call
-specifically. Fixed with `vercel link --yes --project sylviaxie --scope
-portfolios-projects-5d8ea43e` (re-confirmed the existing link, same `projectId`/`orgId`,
-just refreshed the token), then `vercel --prod --yes` succeeded and aliased to
-https://sylviaxie.vercel.app. Separately, at Sylvia's request: `kenya-case-redesign` pushed
-to GitHub and merged into `main` (clean merge, no conflicts -- `main` didn't have the Post
-Harvest case study at all before this, and picked up one previously-unpushed HALOGRIP
-one-line commit from `main`'s own history along the way).
-
-Verified throughout with `npx tsc --noEmit` and `npx next build` (clean at every step) plus
-in-browser checks -- `getBoundingClientRect()`/`getComputedStyle()` calls on the actual
-rendered page rather than screenshots alone, since this session's screenshot tool was
-unreliable (intermittent blank captures, unrelated to any of the above).
-
-### CLAUDE.md brought up to date with Post Harvest (this session)
-
-CLAUDE.md still described the site as having "the first and only [project page] so far... 
-`/work/halogrip`" -- stale by several sessions' worth of Post Harvest work (all the entries
-below, plus everything before them). Updated:
-
-- **"What this project is"**: now lists both case studies, with Post Harvest's own voice
-  (Bodoni Moda/Geist, blue accent, 10 numbered chapters) named the same way HALOGRIP's is.
-- **Hard rule 1** (bespoke visual style per case study): extended to name Post Harvest, plus
-  an explicit carve-out for `.ph-shell` -- Sylvia asked for that one mechanism to mirror
-  HALOGRIP's `.shell` specifically, and future sessions should not read that as license to
-  unify anything else the pages share.
-- **New hard rule 7**: the three different Post Harvest container widths (`.ph-canvas`
-  1600px default, `.ph-shell` 1700px on 09/10 only, `.ph-04-canvas` 1680px on 04 only) and
-  why they're different, so a future session checks which class a section is actually on
-  before assuming `.ph-canvas` is "the" canvas -- this took several back-and-forth sessions
-  to work out and shouldn't need re-deriving.
-- **Structure reference**: added the full `app/work/post-harvest/` file list and
-  `public/post-harvest/`'s asset subfolders (parallel detail level to the existing HALOGRIP
-  entries), and `design-source/kenya-photo-originals/` alongside the HALOGRIP source folders
-  already documented there.
-- **Open items**: added Post Harvest's own open questions from its `TODO(sylvia)` comments
-  (Apollo's attribution, handbook delivery, the roof-drying photo, the round-one storage
-  sketch). Also corrected two stale bullets caught in the process: the "real thumbnail for
-  HALOGRIP" item was already resolved (confirmed the file exists on disk, the note just
-  never got removed) and the tags item now reflects that Post Harvest's card already has
-  real tags while HALOGRIP's still doesn't.
-
-Not touched: nothing about the actual site changed, and neither did anything already-correct
-in CLAUDE.md's Deployment section (this session's own Post Harvest work remains uncommitted
-locally, matching an earlier entry -- routine git status, not something to document here).
-
-### Post Harvest: measured against HALOGRIP directly, then a checklist bump + 10 onto `.ph-shell` (previous session)
-
-Sylvia asked for a same-viewport, code-untouched measurement of HALOGRIP #concepts (its own
-"[ 05 / CONCEPT EXPLORATION ]") against Post Harvest #status (09) before any further
-changes -- her own math (shell "about 90vw" x 75% figure = "only ~67.5vw") assumed the shell
-kept scaling as a flat percentage of viewport past where it's actually capped.
-
-**Measured both at the same 2560px logical viewport, `.ph-canvas`/`Reveal` fade-ins forced
-visible, nothing else touched:**
-
-| | HALOGRIP #concepts | Post Harvest #status (before this entry) |
-|---|---|---|
-| Shell width | 1700px (x=422-2122) | 1700px (x=422-2122) -- identical |
-| Primary visual | active concept card, 1110px | checklist figure, 1143px |
-| Primary visual, % viewport | 43.4vw | 44.6vw |
-| Primary visual, % of shell | 65.3% | 67.2% |
-| Title x | 506px = 19.8vw | 510px = 19.9vw |
-| Title font-size | 61px (`--fs-heading-lg`, capped) | 36px (`.ph-v2-head h2`, capped) |
-
-The width theory didn't survive contact with the numbers: the checklist was already
-proportionally ahead of HALOGRIP's own card, not behind it, in both metrics. What the
-comparison did prove: the two titles are both pinned at their own clamp's ceiling at this
-width, and those ceilings are 61px vs 36px -- a real, 1.7x gap. Reported both findings before
-changing anything, per the brief, rather than acting on the (disproven) width theory alone.
-
-**Adjusted anyway, per the two unconditional items in the brief:**
-
-- `.ph-scored-v2 .ph-fig-primary` 75% -> 80% -- not required by the measurement (67.2% was
-  already ahead of HALOGRIP's 65.3%), but moves it decisively rather than marginally past
-  HALOGRIP's own ratio. Verified: 1219px, still 0px scroll overflow in `.ph-svg-body`.
-- Section 10 moved onto `.ph-shell` (`.ph-10-photo-content` and the utility footer below it,
-  both together so they keep lining up with each other). This is what "cross-project
-  consistency has not yet been completed" concretely meant: 09 alone on `.ph-shell` while 10
-  stayed on the old `--canvas` (1600px) had them starting at x=422 vs x=472 -- a new 50px
-  seam between two adjacent sections that widening only 09 had introduced. Both now start at
-  x=422, matching 09 and HALOGRIP.
-
-**NOT touched: the title font-size gap.** It's real and measured, but `.ph-v2-head h2` is
-used by every section on the page, and CLAUDE.md's hard rule #1 is explicit that each case
-study keeps its own bespoke type voice on purpose (this is exactly the kind of value that
-rule exists to protect). Resizing it to chase HALOGRIP's 61px wasn't done without checking
-first -- flagged in chat instead of acted on silently.
-
-**Verified** in the browser: shell widths match HALOGRIP's 1700px exactly on both 09 and (now)
-10; checklist figure re-measured at 1219px / 80.0% of its shell's inner content width, zero
-scroll overflow; section 10's photo-content and footer both measure x=422/w=1700, matching
-09 and no longer offset from each other. Screenshotted both sections post-change -- no
-overflow, no distortion, checklist visibly larger, section 10's four blocks and footer now
-share one left edge. `npm run build` and `tsc --noEmit` clean.
-
-### Post Harvest 09: `.ph-shell`, HALOGRIP's own container pattern (previous session)
-
-Sylvia, resolving the tension flagged at the end of the previous entry: "这边宽度的规则你
-可以参考halogrip的" (for the width rules here, you can reference HALOGRIP's).
-
-Checked `app/work/halogrip/halogrip.css`'s actual live container: `.shell{width:min(100%,
-1700px);margin-inline:auto;padding-inline:var(--gutter)}` with `--gutter:clamp(22px,5.2vw,
-84px)`. Confirmed HALOGRIP's own shell has the identical ceiling shape 09's bespoke formula
-had -- past roughly 1876-1900px viewport its content flatlines around 1524-1532px and stops
-growing, same as any `min(fixed px, ...)` formula must. That settles the tension from last
-entry: this is the shared design language's accepted "capped reading width," not a defect
-unique to post-harvest's own formula, so matching HALOGRIP means matching its ceiling too --
-just at HALOGRIP's own, more generous number, and its simpler two-part mechanism (width cap
-and gutter computed separately, not baked into one `calc()`).
-
-**Found post-harvest already had a dormant copy of exactly this pattern.** `--shell:
-1960px`, `--shell-wide: 1800px`, `.ph-shell { width: 100%; max-width: var(--shell);
-margin-inline: auto; padding-inline: var(--gutter); }` and `.ph-shell-wide` were sitting in
-the file, structurally identical to HALOGRIP's `.shell`, but never referenced by any live
-element -- confirmed via grep across every `.tsx` file. Their only consumers were equally
-dead v1 selectors (`.ph-done`, `.ph-status*`, `.ph-return*`, `--edge`/`--edge-wide`), long
-superseded by `.ph-done-v2` etc. The file's own comment on `--shell` was already stale,
-still claiming "the hero is the only section still on `--shell-wide`" when the hero has
-read at `.ph-canvas.ph-hero-inner` for several sessions now.
-
-**Fix: revived `--shell` at HALOGRIP's own value (1960px -> 1700px) and wired `.ph-shell`
-onto section 09's three wrappers**, replacing `.ph-canvas.ph-09-canvas` entirely (not
-alongside `.ph-canvas` this time -- `.ph-shell` never needed the old formula's forced
-`padding-inline: 0` workaround, since it computes width and gutter separately instead of
-baking the gutter into one `calc()`). Also dropped the now-orphaned `.ph-v2-ink .ph-canvas
-{ padding-inline: 0 }` rule, which existed only to serve the old formula. Left `--gutter`
-itself untouched -- its one live consumer is the mobile `.ph-band` horizontal-scroll bleed,
-out of scope for this pass, and it was already close to HALOGRIP's own gutter numbers.
-
-Deliberately NOT touched: `.ph-04-canvas` (a categorically different layout -- 04's sticky
-two-column stage has its own carefully re-tuned legibility floor, not re-litigated this
-pass), the site-wide `--canvas` (1600px, 02/03/05/06/07/08/10 -- explicitly off-limits
-again this round), and section 10 (already fixed last entry via the `.ph-insight` nested
-`max-width`, unrelated to any canvas token).
-
-**Verified** in the browser: `--shell` computed to `1700px`, `.ph-shell`'s `max-width`
-matches, and at the one live width this session's environment actually rendered (1536px,
-below the 1700px cap) `.ph-shell` measured 1520.8px with 76.8px padding each side --
-correctly `width: 100%` before the cap engages, exactly as `.ph-canvas` already behaves the
-same way below its own cap elsewhere in this file. The checklist figure
-(`.ph-scored-v2 .ph-fig-primary`) measured 75.0% of the shell's inner content width (1025px
-of 1367px), still square in the requested 70-78% range -- the width is a percentage of the
-padded content box, so it automatically followed `.ph-shell` in without needing its own
-edit. Screenshotted before/after: the dark "completed" band and the checklist now run
-within ~77px of both viewport edges instead of sitting in a visibly narrower centred column.
-`resize_window` still didn't change this session's actual viewport (same limitation noted
-in both prior entries), so the >1700px capped state was verified by reading `.ph-shell`'s
-computed `max-width` and reasoning from `.ph-canvas`'s already-proven identical
-`width:100%;max-width:Xpx` mechanics, not by rendering a literal wide viewport directly.
-`npm run build` and `tsc --noEmit` clean.
-
-### Post Harvest 10: a real nested max-width, and 09's honest limit (previous session)
-
-Sylvia: the `--canvas` widening below "did not materially change the composition,"
-told me not to touch it again, and asked me to inspect actual bounding boxes in sections
-09 and 10 instead. Measured both in the browser rather than guessing -- they turned out to
-be two different situations.
-
-**Section 10 had a real bug, now fixed.** `.ph-insight` (each of the four reflection
-blocks) carried its own `max-width: 44ch` -- meant to keep the paragraph readable, but it
-capped the WHOLE block: numeral, heading, border-top rule and all. In the 2-column grid
-(`.ph-insights`, `1fr 1fr`), that left each block sitting flush left in a ~744px cell at
-only 467px wide, a ~277px dead gap to its neighbour beyond the deliberate `column-gap`. Not
-a canvas problem at all -- `.ph-insights` itself already measured the full padded canvas
-width before this fix. Moved the `44ch` cap off `.ph-insight` and onto just the two pieces
-of running prose inside it (`.ph-body`, `.next`) that actually needed it, plus a `30ch`
-safety cap on the heading (short enough it never actually binds). Verified: each block now
-measures 716px (its full grid cell), body text still wraps at 44ch (394px), and the visual
-difference is immediate -- screenshotted before and after, the four blocks now spread
-across the full width of the dusk photo instead of huddling left in each half.
-
-**Section 09 has no equivalent nested wrapper -- the canvas ceiling itself is the limit.**
-Measured `.ph-done-v2` (the dark "completed" band) and `.ph-why` (the "why these stayed
-open" two-column block): both measure EXACTLY the same x-bounds as `.ph-09-canvas` itself,
-pixel for pixel. There is nothing narrower to remove. The image column already measures
-38.3% of the canvas (inside the requested 36-40%), and at exactly a 2048px viewport
-`.ph-09-canvas`'s formula (`min(1560px, calc(100% - 96px))`) computes to x=244..1804 at
-76.2% of the viewport -- inside every range Sylvia specified (x=220-260 start, x=1780-1820
-end, 75-80% used). The 1560px figure was tuned to land exactly there. What it does not do
-is keep scaling past that: on a wider window (measured at this session's actual ~2560px
-test viewport) the same fixed 1560px reads as only 60.9% of the viewport, which is the
-"narrow tablet floating in a large screen" look Sylvia is describing. That is the
-`.ph-09-canvas`/`.ph-04-canvas` ceiling itself, not a bug in 09's internal grids -- and
-Sylvia's explicit instruction this round was not to touch the canvas again, so it was left
-alone pending her call on that specific tension. Reported plainly rather than guessing
-either direction.
-
-`npm run build` and `tsc --noEmit` clean. No canvas token touched.
-
-### Post Harvest: `--canvas` widened site-wide, 1480px -> 1600px (previous session)
-
-Sylvia, after the 09 fix above: "没有改善啊，大屏幕还是两边大量留白" (no improvement, large
-screens still have big margins on both sides). Diagnosed before changing anything, since
-"no improvement at all" (rather than "still a bit narrow") pointed at a few different
-possible causes -- confirmed by asking rather than guessing:
-
-- **Not a deploy/cache problem.** All of this project's work is uncommitted local changes
-  (`git status`) on `kenya-case-redesign`, itself 5 commits ahead of its own remote and
-  nowhere near `main`; nothing has been pushed or `vercel --prod`'d. If Sylvia had been
-  looking at the live site this would be the whole explanation. She confirmed she was on
-  `localhost:3000`, ruling this out.
-- **Not a 04/09 regression.** Measured both directly: still 1680px / 1560px, exactly as
-  the last two sessions left them.
-- **The real answer, confirmed by asking rather than assuming**: sections 02, 03, 05, 06,
-  07, 08 and 10 -- everything the 04/09 passes didn't touch -- were still reading at the
-  original shared `.ph-canvas` (`--canvas: 1480px`), which was never a bug, just this
-  project's original "editorial reading width" decision (see the file's own header
-  comment). Sylvia now wants that widened too, site-wide.
-
-Presented three ways to do it (one shared token vs. a `.ph-0X-canvas` per remaining
-section vs. one shared opt-in utility class) and she picked the simplest: **widen
-`--canvas` itself**, one line, so every section still using the plain `.ph-canvas` widens
-together. `--canvas: 1480px` -> `1600px` -- a round number between the two section-scoped
-values already validated (1560 for 09, 1680 for 04). `--canvas-pad` (side padding, already
-capped at 56px/side by ~1400px viewport) is untouched, so this only grows the content band,
-not the gutter, and mobile/tablet is unaffected by construction, not by a separate check.
-`.ph-04-canvas`/`.ph-09-canvas` both use literal pixel values in their own `calc()`s, never
-`var(--canvas)`, so this change and those two are fully independent -- confirmed unchanged
-in the browser after this edit.
-
-Updated the stale "1480px" mentions in nearby comments (the `--shell-wide` note, and the
-04/09 canvas blocks' own "every other section reads at 1480px" framing) to say clearly that
-`--canvas` was later widened and that those two sections' own numbers are independent of it,
-so a future reader doesn't take either old value at face value.
-
-**Verified** in the browser: all seven previously-untouched sections (`context`, `field`,
-`challenge`, `concepts`, `final-concept`, `mechanism`, `reflection`) now measure 1600px;
-04 and 09 unchanged at 1680px / 1560px; no page-level horizontal scroll. Spot-checked two
-of the more layout-heavy sections (05's photo-and-vignette-strip beat, 08's diagram pair +
-four-step row + ghosted-body pair) at the new width -- both simply gained more breathing
-room, no overflow, no broken grid, no distortion. `npm run build` and `tsc --noEmit` clean.
-
-### Post Harvest 09: the same wide-margin bug, in a different section (previous session)
-
-Sylvia, following straight on from the 04 container fix above: "The large-screen whitespace
-issue is still not fixed... the requirement-list graphic... heading, graphic, caption and
-bottom two-column explanation." That description doesn't match section 04 (no requirement
-list, no bottom two-column explanation there) -- it matches section **09** ("What we
-completed, and what remained open", `id="status"`), which the 04 fix never touched (it was
-explicitly scoped to 04 only, per that session's own brief: "Do not globally modify already-
-approved sections"). Confirmed in the browser before changing anything: 04's `.ph-04-canvas`
-was still 1680px as expected; 09's three `.ph-canvas` wrappers (heading / dark "completed"
-band / checklist+why+forward) were all still 1480px, exactly the shared, unmodified class.
-The other nested constraint asked about -- "around 1080px / 1200px" -- was
-`.ph-fig-primary { max-width: 1040px }`, wrapping the scored-checklist SVG specifically.
-
-**Fix.** New `.ph-canvas.ph-09-canvas` compound rule (`width: min(1560px, calc(100% - 96px));
-max-width: none; padding-inline: 0`), added ALONGSIDE `.ph-canvas` on all three of 09's
-wrappers rather than replacing the class, so `.ph-v2-ink .ph-canvas`'s existing
-`padding-inline: 0` (the dark band's own rule) keeps matching without needing to be
-duplicated for the new class too. Used `calc(100% - 96px)` rather than the `92vw` also
-offered: the two are equal at exactly 1200px and `92vw` gives less than the requested
-48px-per-side floor below that (40px at 1000px), while `calc(100% - 96px)` holds the floor
-at any width -- same reasoning as 04's `clamp(48px, 8vw, 160px)`, simplified since 09 has no
-equivalent need to keep shrinking past 1200px gracefully. The checklist figure's own
-`max-width: 1040px` is overridden to `width: 75%` (scoped to `.ph-scored-v2 .ph-fig-primary`,
-not the shared `.ph-fig-primary` class, which has no other caller right now but was left
-generic rather than repurposed) -- 75% of 1560px is 1170px, inside the requested 70-78%
-range, and it now scales with the canvas instead of stopping dead at 1040px. Paragraph text
-inside the wider two-column explanation needed no change: `.ph-body { max-width: var(
---measure) }` (58ch) already caps every paragraph in `.ph-why-say`/`.ph-why-limits`
-independently of their column's width.
-
-**Verified** in the browser: all three of 09's canvases measure 1560px; the checklist figure
-measures 1170px (75.0%) with zero scroll inside its plate; the heading, the dark band, the
-checklist+caption and the "why these remained open" two-column block share one left/right
-edge (screenshotted, visually confirmed). Section 04 reconfirmed unchanged at 1680px, and an
-unrelated section (`#context`) reconfirmed unchanged at 1480px -- this fix touched section 09
-only. `npm run build` and `tsc --noEmit` both clean. Same `resize_window` limitation as the
-04 session (this browser session's `innerWidth` does not respond to it): verified against one
-real wide render plus the formula's own arithmetic, not four independent live viewports.
-
-### Post Harvest 04: deterministic GSAP activation + a section-scoped wide container (previous session)
-
-Sylvia: "Fix the interaction and large-screen container of Section 04 only. Do not redesign
-its typography or content." Two problems, diagnosed before touching anything:
-
-**Problem 1, uncontrolled transitions.** `scroll-steps.tsx`'s single `IntersectionObserver`
-(`rootMargin: "-42% 0px -42% 0px"`, `threshold: [0, 0.25, 0.5, 0.75, 1]`) picked whichever
-step had the highest intersection RATIO -- intersecting area divided by the step's OWN
-area. That is not a fixed reading line: step 02 was one sentence, so it hit ratio 1 (and
-"won") the instant it was fully inside the band and lost again almost immediately, while
-three-paragraph step 01 kept "winning" over a much longer scroll distance purely because it
-had more area to intersect with. The steps' `.ph-04-step` rule itself had no `min-height` at
-all, so their real on-screen heights were whatever their own content happened to need.
-
-**Problem 2, wasted margins.** `page.tsx` wrapped section 04 in `.ph-canvas`
-(`max-width: var(--canvas)`, `--canvas: 1480px`) -- the same shared, fixed-width class every
-other section uses. `--canvas` does not grow past 1480px on any wider viewport, so at
-2048px the section still measured 1480px wide (confirmed in the browser), same as at
-1400px. `--shell-wide` (1800px) was considered as the "existing wide-container token" and
-rejected: it is dead CSS, unused anywhere in this file except its own declaration, and its
-comment scopes it to "hero and the blue chapter field" specifically.
-
-**Fix 1: GSAP ScrollTrigger, one trigger per step, a fixed reading line.**
-`start: "top 48%"` / `end: "bottom 48%"` -- the trigger is active exactly while a step's own
-[top, bottom] span contains the line at 48% of the viewport, in either scroll direction
-(`onToggle`), never area-ratio-based. `.ph-04-step` gets `min-height: 60svh` (a floor, so a
-step that genuinely needs more room can still grow) so all three steps -- 02 included -- get
-the same scroll interval; confirmed in the browser at `min-height:0` per step, all three
-measured exactly 763px tall (60svh of that viewport) before this, they were wildly uneven.
-No `pin`, no `scrub`, no scroll-snap: `ScrollTrigger` only reads position via `onToggle`, and
-the sticky visual is plain CSS `position: sticky`, unpinned, so it un-sticks naturally once
-the reader scrolls past the three steps' combined height.
-
-Hit one real bug building this: the first version created every `ScrollTrigger` in the SAME
-effect that calls `setArmed(true)`, which only *queues* the `ph-04-armed` class -- React had
-not yet committed the re-render that adds it (and with it, `.ph-04-step`'s `min-height:
-60svh`) by the time `ScrollTrigger.create` measured each step's `getBoundingClientRect()`. It
-read the pre-armed, un-grown height, so `end: "bottom 48%"` landed hundreds of pixels short
-of the step's real bottom edge and every step after the first became unreachable. Fixed by
-splitting into two effects: one sets `armed`, a second (`useEffect(..., [armed])`) creates
-the triggers, guaranteeing it runs after that class -- and the layout it drives -- has
-already committed. Also added `document.fonts.ready.then(() => ScrollTrigger.refresh())` as
-a safety net against next/font's `display: swap` still reflowing the page after that.
-
-**Fix 2: `.ph-04-canvas`, a new, section-scoped fluid container.**
-`width: min(1680px, calc(100% - clamp(48px, 8vw, 160px))); margin-inline: auto;`, applied
-only where `page.tsx` wraps `id="focus"`'s content -- every other section's `.ph-canvas`
-is untouched, confirmed unchanged (1480px) in the browser after this change. Grid split
-stayed `minmax(0, 35%) minmax(0, 65%)`, but the column *gap* had to change too: CSS Grid
-resolves percentage tracks against the full container width, not width-minus-gap, so
-whichever track is flexible enough absorbs the shortfall -- here the right (visual) column,
-which measured 61.2% instead of 65% at the old `column-gap: var(--pair)` (up to 64px).
-Given a dedicated, smaller `column-gap: clamp(24px, 2.4vw, 48px)` instead, it measures
-62-63% at every armed width. Net effect on the diagram itself: the needs-map plate went from
-a flat ~824px at every desktop width (the old `.ph-canvas` ceiling) to ~695px at the 1280px
-breakpoint scaling up to ~1003px once `.ph-04-canvas` hits its own 1680px ceiling -- no
-min-width floor was reintroduced (would still force a scrollbar at the narrow end of that
-range), but labels now render up to ~12.1px at the wide end, versus a flat ~9.9px before.
-
-**Verified** in the browser with real mouse-wheel scrolling (not `window.scrollTo` -- see
-below): `data-active-step` moves 0->1->2 and back correctly, each transition landing near
-the 48% line; the needs-map's `.ph-latent` emphasis and the maize-lifecycle Drying-node
-growth both fire at the right moments; the sticky visual stays in place across each step's
-full 60svh interval and un-sticks cleanly into section 05 with no dead space. `.ph-04-canvas`
-measured 1680px (its ceiling) at a 2560-logical-px window with `.ph-04-scroll` filling it
-exactly, left column 35.0% / right column 62.1%, zero horizontal scroll on the diagram
-plate or the page. Fallback re-confirmed by removing `.ph-04-armed` by hand (the identical
-code path a sub-1280px viewport or no-JS visitor takes): `display: block`, correct
-step/visual/step/visual/step/visual order, `.ph-04-step`'s `min-height` back to `0`.
-`npm run build` and `tsc --noEmit` both clean.
-
-Not independently verified: `resize_window` did not change this browser session's actual
-`innerWidth` (stuck reporting a 2560-logical-px window regardless of the size requested,
-same limitation noted in the previous session), so 1440/1920/2048/390 could not be checked
-as literal live viewports. 1680px-ceiling and 2048px-equivalent behaviour (`.ph-04-canvas`
-at its cap) *was* measured directly; 1440px and 390px behaviour is confirmed by the
-`min(1680px, calc(100% - clamp(48px, 8vw, 160px)))` formula's own arithmetic against the one
-verified data point, not a second live render. `prefers-reduced-motion: reduce` likewise
-wasn't emulated live; the CSS was written following this file's two existing precedents
-(`.ph-latent-in`'s guard, `.ph-07-cover-stack`'s) and the GSAP layer needed no reduced-motion
-branch at all, since it only ever writes `data-active-step` -- the crossfade it drives is a
-plain CSS `transition`, already gated by `@media (prefers-reduced-motion: reduce)`.
-`window.scrollTo()` calls from the browser automation tool were also found NOT to reliably
-fire the native `scroll` event `ScrollTrigger` listens for in this environment (confirmed by
-comparing `ScrollTrigger.getAll()[i].progress` against a manual `ScrollTrigger.update()`
-call) -- a tooling artifact, not a page bug; every activation check above used real
-mouse-wheel scroll events instead once this was found.
-
-### Post Harvest 04 rebuilt as a three-step scrollytelling sequence (previous session)
-
-Sylvia, after reviewing a three-state motion storyboard: revise section 04 so the heading
-appears once, then a left column advances through three steps (existing solution / latent
-need / the shift) while a right column is one sticky visual stage that crossfades between
-the PICS-bag photo, the needs map, and the maize-lifecycle drawing. Explicit constraints: no
-scroll-jacking/pinned timeline, 34-36%/64-66% column split, progressive enhancement (works
-fully with no JS and under `prefers-reduced-motion`), mobile disables sticky and stacks
-text→visual→text→visual→text→visual, section stays close to its previous height. Planned in
-plan mode (see the plan file's Section 04 revision) and approved before implementation.
-
-**Architecture.** `page.tsx` (a Server Component -- `InlineSvg` reads the diagram files from
-disk, which only works server-side) cannot pass a render-prop function to a Client Component
-across that boundary, only serialisable elements (`next build` caught this immediately:
-"Functions cannot be passed directly to Client Components"). So `scroll-steps.tsx`'s
-`ScrollSteps` takes plain `children`, and instead of cloning/toggling classes on them, it
-reflects "which step is active" as a `data-active-step="0|1|2"` attribute on its OWN wrapper.
-Every rule that needs to know the active step is a `.ph-04-armed[data-active-step="N"]
-<descendant>` CSS attribute selector, not JS-toggled classNames -- the six children (three
-`.ph-04-step`, three `.ph-04-visual`, source order text/visual/text/visual/text/visual) are
-static markup from the server.
-
-**Fail-open, same shape as `reveal.tsx`.** `ScrollSteps` starts unarmed; it only adds
-`ph-04-armed` after mounting, finding an `IntersectionObserver`, and finding at least one
-`.ph-04-step` child. Every sticky/grid/crossfade rule in `post-harvest.css` lives under
-`.ph-04-armed` *and* `@media (min-width: 1280px)` together, so: no JS -> plain `display:
-block` stack in source order (exactly the required mobile order, with zero extra code for
-mobile specifically); JS but narrow -> same stack; JS and wide -> the two-column grid. The
-three `.ph-04-visual`s share one grid cell (`grid-column: 2; grid-row: 1 / 4`) with
-`position: sticky`, which is what makes them overlap instead of stack; opacity + `visibility`
-(delayed 300ms on the way out, immediate on the way in, so the outgoing image stays in the
-accessibility tree only while still visibly fading) pick which one shows.
-
-**The 34/66 split collides with `--canvas`'s 1480px cap.** Measured in the browser: the right
-column's actual width is ~824px at *every* armed viewport from 1280px up to an ultrawide
-monitor, because `--canvas` never grows past 1480px regardless of window width. A first pass
-gave needs-map a 900px `min-width` floor (inherited from the previous non-scrollytelling
-layout) reasoning it would only rarely scroll; it scrolled permanently, 116px of hidden
-diagram at every width, which is exactly the "separate poster" feel the brief said to avoid.
-Fix: no floor at all for these two drawings now -- `width: 100%` lets them shrink to whatever
-the stage actually has. needs-map's smallest labels render at ~9.9px, a real step down from
-the site's usual 12px floor, but the section is finally shorter than one screen and never
-scrolls sideways.
-
-**Two "subtle emphasis" effects, both CSS-only, no SVG edits.** Step 02 active:
-`.ph-04-armed[data-active-step="1"] .ph-04-visual--needs .ph-latent { stroke-width: 2.6 }`
-thickens the two central bubbles (`DRYING PROCESS` / `KNOWLEDGE GAP`, the class already used
-by `.is-visible .ph-latent`'s one-time reveal animation elsewhere on the page) and dims every
-other solid bubble to 0.55 opacity, leaving the dashed EXPRESSED/LATENT set boundaries alone.
-Step 03 active: `circle[fill="#17357a"] { r: 15 }` grows the one filled Drying dot in
-maize-lifecycle (uniquely matched by its exact fill colour) over the hollow Storage node
-beside it. Both use SVG geometry properties (`r`, `stroke-width`) as CSS, which works because
-neither drawing sets these via an inline `style` attribute -- only presentation attributes,
-which any stylesheet rule outranks.
-
-**Verified** in the browser: heading renders once; `.ph-04-scroll` carries `ph-04-armed` and
-`data-active-step` moves 0->1->2 on scroll (confirmed by removing/restoring the `armed` class
-by hand, which reproduces the exact no-JS/narrow-viewport fallback -- correct interleaved
-order, `display: block`); needs-map plate measures 824px wide with 0px scroll overflow;
-`.ph-latent` emphasis and the Drying-node growth both render correctly at their respective
-active steps; section 04's total height (~1099px at a very tall test viewport, including the
-heading) stays in the same range as the previous three-beats layout. `npm run build` clean.
-Not separately verified in this pass: real `prefers-reduced-motion: reduce` emulation (the
-CSS was written and reviewed rule-by-rule for it, following the two existing precedents in
-this file at `.ph-latent-in`'s guard and `.ph-07-cover-stack`'s) and a real sub-1280px
-viewport (`resize_window` did not take effect in this browser session; the fallback was
-instead verified by removing the `armed` class directly, which exercises the identical CSS
-path a narrow viewport takes).
-
-### Post Harvest 04: the two diagrams were the same width, and that was the problem (previous session)
-
-Sylvia: "section 4 结构不协调分析一下原因" plus "这两张图是不是都有必要还有应该怎么摆放".
-
-**Diagnosis.** The previous pass had given both 04 drawings `max-width: none`, so `needs-map`
-(viewBox 1000x640, 1.56:1) and `maize-lifecycle` (1000x330, 3.03:1) ran the full 1368px canvas at
-identical width. Equal width on unequal aspect ratios produced a ~900px tall block followed by a
-~470px tall, mostly empty strip, and it erased a hierarchy the two figures genuinely have: the
-needs map *is* the section's finding, while the maize year carries one sentence. Two further
-causes, both in the code:
-
-- **A double frame.** Each drawing paints its own ground as `<rect fill="#fbfbfa">` — the page's
-  `--paper` — inside `.ph-svg-body`'s `#fff` plate, so a second, differently coloured rectangle
-  was drawn around every diagram, unlike the photographs beside them.
-- **Only this section scrolled.** The 1270px floor on both drawings meant an in-box horizontal
-  scrollbar on anything under ~1400px, an interaction that appears nowhere else on the page.
-
-**Fix.** The drawings were re-typeset rather than scaled up by their box, which is what let the
-widths come down: `needs-map`'s smallest labels 9.5/10 -> 10.5 (11 was tried and rejected —
-"transport-" already fills its r=30 bubble at 10.5), `maize-lifecycle`'s 9.5/10/10.5 ->
-12.5/13/13.5 with 30 units of empty viewBox height removed (330 -> 300). Then
-`.ph-04-finding` 1200px / floor 1130, `.ph-04-cycle` 1010px / floor 960 — the map stays the
-biggest thing in the section, the maize year is sized as the closing line it is. `.ph-svg-body`
-for both is now `background: var(--paper)`, matching each drawing's own ground.
-
-**And the band got its sentence.** The turn from the assigned brief to drying existed only as two
-annotations inside the SVG. It is now page copy (`focus.redirect` in `content.ts`) sitting beside
-the drawing in `.ph-04-redirect`, so the band's right end carries the conclusion instead of blank
-ground. The pair stacks below 1440px, because the drawing cannot go under 960px without breaking
-the 12px floor.
-
-**Second pass, same session: the needs map did not fit on a screen.** Sylvia: "图片也太大了",
-then "全屏都装不下". Measured, the finding figure was 835px tall against a 695px viewport. The
-governing dimension for this figure is height, not width — needs-map is a 0.59 aspect drawing, so
-every 100px of width costs ~59px of height — and nothing about the width rules had been thought
-about in those terms. Three changes, in order of how much height each bought:
-
-- **Width down to 1002px** (svg 960), which required another re-typeset: satellite labels 10.5 ->
-  12.5 and every other size up ~19%, six satellite bubbles grown r+3 so the larger words still fit,
-  "transport-"/"ation" re-broken as "trans-"/"port", and the TRANSPORTATION bubble r56 -> r63.
-- **The viewBox cropped to the drawing**, 0 0 1000 640 -> 14 10 1040 617. The first crop used a
-  bbox measured *before* the type went up and clipped "and what we found" off the right edge; the
-  1040 is the re-measured content width.
-- **The caption moved beside the plate** instead of under it (`.ph-04-finding` is now a two-column
-  grid above 1300px), which is the last ~65px.
-
-Net: 835px -> 611px tall, inside a 695px viewport, no in-box scroll, no label outside its bubble
-(checked programmatically against every circle), smallest label ~11.5px. The 12px floor is broken
-by half a pixel on six minor satellite words; that is the stated trade for a figure that can be
-seen at once.
-
-**Verified** at 1536px in the browser: finding 1200px wide / svg 1158 / no in-box scroll / smallest
-label 12.2px; cycle 1010 / svg 968 / no scroll / 12.1px; no page-level horizontal scroll; the plate
-no longer draws a second rectangle. `npm run build` clean. Below ~1240px both boxes still scroll
-rather than shrink — the same deliberate trade as before, but entered ~160px later for the map and
-~310px later for the maize year.
-
-### Post Harvest 04, and a diagram legibility floor that was silently broken everywhere
-
-**Section 04 was four bands on four different grids.** Sylvia: "感觉这个section 4 的排版信息不是
-很集中，这次的plan有改进这个排版的计划吗" — and the plan did not: it listed only "add the chapter
-label, emphasise the latent-need bubbles" for 04. Measured, the section ran 1368 / 651+651 indented
-20px / 1040 / 793+529, so nothing but x=0 was shared and one band sat 20px in from every other.
-Worse, the PICS-bag argument was split in half: the two paragraphs explaining why the farmers had
-stopped trusting the bags sat *below* the needs map, separated from the bag photo by the largest
-figure in the section.
-
-Rebuilt as three beats on one axis, moving copy rather than rewriting it:
-1. **The brief** — `.ph-bags` now carries the label, the bag text and both stranded paragraphs
-   beside the photo. The blue accent moved from a left border to a top rule, which is what removes
-   the 20px indent while keeping the colour.
-2. **The finding** — the needs map alone, full canvas width, nothing competing.
-3. **The redirect** — the maize year, full canvas width.
-
-All four blocks now measure L56 / R56 / w1368, with even 55px gaps.
-
-**The bigger find: `max-height` was making every diagram smaller, not smaller-boxed.**
-`.ph-v2 .ph-svg-body svg { max-height: 64vh }` does not shrink a replaced element with a viewBox
-— the drawing letterboxes inside the capped box. So a tall diagram rendered *smaller* while still
-occupying the full height, with dead margins either side. Measured on the needs map: a 1326px box
-containing a drawing scaled to 0.639, its in-bubble labels at **6.1px**, with ~340px of empty space
-on each flank. The 09 checklist was doing the same at 0.895 instead of 1.124. This is very likely
-the source of the "好多奇怪的留白" reported in earlier passes. SVGs are now excluded from the cap;
-width alone bounds them. Every drawing measures `slack=0` afterwards.
-
-**The 12px floor did not hold below 1536px.** The per-drawing minimum widths lived inside
-`@media (max-width: 767px)`, so between 768px and the design width there was no floor at all —
-measured at 1024px, five of seven drawings rendered their smallest labels at 8.1–11.2px. Four of
-the six selectors in that block (`.ph-needs`, `.ph-timeline`, `.ph-cycle`, `.ph-locator`) also
-matched nothing and never had. Rewritten onto the classes actually in use, unconditional, each
-value derived as `12px ÷ smallest declared label × viewBox width`.
-
-That change then exposed a second bug: a child `min-width` against a grid item's default
-`min-width: auto` pushed the box wider than the screen instead of scrolling inside it — at 430px
-the 03 timeline box was 780px and the 05 checklist 820px. Fixed with `min-width: 0; max-width: 100%`
-on `.ph-svg`.
-
-**Drawings re-typeset** so their smallest label clears 12px at the width they are actually shown:
-`sketch-legend` redrawn from an 800×66 strip (squeezed into a 420px flex slot, rendering 5.8px)
-to 600×76 at scale 1.0; `field-timeline` re-spaced and enlarged; `seme-locator`, `maize-lifecycle`
-and both requirement checklists rescaled. `needs-map` was left alone on purpose — its 9.5px labels
-are inside bubbles and already hand-hyphenated (`transport-/ation`, `INDEPEN-/DENCE`), so enlarging
-them would overflow the circles; widening the figure to the full canvas lifted them to 12.6px
-instead. The 09 checklist also had a pre-existing collision (`NOT EVALUATED` overlapping the longest
-row by 22px at its old size); its viewBox widened 888 → 960 to give the status tags their own gutter.
-
-**`inline-svg.tsx` now only caches in production.** The module-level `Map` survived file edits for
-the life of the dev server, so SVG changes did not appear until the module happened to recompile.
-
-**Verified.** `tsc --noEmit` clean. At 1536/1024/768/430: every drawing ≥12px, no DOM text under
-12px, no overflow or collisions inside any drawing, and the page never scrolls sideways at any width
-(only the diagram boxes do). Fail-open: server HTML carries 32 `ph-reveal` and zero `ph-reveal-armed`
-/ `is-visible` with no inline `opacity: 0`; from a top-of-page load all 32 arm, nothing is hidden
-above the fold at first paint, and a single jump to the bottom leaves nothing hidden. With
-`IntersectionObserver` stubbed to a no-op, all 32 blocks still resolved via the 1200ms failsafe.
-Anchor landings on `#status`, `#reflection` and `#final-concept` show their targets immediately.
-Headings: only 07 and 09 wrap to two lines now, 09 down from three.
-
-**One incident worth recording.** A `String.indexOf` anchor in a scripted edit returned `-1`, so a
-`slice(start, -1)` swallowed sections 05–10 of `page.tsx` (975 lines → 373). Recovered by pulling
-the complete pre-truncation source out of a Next dev sourcemap
-(`.next/dev/server/chunks/ssr/[root-of-the-server]__*.js.map`, `sections[].map.sourcesContent`),
-splicing the tail back on and re-applying the chapter-label and stagger edits. Guard every scripted
-replacement with an occurrence count before writing.
-
-### Post Harvest 02 locator: two separated panels, and the county was wrong (this session, follow-up)
-- Sylvia: "Remove the diagonal connector line completely—it looks like an accidental construction
-  line and does not communicate zooming. Rebuild the locator as two clearly separated sequential
-  panels [...] Connect the panels only with a small downward arrow or the words 'ZOOM IN'. Do not
-  overlap the maps and do not use cartographic projection lines. The reading order must be obvious
-  without the caption. Also verify whether the field site belongs to Kisumu County or Siaya County
-  before finalising the labels."
-- **The projection cone is gone.** The inset-plus-cone from the previous pass is replaced by two
-  framed panels, stacked, fully separated, sharing no edge: `01 / WESTERN KENYA` (a small centred
-  panel holding the whole country with the study region boxed in deep blue) and
-  `02 / SEME — FIELD SITE` (the full-width local map). The only mark crossing between them is a
-  centred "ZOOM IN" arrow standing in the gap, touching neither frame. Reading order now comes from
-  the numbered titles, not from geometry the reader has to decode.
-- **The field site is in KISUMU County, not Siaya — the booklet header is wrong.** Verified two
-  ways before the labels were finalised: (1) grid-sampling ~24,600 points inside the geoBoundaries
-  ADM2 "Seme" polygon and testing each against all 47 ADM1 counties puts **99.7% of its area in
-  Kisumu** (0.3% Siaya, 0.1% Vihiga — boundary-sampling noise); (2) Seme is one of Kisumu County's
-  seven constituencies, created in 2012, 268 sq km, pop. 121,667 — and 121,667/268 = 454, which is
-  exactly the "about 450 per square kilometre" already in `content.ts`. Siaya is the county
-  immediately west; the marker sits just across its boundary, which is why the earlier draft looked
-  odd with Siaya highlighted.
-  - Panel 02 now highlights and labels **KISUMU COUNTY**, and two strings in `content.ts` were
-    corrected: `context.dateline` ("Seme, Siaya County" -> "Seme, Kisumu County") and
-    `context.captions.locator`, which now also names Siaya as the neighbour so the booklet's own
-    wording still makes sense to anyone comparing the two. **Sylvia should confirm** — she was
-    there, and if the booklet's "Siaya" was deliberate (an older boundary, or a partner
-    organisation's framing) this is a one-line revert.
-- Other fixes in the same pass: Lake Victoria is clipped to Kenya in panel 01, so the Ugandan and
-  Tanzanian two thirds of the lake no longer trail off the country's west side as an unexplained
-  blob; the county label anchor is chosen by testing the label's *whole width* for "inside Kisumu
-  and clear of the lake" rather than by centroid, which had it straddling the shoreline; panel 01's
-  ground uses the same "outside Kenya" tone as panel 02, so the two panels read as one system.
-- Verified with `sharp` renders at review size and at the real 340px `.ph-v2-map` width (the
-  reading order and every label survive the small size), and with `npm run build`.
-
-### Post Harvest 02 locator map redrawn from real geodata as a two-level locator (this session, follow-up)
-- Sylvia, after the colour fix below: "Redesign the Section 02 map as a clear locator graphic, not
-  an extracted booklet diagram. The current image begins at an unfamiliar local scale, so readers
-  cannot identify Kenya, distinguish land from water, or understand the relationship between Siaya
-  County and Seme. [...] The map should communicate 'western Kenya, near Lake Victoria' within two
-  seconds. Do not enlarge the current map. Redraw and simplify its information hierarchy."
-- **The traced coastline is gone.** `public/post-harvest/diagram/seme-locator.svg` is now
-  *generated* by `scripts/build-seme-locator.mjs` from open geodata, so it is checkable and
-  re-runnable instead of being an eyeballed trace:
-  - Natural Earth 1:50m countries (public domain) — the Kenya silhouette in the inset,
-  - Natural Earth 1:10m lakes (public domain) — Lake Victoria's real shoreline,
-  - geoBoundaries gbOpen KEN ADM1 + ADM2 (public domain, RCMRD) — Siaya County, and the Seme
-    polygon whose centroid places the marker.
-  The script fetches once into `scripts/.cache/` (gitignored, ~9MB) and is the only thing that
-  should ever edit that SVG — hand-editing it will be overwritten on the next run.
-- **Two-level composition.** A small whole-of-Kenya inset at the top, the study region boxed in
-  deep blue, opening downward through a pale projection cone into the detail frame: Lake Victoria,
-  Siaya County, Seme. The reader starts from a country shape they can recognise, not from an
-  unlabelled shoreline. Header reads "Western Kenya / LAKE VICTORIA BASIN" so the two-second
-  message is carried by type as well as by geometry.
-- **Colour does one job each.** Deep blue `#17357a` is used *only* for the Seme marker, its label,
-  and the inset box + cone. Land is warm-neutral grey (`#e8e6e0` inside Kenya, `#f5f4f2` outside,
-  so the national border reads without being drawn or labelled), Siaya is one step darker
-  (`#dbd9d4`), and water is `#b9c4d2` — cooler *and* darker than every land tone, which is the
-  thing the previous version got backwards.
-- **Everything too small to read was cut.** "Winam Gulf", "Homa Bay" and the county dot are gone;
-  four labels remain (KENYA / Western Kenya / SIAYA COUNTY / Lake Victoria) plus "SEME — FIELD
-  SITE". Label positions are computed, not hand-placed: Siaya's is set from the county's
-  area-weighted centroid lifted into its northern half (its true centroid sits at almost exactly
-  Seme's latitude and would have collided with the marker), and the local extent is deliberately
-  off-centre east so the Seme label has room to run without being clipped.
-- **Two implementation notes.** (1) Kenya's landmass in the detail frame is the union of the 47
-  county polygons, not the 1:50m national outline — at this scale the coarse national polygon
-  leaves visible slivers of "not Kenya" along the lake shore; the counties are filled and never
-  stroked, plus a 2-unit stroke in the fill colour to close antialiasing seams between neighbours.
-  (2) `inline-svg.tsx` injects this file into the page's HTML, so off-screen geometry is pure page
-  weight: every ring is Sutherland-Hodgman clipped to the extent before simplification, which took
-  the output from 107KB to 18KB with no visible change.
-- **One thing to check, not a bug in the drawing.** geoBoundaries puts the Seme sub-county polygon
-  inside **Kisumu County**, not Siaya — its centroid (34.532, -0.071) resolves to Kisumu, and Seme
-  is one of Kisumu's sub-counties alongside Kisumu East/West/Central, Muhoroni, Nyando and Nyakach.
-  The marker is drawn at its true position, which puts it just across Siaya's eastern boundary. The
-  site copy still says Siaya in three places (`content.ts`: `dateline`, `captions.locator`, and the
-  booklet's own page header). Left alone pending Sylvia's call — she was there and the booklet may
-  be using an older or informal boundary.
-- Verified by rasterising the SVG with the project's own `sharp` at both review size and the real
-  340px `.ph-v2-map` display width, and with `npm run build`.
-
-### Post Harvest 02 locator map — water/land figure-ground inverted, so the lake read as a landmass (this session)
-- Sylvia: "这个图片是你做的吗，感觉湖水的部分太像陆地。让人看不懂"
-- She was right, and it was my drawing. `public/post-harvest/diagram/seme-locator.svg` (the
-  `.ph-v2-map` inline SVG in section 02) traces the Kenyan shore of Lake Victoria, and the single
-  filled path in it **is the water** — but it was filled `#e6ebf4` on a `#fbfbfa` background. Two
-  near-whites separated by one crisp outline: the eye takes the outlined shape as the figure and
-  the empty ground as background, i.e. exactly backwards. It looked like a country sitting on
-  blank paper.
-- **Fix is colour, not geometry** — the traced coastline `d` is untouched, so nothing about the
-  map's accuracy or the Seme pin position moved:
-  - background rect (the land) `#fbfbfa` -> `#f2f2f0` (the existing `--paper-sunk` value, so the
-    land stays on-palette — deliberately *not* a cartographic tan, per the palette note at the top
-    of `post-harvest.css`),
-  - water fill `#e6ebf4` -> `#a9c8e8`, coastline stroke `#9fb2d0` -> `#5f87b6`,
-  - hydronyms (Lake Victoria / Winam Gulf / Homa Bay) set in italic — the standard cartographic
-    signal for water — and darkened from `#9fb2d0` to `#375c8c` so they stay legible on the
-    stronger blue instead of dissolving into it.
-- **Two smaller corrections in the same pass.** "Home Bay" -> "Homa Bay" (misspelled). And the grey
-  dot next to "Siaya County" was removed: with no county boundary drawn anywhere on the map it
-  pointed at nothing, and read as a second location pin competing with Seme. It is now an
-  unadorned letterspaced area label, which is what it always actually was. `aria-label` updated to
-  say which tone is water and which is land.
-- Verified by rasterizing the SVG with the project's own `sharp` at 120 DPI and comparing before
-  and after.
-
-### Post Harvest 07 — the intro composition refined, previews left untouched (this session, follow-up)
-- Sylvia: the handbook preview structure now works; keep the "Inside the handbook / Browse all 53
-  pages ->" row and the two equal spreads exactly as they are. Refine only the introductory
-  composition above it: rename the title to "The Drying Tower Handbook" so the completed
-  deliverable is immediately clear; move "FINAL CONCEPT" above the title as an eyebrow, not
-  underneath; grow the cover about 30%; narrow the spec column and its divider lines, which
-  currently overwhelm the cover; compress the top composition vertically by about 100-140px so the
-  previews appear sooner; increase the contrast of captions and body copy on the blue background;
-  keep the 53-page link secondary and in its current position; do not redesign the previews again.
-- **Heading and eyebrow.** `finalConcept.heading` renamed "The Drying Tower" -> "The Drying Tower
-  Handbook" in content.ts (the concept keeps its own name, "The Drying Tower," everywhere else in
-  the section's body copy — only the heading changed, per the request). The eyebrow ("Final
-  Concept") moved out of `.lede` (where it rendered below the heading, inside the shared
-  `.ph-v2-head` grid every other section also uses) to a plain sibling `<p className="ph-lbl
-  ph-07-eyebrow">` rendered before `.ph-v2-head` — section 07's own markup only, so the eight other
-  sections that still put their label inside `.lede` are untouched.
-- **Cover +30%, spec column narrower — one change, not two.** `.ph-07-ident`'s cap went 300px ->
-  390px (exactly the requested 30%). Rather than relying on that cap alone against a wide grid
-  track, the row's ratio also moved from 3.4fr/8.6fr to 4.4fr/7.6fr (the same split already used by
-  `.ph-06-lead`, so it is not a new number invented for this one spot) — this makes the 390px cap
-  the reliably binding constraint across ordinary viewport widths, and shrinks the aside/spec
-  column's track from ~943px to ~833px, along with every divider line inside it (`.ph-annot`'s
-  `border-top` runs the column's full width). Verified the aside's rendered height is unaffected by
-  its own narrower track: its content (a lead paragraph and three short annotation rows) is already
-  width-capped by `--measure` well inside both the old and new track widths, so nothing re-wraps.
-- **100-140px turned out to need two passes, because the first pass was calibrated against the
-  wrong viewport.** Compressed five things: the section's top padding (split off from the shared
-  `padding-block` so only the top moved, not the section's closing rhythm), `.ph-07-lead`'s
-  margin-top, `.ph-07-inside`'s margin-top, the annotation list's row gap, and its inline top
-  margin. A first pass, measured live via a Chrome-bridge session whose reported `innerWidth`
-  turned out to be stale (2304px reported, 1536px actual — the same window-sizing flakiness noted
-  in the last two entries), read back a 105-107px delta and looked done. Re-measured with
-  `innerWidth`/`innerHeight` cross-checked in the same call as the delta (confirmed 1536x639, the
-  viewport this session's own screenshots have used throughout): the real delta was only 69px.
-  Tightened all five clamp ranges further and re-verified in the same confirmed viewport: 102px.
-  Method note for next time: when this bridge's window sizing has already misbehaved once in a
-  session, distrust its `innerWidth` on later calls too until it's re-confirmed in the same
-  execution as whatever is being measured, not assumed from an earlier resize call.
-- **Contrast was not re-touched.** `--on-blue-dim` was already bumped 0.62 -> 0.82 alpha in the
-  entry two below this one; re-verified live it still reads 0.82 on `.ph-cap` inside this section,
-  so the request was already satisfied and needed no further change here.
-- **The previews group is untouched, verified rather than assumed:** `.ph-07-inside`,
-  `.ph-07-inside-head`, `.ph-07-previews` and their children were not edited in this pass, and the
-  link's position (in the header row, opposite the "Inside the handbook" label) did not move.
-- Verified with `npx next build` (clean) and, live, in the confirmed 1536x639 viewport: eyebrow
-  renders above the heading (`getBoundingClientRect().top` compared), heading text reads "The
-  Drying Tower Handbook", cover renders at 390px, aside column at 833px, the intro-to-previews gap
-  measures 102px against a 69px baseline (both from the same script, same viewport), and the full
-  reader still opens on 01/07, crosses the tier to 08/53, and preserves scroll position (delta 0)
-  through Escape.
-
-### Post Harvest 07 — the boxed button folded into the previews' own header row (this session, follow-up)
-- Sylvia, on the boxed secondary button from the previous entry below: it is no longer too small,
-  but it floats alone in a large empty area, detached from both the previews and the conclusion,
-  and creates an unnecessary third composition. Remove the standalone CTA. Integrate the entry into
-  a header over the two previews ("INSIDE THE HANDBOOK" left, "Browse all 53 pages ->" right, a rule
-  beneath), previews directly below it. Style the link as a plain secondary text button, ~15-16px
-  semibold, hover underline or colour change, one line, not placed inside either image. After the
-  captions, 64-80px before the concluding statement, quote and status text aligned at the same top,
-  remove the large empty gap. Increase the contrast of the grey-blue captions and body text on the
-  navy background. Preserve the 53-page reader and its functionality.
-- **Third shape for this control in two sessions, and the previous entry's own reasoning explains
-  why it kept moving.** A full-width "paper on blue" band solved "four entrances, none primary" but
-  became the section's dominant element once the reader was reclassified as optional. A small
-  bordered box fixed the size but had nowhere to belong — it was not part of the previews, not part
-  of the conclusion, just adrift between them. It is now `.ph-hb-textlink`: no box, sized to its own
-  label, living inside `.ph-07-inside-head` beside the label "Inside the handbook" (new copy,
-  `finalConcept.previewsLabel`) so "optional access" reads as one property of the previews group
-  rather than a destination in its own right. `HandbookOpen`'s props collapsed from `{title, sub}`
-  to a single `{label}` to match — one line only, per the request, not the two-line copy from
-  the box version.
-- **The 64-80px gap and the top-alignment were the same root cause: `.ph-07-close`'s two children
-  had inconsistent spacing baked in.** \`.ph-status-line\` carried its own \`margin-top: var(--block-y)\`
-  (up to 60px) plus a \`border-top\` and \`padding-top\`, meant for contexts where it stands alone; paired
-  against \`.ph-handbook-quote\` (plain, no top offset) in a two-column grid with \`align-items: start\`,
-  that extra box-model pushed the status text below the quote's top edge despite the grid aligning
-  both columns to the same start line. Zeroed all three properties in the \`.ph-07-close\` scope.
-  Separately, \`.ph-07-close\`'s own \`margin-top\` was the generic \`--beat-y\` token (which the removed
-  CTA had *also* carried on top of, stacking two beats of near-empty canvas around a small button);
-  replaced with an explicit \`clamp(64px, 6vw, 80px)\` matching the literal ask. Verified live: quote
-  and status \`getBoundingClientRect().top\` both read 345px (delta 0), gap from the previews' bottom
-  edge to \`.ph-07-close\`'s top measured 80px.
-- **Contrast: one token, \`--on-blue-dim\`, from 0.62 to 0.82 alpha.** It is the sole color behind
-  every caption, body paragraph, annotation label and the handbook quote's attribution on the
-  section's navy field (\`.ph-v2-blue .ph-cap\`, \`.ph-body\`, \`.ph-annot .k\`, \`.ph-status-line span\`,
-  etc.) — bumping it fixed all of them from one place rather than hunting each rule down. Computed
-  against \`--blue\` (#17357a): 0.62 alpha blended to roughly 5:1, past the WCAG AA floor (4.5:1) on
-  paper but reading as flat grey-on-navy in the screenshot Sylvia was looking at; 0.82 blends to
-  roughly 7.6:1, near AAA, while staying visibly dimmer than full \`--on-blue\` (headings, emphasis)
-  so the two-tier hierarchy is still legible. \`--on-blue-line\` (borders, 0.28 alpha) was left alone —
-  the request was about text, not rules.
-- Preview images were already non-clickable (confirmed again, zero clickable elements inside
-  \`.ph-07-previews\`) and the reader's scroll-preservation fix (\`{ preventScroll: true }\` on the
-  returned focus, from the previous entry) needed no change — verified again with the new trigger
-  element: scrollY delta 0 across both close paths (the Close button, Escape) with the link as the
-  origin instead of the removed box.
-- Verified with \`npx next build\` (clean) and, live: the header row renders exactly as requested
-  (label left, link right, rule beneath, previews directly under it); the link is 15px/600, single
-  line "Browse all 53 pages ->", \`cursor: pointer\`, underlines on hover (zoomed screenshot); clicking
-  it opens the reader on 01/07 and the full 53-page walk (end of overview -> cross the tier -> End)
-  reproduces the same counts as every previous pass; the old \`.ph-hb-secondary\` class matches zero
-  elements anywhere in the section.
-
-### Post Harvest 07 — the entrance to the reader demoted from a dominant band to a secondary button (this session)
-- Sylvia: the 53-page reader is an optional deep dive, not the primary reading path, and opening it
-  interrupts the case-study flow — so the entry should be clear but visually secondary. Keep the two
-  large interior previews. Replace the image-embedded entrances (there were none left to embed by
-  this point; read as confirming the full-width band from the previous session had also become too
-  dominant) with one secondary outline button: "Browse the full handbook" / "53 pages · Opens in
-  full-screen reader ->", placed beneath the previews, 14-16px label, ~44-48px control height,
-  clearly bordered, pointer cursor, obvious hover, opens the reader at the cover. Do not make the
-  preview images clickable. Preserve scroll position on close. Hierarchy: (1) handbook as final
-  deliverable, (2) two representative previews, (3) optional access to all 53 pages.
-- **The full-width "paper on blue" band from the previous session was itself the problem now.** It
-  was built to solve "the page has four entrances and none look primary" — correct at the time — but
-  at full canvas width with a 21-32px serif title it became the section's dominant element, which is
-  wrong once the reader is reclassified as optional rather than the natural next step. Demoted to
-  \`.ph-hb-secondary\`: sized to its own content (\`inline-flex\`, not \`width: 100%\`), outline instead
-  of a solid fill, sans-serif label at 15px/13px instead of a 21-32px serif headline, hover firms the
-  border and adds a faint tint instead of inverting paper-to-ink. Measured live at 290 x 47px, inside
-  the requested ~44-48px band.
-- **The arrow moved from the title to the subtitle**, because the requested copy puts it there
-  ("... Opens in full-screen reader ->") rather than after the title as the previous band did. Copy
-  stays in \`finalConcept.handbookCta\` (content.ts), page count still interpolated from
-  \`HANDBOOK_TOTAL\` so the button's promise cannot drift from the reader's actual page count.
-- **Scroll preservation: one line, \`{ preventScroll: true }\` on the returned focus.** The button
-  sits mid-page, under the two previews, so a plain \`.focus()\` on close scrolls the trigger into view
-  if the browser considers it not fully visible — the classic modal-close scroll-jump. Nothing else
-  needed fixing: the overlay is \`position: fixed\` and \`overflow: hidden\` on body only blocks
-  scrolling, it does not move the stored offset, so the underlying page never actually scrolled while
-  the reader was open. Verified live, scrollY before vs. after across all three close paths (Escape,
-  the Close button, a backdrop click): delta 0 in every case.
-- Preview images were already non-clickable plain \`<Image>\`s from the previous session (that
-  session's own "one entrance" pass had already pulled the pills off the spreads and onto the band) —
-  confirmed live rather than assumed: zero clickable elements inside \`.ph-07-previews\`.
-- Verified with \`npx next build\` (clean) and, live: the button's rect (290 x 47px), its two-line
-  text matches the requested copy exactly, \`cursor: pointer\`, the hover tint is visible on a zoomed
-  screenshot, clicking it opens the reader on 01/07, and the full 53-page walk (open -> end of
-  overview -> cross the tier -> End -> Home -> Escape) reproduces the same counts and disabled states
-  as every previous pass.
-
-### Post Harvest 07 — previewing and reading split into separate affordances (this session)
-- Sylvia, after the reader shipped: keep two large interior previews (one construction-step spread,
-  one materials/cut-list spread) side by side at equal weight, capped near 55-60vh, with short
-  captions; strip the small buttons out of the images and give each preview no reader entrance of
-  its own; add one unmistakable full-width CTA ("OPEN THE COMPLETE HANDBOOK ->" / "Browse all 53
-  pages . Jump between chapters . Full-screen reader"), the whole band clickable with a clear
-  border or paper background, pointer cursor and an obvious hover state, opening the reader at the
-  cover; keep the cover itself as a smaller publication identifier near the intro; preserve the
-  53-page reader exactly.
-- **The section now says three things, each with exactly one job.** The cover (small, beside the
-  intro copy) says what the publication IS. The two interior spreads (large, equal columns) say
-  what is INSIDE it — a construction step and the Drying Tower cut list, chosen because they show
-  actual content rather than the cover, which shows nothing about the interior. The CTA band is the
-  only thing that OPENS anything. Previously every one of the three plates carried its own pill, so
-  the page had four entrances and none of them read as the main one.
-- `HandbookPlate` (a sheet plus an absolutely-positioned button pill) is gone from
-  handbook-reader.tsx. In its place, `HandbookOpen` renders one `<button>` end to end — title,
-  arrow and subtitle all inside the hit area, not a link with a separate clickable region inside
-  it. It calls the same `openHandbook()` bus the old pills used, landing on `HANDBOOK_PLATE_PAGE
-  .cover`, so the reader itself did not change at all.
-- **Copy lives in content.ts, not hand-typed in the CTA.** `finalConcept.handbookCta` builds its
-  subtitle from `HANDBOOK_TOTAL` (imported from handbook-pages.ts) rather than a literal "53", so
-  the promise on the button cannot drift from the reader's actual page count if pages are ever
-  added or removed.
-- **The cover shrunk from the section's dominant to an identifier.** `.ph-07-lead" flipped from a
-  7fr/5fr split (cover leading) to 3.4fr/8.6fr (copy leading, cover capped at 300px) because it is
-  no longer the way in — it does not need the visual weight that implied.
-- **The 55-60vh cap on the previews had to be spelled as a width, not a height, or it deadlocks.**
-  The obvious rule, `width: auto; max-height: 58vh`, means the image has 0x0 intrinsic size before
-  it loads, so the grid row it sits in collapses to 0px, so the image never scrolls into view, so
-  `next/image`'s lazy loading never fires and it never loads at all — confirmed live, both preview
-  images stuck at `naturalWidth/Height: 0` and the wrapping grid measured 86px tall instead of
-  roughly 350-400px. Fixed by keeping `width: 100%` (so next/image can reserve the box from the
-  width/height attributes it already emits) and capping the wrapper's `max-width` at
-  `calc(58vh * 1.42)`, the scans' own aspect ratio, which bounds the height without a
-  `max-height` anywhere. Verified after the fix: both images loaded (706x490 and 706x499 natural)
-  at 342-349px tall in a 639px-tall viewport, about 54-55vh.
-- Verified with `npx next build` (clean, twice — once before finding the deadlock, once after)
-  and, live: both preview images decode and size correctly; the CTA band is a `<button>` with
-  `cursor: pointer`, inverts paper-to-ink on hover, and opens the reader on 01/07; the full
-  53-page walk (band -> end of overview -> cross the tier -> End -> Home -> Escape) reproduces the
-  same counts and disabled states as the previous session's pass; zero elements matching the old
-  `.ph-hb-plate`, `.ph-hb-open` or `.ph-hb-cta` classes remain anywhere in the section.
-- Not verified by eye: a narrow-viewport screenshot. The browser bridge's window resize did not
-  take effect this session (still reported 1536x639 after a resize call asked for 390x844) — the
-  same flakiness noted in the previous entry. Did not fight it a second time; instead confirmed the
-  mobile rule directly in the stylesheet (`.ph-07-previews` is mobile-first `1fr`, only becoming
-  `1fr 1fr` at `min-width: 900px`, and `.ph-hb-band` is unconditionally `width: 100%`), which is
-  the same code path the verified desktop screenshot already exercised. **Worth one human look on
-  an actual narrow window.**
-
-### Post Harvest 07 — the construction handbook is readable end to end, not three plates of it (this session)
-- Sylvia: "你说能把那个handbook变成就是可翻阅的，会不会花很多token" then "好，就放section07", and on scope,
-  "分两层".
-- **Corrected mid-task: the handbook is 53 sheets, not 7.** The first estimate came off the seven
-  probe renders already sitting in `scratch/handbook-probe/` (p054-p060), which were only the
-  slice a previous session cut the cover and cut-list plates from. Scanned the report PDF page by
-  page instead: the handbook is the final appendix, PDF p.54 to p.106, and it does not stop at the
-  cut lists. Chapter starts were read off the section title pages that still carry live text —
-  "Black Box" (p.61), "Drying Tower" (p.76), "Metal shelves" (p.102), "How to use" (p.104).
-- **Rendering: a mode, not 53 JOBS rows.** `scripts/convert-pdf-pages.mjs --handbook` renders
-  p.54-106 to `public/post-harvest/handbook/pages/handbook-NN-{1600,900}.webp`, numbered by the
-  handbook's own 1-based count. 106 files, 6.4 MB, all 53 pages uniform at 842 x 595 pt. Verified
-  live: every one of the 106 files returns 200.
-- **Two tiers, per Sylvia.** The reader opens on the 7-page overview (cover, what it is, the
-  principle, tools, raw materials, both cut lists). "View all 53 pages" reveals the 46 assembly
-  sheets, and Next on sheet 07 does the same thing rather than dead-ending on a disabled button.
-  Opening on a plate past the overview (the Step 1 spread is sheet 24) implies the full set.
-- **Section 07's three plates are unchanged as pictures; each is now an entry point.** Which sheet
-  each one shows was matched against the rendered sequence pixel by pixel rather than guessed:
-  cover -> 01, tools -> 04 and cut list -> 07 are exact, and the two plates cropped for the page
-  (`handbook-step`, `handbook-howto`, both 1.440 against the sheets' 1.413) matched 24 and 52.
-- **The overlay is mounted at `.ph-root` level, NOT inside `#final-concept`, and that is
-  load-bearing.** `position: fixed` escapes 07's layout but not 07's cascade: mounted inside the
-  section it picked up the page's single-class image primitives and the sheet was capped at 511px
-  (54vh) inside a 663px stage. Outside every section it still gets the route's font variables and
-  colour tokens. Its plates reach it through a module-level bus in `handbook-reader.tsx`, so where
-  it sits in the tree does not matter to them. The sheet rules are two classes deep as well.
-- **The sheet then overflowed the stage anyway, for a second and unrelated reason.** A percentage
-  `max-height` on a grid item resolves against its grid area; when the row is content-sized the
-  value is cyclic and the browser drops it silently, so `max-height: 100%` did nothing and a
-  1132px scan ran under the footer. Fixed by making every row in the chain definite:
-  `minmax(0, 1fr)` on the stage row, `align-items: stretch`, flex inside the figure. Measured
-  after: sheet 663px in a 663px stage, bottom edge 11px clear of the footer.
-- `background: #fff` came off the sheet image. The rendered pages are white to the edge already
-  (the rasteriser fills white before drawing), so it was redundant, and without it the drop shadow
-  hugs the paper instead of a letterbox.
-- MOTION IS OFF still holds (reveal.tsx): no page-turn, no fade between sheets, no transform on
-  open. A sheet swaps on the frame the button is pressed. The only transitions are hover/focus
-  states on the controls.
-- Verified with `npx next build` (clean) and, in the live page, every control driven through the
-  DOM: the overview stops at 07/07 with Next relabelled "Show the assembly sheets"; crossing lands
-  on 08/53 and reveals the chapter nav; ArrowLeft/Right, Home and End all move; the chapter jump
-  lands on 51 with "How to use" marked current; Next is disabled at 53 and Prev at 01; the scroll
-  lock sets and releases; Escape, the close button and a backdrop click all close. All three plates
-  open on their own sheet.
-- Screenshot evidence is thinner than usual: the browser bridge started capturing a different
-  window from the one it was reporting viewport metrics for (1536x639 against 1920x799) and
-  several captures came back blank while the DOM was demonstrably fine. One good capture shows the
-  reader's chrome and the fitted sheet box. The image itself was confirmed decoding by
-  `naturalWidth` (1180 x 834 served for the cover), not by eye. **Worth one human look.**
-- Flagged, not changed: `handbook-tools-{1200,700}.webp` and `handbook-howto-{1600,900}.webp` are
-  referenced by nothing. They predate this session; the reader covers both sheets now (04 and 52),
-  so they can go whenever Sylvia wants them gone.
-
-### Post Harvest 06 / 07 — the evaluation photo goes back to portrait, and 07's white band and unreadable handbook pages are fixed (this session)
-- Sylvia: "你为什么会选择让section6的所有照片做横屏，我明明觉得它们都适合做竖屏。section 7 的那个长图是什么意思，下面的字也看不清。"
-- **06 was landscape for a layout reason, not a photographic one — reverted.** The section's
-  dominant was `sketch-review-wide-1600.webp`, a purpose-cut 3:2 crop of the portrait original
-  `sketch-review-1600.webp` (1600x2400), made so the picture could run the full canvas as a band
-  through `.ph-dominant`'s `max-height:54vh; object-fit:cover`. That cropped it a *second* time:
-  measured live at 1368x409 from a 1126x751 source. The frame is vertical — the sheet, both hands
-  and the standing farmer only fit top-to-bottom — so the band amputated the top of the sketch and
-  the person holding it.
-- Now `.ph-06-lead`: a two-column lead at >=1100px (`4.4fr / 7.6fr`). The portrait photograph keeps
-  its own proportion on the left (484x725 at a 1536px viewport, `max-height:none`), and the whole
-  evaluation argument — the two rounds, the legend bar, the three-way comparison — stacks in the
-  column beside it. The conclusion moved *into* that column with `margin-top:auto` so it pins to
-  the photograph's bottom edge instead of leaving the column trailing into empty page; that needs
-  `align-self:stretch` on `.ph-06-col`, since the row's `align-items:start` would otherwise
-  shrink-wrap the column and leave no free space for the auto margin. Below 1100px it stacks, photo
-  capped at 440px.
-- `#concepts .ph-dominant-tall img` is id-scoped deliberately. `.ph-dominant-tall img` alone ties
-  on specificity with `.ph-dominant img`, so it was decided by source order — and in dev, with two
-  copies of the stylesheet injected, the 54vh cap won anyway (verified: computed `max-height` came
-  back `409.088px` while `object-fit` came back `contain` from the newer rule). `#challenge`
-  already overrides the same primitive the same way.
-- **07's "long image" was a white background, not an image.** The handbook cover carried
-  `width:100%` + `object-fit:contain` + `background:#fff` on a full-canvas box. The scan is 1.41:1
-  and the box was ~3.3:1, so the white filled every pixel the letterboxed scan did not: a
-  full-width empty white band with a small drawing adrift in the middle of it. `.ph-07-lead` now
-  sizes the figure to a 7fr column and lets the image set its own height, so the only white on the
-  page is the page (768x542 at 1536px).
-- **07's handbook pages were too small to read.** Both are dimensioned instruction spreads and both
-  sat in a third-width column capped at `max-height:22vh` — about 424x178px, where none of the step
-  text or the cut-list measurements resolve. `.ph-07-pages` makes them a two-up row across the
-  canvas (~660px each, cap removed) and the running text + annotations moved beside the cover into
-  `.ph-07-aside`. Verified by screenshot: "4x 825 mm (cut 45 deg in each end)" and "Angle iron
-  40x40x3 mm" are legible.
-- Asset side of this: `sketch-review-*.webp` had been deleted from the working tree as part of
-  Sylvia's own pass over `public/post-harvest/photo/` — she re-exported the photographs at higher
-  quality and pruned every size nothing referenced. The portrait sketch-review set was pruned
-  because, at that moment, only the wide crop was referenced. Restored `sketch-review-1600.webp`
-  from HEAD (06 has nothing else to point at), then deleted the four unused sizes
-  (600/800/1000/1400) and the now-orphaned `sketch-review-wide-1600.webp`, which matches her
-  convention of one file per photograph at the size actually in use.
-- **`sketch-review-1600.webp` is still the OLD export and should be redone.** It is 101KB for
-  1600x2400 = 0.03 B/px, against 0.16-0.39 B/px across her new batch (`field-walking-2400`,
-  `collector-handover-1600`, `road-to-seme-2000`...). It was tolerable as a 1368x409 band; shown
-  uncropped at 484x725 the compression is much more exposed. Flagged to her, not fixed — the raw
-  is hers.
-- Verified with `npx next build` (clean) and live screenshots of both sections at 1536px.
-- Flagged, not changed: `concept/concept-box-760.webp` has a dark vertical strip baked into its
-  right edge — an export artifact in the source asset, visible in the third comparison frame.
-
-### Unreferenced HALOGRIP design source moved out of `public/media/` into a new `design-source/` (this session)
-- Sylvia: "现在项目里的文件好像有点乱，有些重复的文件和图片可以删掉，把所有halogrip项目相关的文件整理一下" —
-  audited every `/media/...` path actually referenced by `app/work/halogrip/*` (page.tsx,
-  content.ts, concept-carousel.tsx, design-gap-sequence.tsx, sketch-lightbox.tsx,
-  interaction-deck.tsx, need-scene.tsx, overview-backdrop.tsx, scroll-intro.tsx) against every
-  file physically in `public/media/`. 90 files were git-tracked there (224MB); 33 are actually
-  used by the site.
-- Confirmed scope with her via `AskUserQuestion` rather than guessing: everything unreferenced
-  moves to a new project-root `design-source/` folder (outside `public/`, so it stops being
-  publicly deployed by Vercel) instead of being deleted outright — kept for history/reference.
-  Used `git mv` throughout so blame/history follows the files.
-- Moved: the original pitch-deck source (`Final Presention for claude12.pptx` + its screen
-  recording `.mp4`, plus an older `halogrip ppt.pptx`, ~151MB total) into
-  `design-source/halogrip-pitch-deck/`; the standalone `section 2 reference/` HTML/CSS prototype
-  (its own README confirms it was a reference for 02.2, now implemented in `need-scene.tsx`) to
-  `design-source/section 2 reference/`; and every exploratory/reference image not imported by any
-  component (alternate concept renders, sketch refinements, `06-sketch-process/`'s reference
-  photo, `2.3/`'s and `2.4/`'s reference stills, the `other/skets/` batch, two asset `.zip`s, etc.)
-  to `design-source/halogrip图片/`, mirroring `public/media/halogrip图片`'s own subfolder names.
-- Deleted outright (not moved): `public/media/~$Final Presention for claude12.pptx`, a PowerPoint
-  autosave lock file with no real content — had to wait for Sylvia to close PowerPoint first since
-  the source pptx it was locking (`Final Presention for claude12.pptx`) was open and blocked the
-  `git mv` with a Windows "Permission denied".
-- Verified: re-grepped `app/` for every `/media/` reference after the move and confirmed each
-  still resolves inside `public/media/` (nothing referenced was relocated); `public/media/` is now
-  33 files instead of 90.
-- Gotcha hit while doing this: pre-creating the destination subfolders (e.g.
-  `design-source/halogrip图片/2.3/`) before `git mv`-ing a whole source directory of the same name
-  into it nests the directory one level deeper than intended (`2.3/2.3/...`) instead of merging —
-  had to detect and flatten those with a follow-up `git mv` per file. Don't pre-create the leaf
-  directory when the move source is itself a whole directory; only pre-create parents.
-
-### `product-intro` heading rewritten: "NEXT GENERATION STEERING DEVICE" → "EMERGENCY STEERING DEVICE FOR ROBOTAXI" (this session, follow-up)
-- Sylvia's direct ask, typo in her own message ("EMERGANCY") corrected to match the spelling used
-  everywhere else on the page (section 09's `EMERGENCY HANDOVER`, the root `layout.tsx`/case-study
-  `metadata` descriptions). `page.tsx`'s `.product-intro-heading` `<h2>` only — no CSS touched.
-- Verified via `npx tsc --noEmit` (clean) and a live screenshot: the longer string (39 vs. 30
-  characters) still renders on one line at desktop width with no overflow —
-  `.product-intro-heading h2` has no `max-width`/`white-space:nowrap` forcing a break, so this
-  would have wrapped gracefully even if it hadn't fit.
-
-### Site renamed from "halogrip-portfolio" to "sylviaxie" across GitHub, Vercel, and local config — HALOGRIP is one case-study project, not the whole site (this session, follow-up)
-- Sylvia: "这个网站可以不叫halogrip portfolio吗，halogrip只是我这个项目的名字" — correct: the page
-  `<title>`s were already right (`Sylvia Xie — Industrial Designer` on `/`, `HALOGRIP — Sylvia
-  Xie` on the case-study page), but the *infrastructure* naming (GitHub repo, Vercel project,
-  live domain, `package.json`) all still said "halogrip-portfolio" as if HALOGRIP were the whole
-  site rather than its first project. Confirmed the new slug (`sylviaxie`) and scope (rename both
-  GitHub and Vercel; don't keep the old domain redirecting) with her via `AskUserQuestion` before
-  touching anything public-facing.
-- **GitHub**: `gh repo rename sylviaxie --repo sylvia990317-bot/halogrip-portfolio` →
-  `sylvia990317-bot/sylviaxie` (GitHub auto-redirects the old URL). Updated the local `origin`
-  remote to match (`git remote set-url`).
-- **Vercel**: `vercel project rename halogrip-portfolio sylviaxie`. This alone did *not* move the
-  live domain — Vercel keeps a project's originally-assigned `<name>.vercel.app` production alias
-  pinned as a real "Domain" resource independent of the project's display name, so every
-  `vercel --prod` deploy kept auto-aliasing to the old `halogrip-portfolio.vercel.app` even after
-  the rename (confirmed live: a full redeploy still printed `Aliased
-  https://halogrip-portfolio.vercel.app`). Fixed by explicitly claiming the new domain as a
-  project resource — `vercel alias set <latest-deployment> sylviaxie.vercel.app` first (came back
-  as a bare alias, which the project's `ssoProtection:{deploymentType:"all_except_custom_domains"}`
-  setting doesn't exempt — confirmed via `vercel project protection sylviaxie`, and the new domain
-  briefly 302'd to a Vercel SSO login wall), then `vercel domains add sylviaxie.vercel.app
-  sylviaxie`, which registers it as a first-class project domain and does get the SSO exemption
-  (confirmed: 200, no redirect). Then `vercel alias rm halogrip-portfolio.vercel.app` per Sylvia's
-  explicit choice not to keep the old URL working (confirmed old domain now 404s, new one 200s).
-  `.vercel/project.json`'s cached `projectName` updated to match.
-- **Code/config**: `metadataBase` in both `app/layout.tsx` and `app/work/halogrip/page.tsx`
-  (`halogrip-portfolio.vercel.app` → `sylviaxie.vercel.app` — this feeds every relative
-  OpenGraph/Twitter image URL Next generates, so it had to move too, not just the visible domain);
-  `package.json`'s `name` (`halogrip-portfolio`→`sylviaxie`) and `description` (was literally
-  "HALOGRIP — Sylvia Xie | Emergency steering for autonomous vehicles", describing the whole repo
-  as if it only contained the HALOGRIP project — changed to "Sylvia Xie — Industrial Designer |
-  Portfolio site"); ran `npm install` afterward so `package-lock.json`'s own `name` field
-  resynced automatically rather than hand-editing a lockfile. `CLAUDE.md`'s Deployment section
-  rewritten with the new domain/repo and a note on why the old domain was deliberately dropped.
-- Verified via `npx tsc --noEmit` (clean), a full `vercel --prod --yes` redeploy after all the
-  renames, and direct `curl` checks of both domains: `sylviaxie.vercel.app` → `200`,
-  `halogrip-portfolio.vercel.app` → `404`.
-- **Left uncommitted, by design**: per this project's standing rule (only commit when explicitly
-  asked), none of this session's file changes were committed or pushed — the live site was
-  updated directly via `vercel --prod --yes` (which deploys from the local working tree,
-  independent of git state), so `git status` still shows these edits as pending. `git remote`
-  now points at the renamed GitHub repo either way.
-
-### Section-number scheme audited and completed; 02 / CHALLENGE chapter label added; sketch-card hover and sketch lightbox rebuilt; CLOSE PROJECT pill made background-adaptive; 02.2's stat footnote restored with a real citation (this session)
-- Sylvia noticed the `[ NN / SECTION ]` eyebrow numbering was inconsistent across the page and
-  asked for a proposal to unify it. Audit found the scheme was `01`–`09` for top-level sections
-  with `02` alone split into `02.1`–`02.4` sub-scenes, and 3 spots that should have carried a
-  sub-number but didn't: `PRODUCT OVERVIEW` → **`07.1 / PRODUCT OVERVIEW`**, `SECURE ACCESS` →
-  **`09.1 / SECURE ACCESS`**, `HEAD-UP DISPLAY` → **`09.2 / HEAD-UP DISPLAY`** (`page.tsx`). The
-  opening hero's `[ CASE STUDY 001 ]` and the footer's `[ MASTER'S THESIS / 2025 ]` were
-  deliberately left unnumbered — they're the page's start/end bookends, not narrative chapters,
-  and reading differently from the numbered mid-page sections is intentional.
-- **`02 / CHALLENGE` chapter label added** (per Sylvia's spec): a new `.chapter-label` sits above
-  the existing `[ CABIN SHIFT ]` eyebrow at the start of the Cabin Shift scene — no new
-  full-screen section, no `02.1` (Cabin Shift itself is now unnumbered, just a subsection title
-  under the chapter marker; `02.2`–`02.4` on the later sub-scenes are unchanged). Sized between
-  the eyebrow and the section `h2` (`--fs-heading-sm`, 24–37px) with `[ ]` brackets matching the
-  eyebrow convention. First pass colored it `var(--red)`; Sylvia felt that read as an alert/selected
-  marker since red is this page's "attention" accent elsewhere (concept-carousel's `SELECTED
-  DIRECTION`, the signal dots) — changed to inherit `.dark-section`'s white, distinguished from
-  the eyebrow by size/weight/spacing alone.
-- **06 / SKETCH PROCESS card hover rebuilt** (Sylvia: "3张卡片上的字感觉太粗了，看不清" — the card
-  titles read too bold/blurry). Root cause: `.dgs-panel h3`/`.dgs-panel-index` set
-  `font-weight:700` on `var(--display)` (Koulen), but only Koulen's 400 weight is loaded
-  (`page.tsx`'s `Koulen({weight:["400"]})`) — the browser was faux-bolding a font that's already a
-  heavy condensed display face, blurring the small (14–20px) card text. Changed both to
-  `font-weight:400`. Separately, the sketch-process concept cards' hover ("Remove the red outline
-  around the entire card — it makes the tile look selected like an admin UI") turned out to be
-  `:focus-visible`, not `:hover` — `ConceptSketchLightbox`'s cards are a `<figure role="button"
-  tabIndex={0}>` (deliberately not a `<button>`, see that file's own header comment), and
-  Chromium shows a focus-visible outline on a plain mouse click for non-native interactive
-  elements, unlike a real `<button>`. Rebuilt the whole interaction to spec: no full-card border,
-  card lifts `translateY(-3px)`, image scales `1.025`, title contrast bumps to `#000`, 220ms
-  ease, no dimming of the default title/description, `cursor:zoom-in` kept, `:focus-visible`
-  reuses the identical treatment (plus a neutral 1px outline, not red) so a click never looks like
-  a persistent "selected" tile.
-- **Sketch lightbox rebuilt from an image-only preview into an editorial detail panel** (Sylvia:
-  "Do not use an image-only lightbox... make it feel like opening a refined portfolio detail
-  view, not a browser image preview"). `sketch-lightbox.tsx`: `SKETCHES` gained a `traits: string[]`
-  field per concept (2–3 short phrases derived from each concept's existing description); the
-  portal now renders `.sketch-lightbox-media` (left, ~68%, `object-fit:contain`, never cropped)
-  and `.sketch-lightbox-info` (right, ~32%: number, large title, description, trait list) inside
-  one `.sketch-lightbox-dialog` panel instead of a bare `<figure>`. `halogrip.css`: light
-  `var(--paper)` panel, 1px `var(--line)` border, soft shadow (no heavy drop shadow), backdrop
-  changed from a dark `rgba(15,16,15,.55)` scrim to a light frosted `rgba(249,249,250,.72)` +
-  blur so the page stays faintly visible behind it, close button moved from outside the panel
-  (`top:-34px`) to inside its top-right corner. Panel capped at `min(80vw,1080px)` / `76vh`. Added
-  a `@media(max-width:640px)` stack (image above info) since the 68/32 side-by-side doesn't fit a
-  phone width — not in the original spec but required for the redesign to function on mobile.
-- **`.sketch-process-converge-result` background** changed `var(--paper)` → `#fff` per Sylvia's
-  direct ask ("这个框的背景可以改成纯白吗").
-- **CLOSE PROJECT pill made background-adaptive**, in three iterations. (1) First attempt used
-  `mix-blend-mode:difference` with no fill (white text only) so the label's rendered color
-  auto-inverted against whatever was painted underneath — Sylvia rejected this: "这个按钮怎么会透
-  背景啊，不要这样" (why does this button show the background through it, don't do that) — a
-  diff-blended fill shows the actual (inverted) pixels of whatever's behind it, which reads as
-  translucent/see-through over a photo, not solid. (2) Reworked into two fully opaque states
-  toggled by a new client component, **`close-project-button.tsx`**: an `IntersectionObserver`
-  (rootMargin collapsed to a 1px band at the fixed button's own screen y, recomputed on resize
-  only since a `position:fixed` element's screen position doesn't move on scroll) watches every
-  `.dark-section` element plus `.overview` (visually dark but not classed `dark-section`, since
-  its dark photo is a separate absolutely-positioned child) and toggles `.is-on-dark`, which
-  swaps `background`/`color` between `var(--ink)`/`var(--white)` and the reverse — a real CSS
-  transition, no translucency. (3) Sylvia caught a real remaining gap: "经过图片的时候也要保持实心"
-  — the toggle is section-level, not pixel-level, so a nominally *light* section can still have a
-  locally dark passage (confirmed live: `.product-visual`'s `product-front.webp` has a black grip
-  crossing directly under the button inside "07.1 PRODUCT OVERVIEW," a light section) — a dark
-  pill over a dark patch of that photo is still fully opaque but reads as low-contrast/blending
-  in. Fixed generally rather than special-casing that one image: added a 1px border whose color
-  is always the *opposite* tone from the pill's own fill (a light ring on the dark pill, a dark
-  ring on the light pill) plus a drop shadow, so the chip's edge is legible from its own internal
-  contrast regardless of what's directly behind it — reproduced the exact black-grip overlap live
-  and confirmed the ring reads clearly there.
-- Verified throughout via `npx tsc --noEmit` (clean after every change) and live dev-server
-  checks via `mcp__claude-in-chrome`: screenshotted the new chapter label, the 3 filled-in section
-  numbers, the redesigned sketch-card hover (default vs. `:hover`/`:focus-visible`) and the
-  rebuilt lightbox panel; for the CLOSE PROJECT pill, scrolled through every light section,
-  every `.dark-section`/`.overview` section, and reproduced the exact scroll offset where
-  `product-front.webp`'s dark grip crosses the button (via `getBoundingClientRect()`-driven
-  `window.scrollTo`, since manual wheel-scroll couldn't reliably re-hit that one frame) to confirm
-  each fix live rather than by inspection alone.
-
-### 06 / SKETCH PROCESS — "Interaction detail" stage removed after Sylvia caught it duplicating "Concept convergence"; the 4-vs-1 convergence made explicit with an arrow (this session, follow-up)
-- Sylvia: "section 6 的sketch process是不是把4张灰色背景的图片重复了一遍" (did sketch process end up
-  repeating the 4 gray-background images?). First check (filenames + a live DOM read) looked clean
-  — `sketch-1..4` (Concept convergence) and `refinement-1..4` (Interaction detail) are genuinely
-  different files, different hashes. But she pushed back directly: "Concept convergence只是比
-  Interaction detail多了一张图，其他四张是一样的" (Concept convergence just has one extra image,
-  the other four are the same) — so this time verified by actually **looking at the pixels**
-  (`Read` on the PNGs themselves, not just filenames/hashes) rather than trusting the earlier
-  histogram-based "different file → different content" assumption. She was right: `sketch-1`/`2`/`3`
-  and `refinement-1`/`2`/`3` carry byte-different but content-identical pink hand annotations —
-  same text ("Contact remote assistant", "Authorization", "Screen", "NFC Authorization", "Pull
-  out", etc.), same handwriting, same positions — confirming `refinement-*` is a separately
-  re-exported (and more washed-out) crop of the exact same 4 source sketches `sketch-1..4` already
-  show, not a distinct functional-detail set as assumed when this stage was written the entry
-  below. Removed the entire "Interaction detail" `.sketch-process-stage` from `page.tsx` (JSX
-  only — `06-sketch-process/refinement-*.png` left on disk unused, per this project's standing
-  convention for superseded-but-kept assets) and rewrote the intro paragraph from "three stages"
-  down to the two that are actually distinct: "exploring different overall forms before converging
-  on the pull-out wheel, then refining the grip itself."
-- **Lesson applied within the same exchange**: a file-hash/histogram check proves files differ, it
-  doesn't prove their *content* differs — Sylvia's correction here is the same category of miss as
-  trusting a filename. Any future "are these the same asset" question should default to actually
-  opening and looking at the images, not just diffing bytes or metadata.
-- Sylvia's immediate follow-up, before the "Interaction detail" removal had even been verified:
-  "但是要明确那四张黑底的最终推导出来了右边白底那张" (make it clear the 4 dark ones converge into
-  the light one on the right) — the surviving "Concept convergence" row previously just relied on
-  the dark/light color difference to imply "this one is the outcome," with all 5 cards in one
-  auto-fit grid. Restructured into `.sketch-process-converge` (flex row): the 4 dark exploration
-  cards in their own `.sketch-process-grid-converge` (explicit `repeat(2,1fr)` 2×2 grid, per
-  Sylvia's own follow-up "可以把四张黑底的做成两行在左边，然后右边是那张白的" — 2 rows on the
-  left, the white one on the right — rather than the previous auto-fit row that could lay all 4 out
-  flat), a red `→` connector (`.sketch-process-converge-arrow`), then the final sketch on the right
-  in its own `.sketch-process-converge-result` figure, now also carrying a small
-  "Selected direction" `<figcaption>` (mirroring section 05's own "SELECTED DIRECTION" treatment
-  on its final card) so the convergence reads from the label text too, not just position/color.
-- **A real bug hit while wiring this up, fixed same-round**: pulling the final-sketch `<figure>`
-  out of `.sketch-process-grid-converge` (so it could sit outside the 2×2 grid, next to the arrow)
-  silently broke its styling — `.sketch-process-grid figure{border;background}` and
-  `.sketch-process-grid figure img{aspect-ratio;object-fit}` are descendant selectors keyed off the
-  `.sketch-process-grid` ancestor class, which the relocated figure no longer had. Caught live: the
-  result card's `getBoundingClientRect()` came back 649×28px — essentially collapsed, since with no
-  `aspect-ratio` the `<img>` had nothing forcing it to take up vertical space. Fixed by giving
-  `.sketch-process-converge-result` (and its `img`) their own explicit rules instead of relying on
-  the now-severed ancestor relationship; the now-dead `.sketch-process-grid figure.sketch-process-
-  card-light` selector (unreachable now that nothing outside `.sketch-process-grid` carries that
-  class, and the result figure has its own `background:var(--paper)` directly) was deleted along
-  with the now-unused class name in the JSX.
-- **Sizing balance fixed in the same round too**: the first pass gave the grid side `flex:1` and the
-  result card a fixed `flex:0 0 200px` — Sylvia: "现在左边太大右边太小了" (left is too big now,
-  right too small). Changed the result card to `flex:1` as well (equal weight against the grid
-  side), which — confirmed live — brought the two sides to near-identical rendered dimensions
-  (647×461 vs 649×482) instead of the grid dwarfing a 200px-wide result card.
-- Added a mobile (`@media(max-width:760px)`) counterpart: `.sketch-process-converge{flex-direction:
-  column}` and the arrow rotated 90° to point downward instead of sideways, since the existing
-  mobile `.sketch-process-grid{grid-template-columns:1fr}` rule already collapses the 2×2 exploration
-  grid to a single column at that width (wins over the desktop `.sketch-process-grid-converge`
-  override via CSS source order — both single-class selectors, mobile block is physically later in
-  the file — same mechanism noted in the entry below for why no separate mobile override was needed
-  there either).
-- Verified via `npx tsc --noEmit` and `npm run build` (clean throughout, checked after each of the
-  three fixes above) and live `getBoundingClientRect()`/`getComputedStyle()` reads in the dev
-  server confirming: the "Interaction detail" stage and its DOM nodes are fully gone; the intro
-  paragraph still renders correctly (2 lines) with the new copy; the 2×2 exploration grid and the
-  result card render at matching widths/heights with the correct dark/light backgrounds; and the
-  "Selected direction" caption is present under the final sketch.
-
-### PRODUCT OVERVIEW: `03 TILT INPUT` / `04 15 KM/H` labels pulled further from the product (this session, follow-up)
-- Sylvia's next request, after the annotation-calming round documented below: "03和04可以字稍微离
-  3D model远一点吗" (can the 03/04 text sit a bit further from the [product] model). The two
-  bottom callouts' dot stayed on the same real anchor points (`page.tsx`'s `PRODUCT_ANNOTATIONS`,
-  `point:[0.08,0.8]`/`point:[0.9,0.8]`, still the alpha-verified opaque spots on the grip's lower
-  curve from the previous round) — only the `label` fraction moved, `y:1.06→1.16` for both, so the
-  gap between the image's own bottom edge and the label text roughly tripled (from ~6% of the
-  image's height to ~16%) while the leader line stays a single clean vertical, just longer.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and a live dev-server
-  screenshot: confirmed a clear, deliberate gap between the grip's lower curve and the `03`/`04`
-  text, and confirmed the extra 10% of drop still lands comfortably inside `.product-detail`'s
-  own bottom padding — no crowding against `[ 08 / INTERACTION MODEL ]` immediately below.
-
-### 06 / SKETCH PROCESS expanded into a 3-stage story, reusing the `05-iteration/` assets Sylvia clarified actually belong to section 6 (this session)
-- Sylvia pointed out that `public/media/halogrip图片/05-iteration/` (5 concept-iteration
-  sketches — `sketch-1-d-shaped-hud` through `sketch-4-classic-round`, converging on
-  `sketch-5-final-pullout-wheel` — plus `sketches.webp`, a 6-round hand-grip-form iteration
-  sheet) belongs to section 06, not section 05: those files sat in a `05-iteration`-named folder
-  only because they were used in section 05 (CONCEPT EXPLORATION) in an earlier, since-replaced
-  round of that section (see the "05 / CONCEPT EXPLORATION replaced again" entry further below —
-  section 05 now uses a completely different asset set, `05/concept-*`, and was **not touched**
-  by this change; confirmed explicitly with Sylvia after she asked "你的意思是改动第五章节吗，
-  那个章节我不想动" (do you mean modifying section 5? I don't want to touch that section) — this
-  entire change is scoped to `.sketch-process` in `page.tsx` only).
-- Asked Sylvia to walk through the actual story these assets tell (two rounds of
-  `AskUserQuestion`, since my first framing of the options wasn't clear): the sketch-process
-  narrative actually has 3 stages, not the 1 the section previously showed — (1) exploring
-  different overall control-device forms (the 4 `05-iteration/sketch-1..4` concepts: D-shaped
-  wheel+HUD, U-shape yoke+on-screen, oblique ellipse+NFC, classic round+voice), converging on
-  `sketch-5-final-pullout-wheel` as the selected direction; (2) refining the physical grip shape
-  itself (`sketches.webp`'s 6 iteration rounds); (3) working through interaction/functional detail
-  on the now-chosen pull-out wheel (the existing `06-sketch-process/refinement-1..4` — the section's
-  entire pre-existing content, describing authorization, the pull-out mechanism, NFC, and slide
-  rails). The section's intro copy previously only described stage 3 ("Once the pull-out wheel was
-  chosen...") since that was all it showed; rewrote it to span all 3 ("Sketching moved through
-  three stages: exploring different overall forms, refining the grip itself, then working through
-  the interaction points that make the pull-out wheel function.") — still a `TODO(sylvia)` draft.
-- Restructured `page.tsx`'s `.sketch-process` section into 3 `.sketch-process-stage` blocks, each
-  with a small red mono `.sketch-process-stage-label` caption ("Concept convergence" / "Grip
-  refinement" / "Interaction detail") above its content — reusing the section's existing heading
-  and intro paragraph as a shared frame rather than duplicating them per stage.
-- **Asset format check before styling, not assumed**: sampled all 6 new images via `sharp` raw
-  pixel histograms before deciding on card treatment. `sketch-1` through `sketch-4` (PNG) are
-  white line art on ~94-95% transparent backgrounds, alpha-antialiased exactly like the existing
-  `06-sketch-process/refinement-*` set — so they reuse the same dark-charcoal
-  (`.sketch-process-grid figure`, `#3c403d`) card background. `sketch-5-final-pullout-wheel.jpg`
-  (no alpha — JPEG) and `sketches.webp` are the opposite: ~88-96% near-white/paper background
-  with black ink (`sketches.webp` also carries the pink highlight marks the README/earlier
-  changelog entry described). Gave both a light `var(--paper)` card background instead
-  (`.sketch-process-card-light` modifier for the sketch-5 card in the concept-convergence grid;
-  `.sketch-process-wide` for the full-width grip-refinement figure) — this format split also
-  happens to reinforce the narrative for free: the concept-convergence row visually sets the
-  "converged" final sketch apart from the 4 dark exploratory ones, the same way section 05's own
-  "SELECTED DIRECTION" final card reads differently from its other concepts.
-- New CSS: `.sketch-process-stage`/`.sketch-process-stage+.sketch-process-stage` (32px before the
-  first stage, 56px between stages — desktop; 24px/40px — mobile, added to the existing
-  `@media(max-width:760px)` block), `.sketch-process-stage-label`, `.sketch-process-grid-converge`
-  (`grid-template-columns:repeat(auto-fit,minmax(200px,1fr))`, letting the 5-image convergence row
-  wrap naturally at medium desktop widths rather than forcing 5 cramped columns), `.sketch-process-
-  grid figure.sketch-process-card-light`, `.sketch-process-wide`/`.sketch-process-wide img`
-  (`aspect-ratio:1.778` matching `sketches.webp`'s real 1920×1080, `object-fit:contain` — no crop,
-  same reasoning as every other dense sketch-sheet asset in this project's history). Moved
-  `margin-top` off the base `.sketch-process-grid` rule onto the new `.sketch-process-stage`
-  wrapper instead, and dropped the mobile override's redundant `.sketch-process-grid{margin-top:
-  24px}` (would have double-stacked with the stage wrapper's own margin) — the existing mobile
-  `.sketch-process-grid{grid-template-columns:1fr}` rule already wins over the new
-  `.sketch-process-grid-converge` desktop override at ≤760px width via CSS source order (both are
-  single-class selectors; the mobile block is physically later in the file), so no separate mobile
-  override was needed for the convergence grid specifically.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and live checks in the dev
-  server: re-verified the intro paragraph still renders at exactly 2 lines despite the copy
-  rewrite (same `max-width:780px` from the entry below happened to still work); confirmed all 10
-  images in the section (`status:200`, correct byte sizes, correct decoded pixel dimensions via
-  `fetch`+`createImageBitmap`, matching each file's real dimensions from `sharp` metadata exactly)
-  actually load — `<img>.complete`/`.naturalWidth` read as `false`/`0` in this automation session
-  despite the images being genuinely loaded and visible (confirmed by `getBoundingClientRect()`
-  and `getComputedStyle()` both reporting correct, fully-laid-out boxes) — a DOM-reporting quirk
-  of this particular browser session, not a real loading failure, so verification relied on
-  `fetch`-based decoding instead of the DOM `<img>` properties; and confirmed via computed
-  `background-color` that all 4 concept-convergence exploration cards + all 4 interaction-detail
-  cards render the dark charcoal while the sketch-5 card and the grip-refinement figure both
-  render the light paper tone.
-
-### PRODUCT OVERVIEW annotations calmed down: shorter lines, secondary type scale, moved clear of the fixed CLOSE PROJECT pill (this session, follow-up)
-- Right after the annotation rebuild below shipped, Sylvia said the result was stronger but now
-  read as crowded, and asked for a calmer, more compact composition: pull `01 OPEN GRIP` and
-  `04 15 KM/H` in from the page's outer margins, keep `02 ID ACCESS` near the center display,
-  keep `03 TILT INPUT` on the left/lower side but aligned more cleanly, keep `04` clear of the
-  bottom edge, and make all four labels read as secondary supporting detail rather than
-  competing with the headline.
-- **First pass moved every label to sit *inside* the product photo's own transparent gaps**
-  (e.g. `01`'s label tucked between the two grip curves near the top of the frame). Sylvia's
-  live feedback on that version, mid-session: "现在的字怎么向内扣，向外更好啊" (why is the text
-  curling inward now, outward would be better) — "especially OPEN GRIP." That's the opposite of
-  a standard annotation convention (label sits just *outside* the object's silhouette, pointing
-  away from it), so it read as text folding back into the product rather than a callout
-  supporting it, however short the line was.
-- **Final layout**: every callout's label now sits straight outside the image's own silhouette —
-  `01`/`02` directly above their point, `03`/`04` directly below — using a single, shared,
-  same-x-coordinate point→label pair per callout, so every leader line is a short, clean vertical
-  rather than a diagonal. Re-sampled `product-front.webp`'s alpha channel again (same `sharp`
-  technique as the original build) to find real opaque anchor points close to — but not at — the
-  very outer edge: `01 OPEN GRIP` moved from the grip's widest, most extreme point (`x:0.90`) to
-  a point further up the same curve that's already more inward (`x:0.85`); `03`/`04` moved off
-  the thin, constant-width vertical hand-bars (which don't offer any more-inward opaque option)
-  onto the grip's *lower curve* instead, both around `y:0.80`, which is naturally more central
-  than the bars while still reading as "left/lower" and "right/lower." Every label sits just
-  outside the 0–1 image frame by a small, consistent margin (`-0.07` above, `1.06` below) rather
-  than deep inside the photo's negative space or far out at `1.03`+ like the very first draft —
-  short lines, but genuinely outward-pointing ones.
-- `PRODUCT_ANNOTATIONS` dropped its per-item `corner` field entirely — since every label now uses
-  the identical "centered, growing upward from its anchor" transform, `page.tsx` renders one
-  shared `.product-annotation` class with no modifier, and `halogrip.css` collapsed the old
-  `--tr`/`--tc`/`--bl`/`--br` variants into that single base rule.
-- **Also addressed, raised live by Sylvia mid-verification**: "可以稍微整体向左边移动一点，现在容易被
-  close project的按钮挡到" (shift the whole thing slightly left, it's easy for the fixed CLOSE
-  PROJECT pill to block it right now) — `.product-visual` width reduced `100%→88%` inside its
-  grid column (stays left-aligned by default, so this only pulls its *right* edge in), giving
-  `01`'s point/label real clearance from the always-visible fixed pill instead of sitting right
-  under it while scrolling through the top of this section.
-- **Secondary-feel typography**: `.product-annotation strong` (the callout title) dropped from
-  `var(--fs-card-title-sm)` (24px, the same tier as real card headings elsewhere on the page) to
-  a fixed 16px — still comfortably above the project's own "nothing under 12px" floor (see the
-  Koulen/Roboto Mono type-scale entry further below), but now unmistakably smaller and lighter
-  than the section headline, so the four callouts read as supporting annotation rather than a
-  second competing headline tier. The connecting `<line>` also picked up `stroke-opacity:.6` for
-  the same reason.
-- Section padding/spacing tightened alongside this for an overall calmer feel:
-  `.product-detail`'s bottom padding `clamp(90,9vw,140)`→`clamp(72,8vw,120)`,
-  `.product-visual`'s `margin-top` `6%`→`4%` (top padding above the headline — the "generous
-  negative space around the title" Sylvia asked to preserve — was left untouched).
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and live dev-server checks:
-  re-sampled the new anchor coordinates' alpha values directly (confirmed every `point` opaque,
-  every `label` off the raster entirely by construction) before writing them, then checked real
-  `getBoundingClientRect()`s for all 4 labels against the fixed `.close-project` pill's own rect
-  at the scroll position where `01` first comes into view — confirmed ~35px of horizontal
-  clearance and no vertical overlap — and screenshotted the finished section: headline upper-left
-  with clear surrounding space, product dominant and centered, all four short vertical leader
-  lines landing cleanly outside the grip/display silhouette with `03`/`04` aligned at the same
-  height for a tidy symmetric bottom pair.
-
-### PRODUCT OVERVIEW rebuilt: plain 2×2 spec grid replaced with industrial-design annotation callouts (this session)
-- Sylvia asked to keep the section's light background and overall two-part layout (copy upper-left,
-  product large on the right) but replace the flat `.final-specs` 2×2 card grid with four annotation
-  callouts (`01 OPEN GRIP`/`02 ID ACCESS`/`03 TILT INPUT`/`04 15 KM/H`) connected to the product photo
-  by thin leader lines + small numbered red markers — reading as industrial-design annotations, not UI
-  cards, with the product itself staying dominant and red used only as a small numbering accent.
-- **Anchor points were pixel-sampled, not guessed.** Read `product-front.webp`'s raw alpha channel
-  directly via `sharp` (see the alpha-mask grid dumped during this session) to find exactly where the
-  device geometry is opaque vs. where the PNG is transparent, so each callout's dot lands on real
-  product surface (right grip curve for OPEN GRIP, the display's NFC icon for ID ACCESS, the two
-  vertical hand-bars either side of the display for TILT INPUT/15 KM/H) and each label lands in
-  genuinely empty space — keeping every leader line short instead of crossing over the photo.
-- `page.tsx`: new `PRODUCT_ANNOTATIONS` const (fractional `point`/`label` coordinates against the
-  image's own 2100×1032 frame, plus a `corner` key for label alignment) replaces the old inline
-  `[["OPEN GRIP","RECOGNIZABLE"],...]` 2×2 array. The `.product-detail` section now renders
-  `.product-copy` (eyebrow + heading only, no more `.final-specs`) and a `.product-visual` wrapper
-  holding the real `<img>`, one `<svg viewBox="0 0 2100 1032">` overlay (a thin `<line>` + small red
-  `<circle>` per callout), and 4 absolutely-positioned `.product-annotation` label divs (number/title/
-  note, no border/background) — all sharing one percentage coordinate space against the image so lines
-  and labels stay aligned at any viewport width.
-- **Layout bug found and fixed while verifying live, not assumed correct from the code alone**:
-  `.product-detail` originally kept `.product-visual` `position:absolute` inside a hand-picked
-  `min-height:960px` section — since the absolutely-positioned visual doesn't contribute to flow
-  height, the section rendered ~300px of dead whitespace below the product before the next section
-  started. Rebuilt `.product-detail` as a real CSS grid (`grid-template-columns:min(430px,34%) 1fr`,
-  `align-items:start`) with `.product-copy` and `.product-visual` as normal grid items — this also
-  satisfies "title/intro on the upper-left" directly via `align-items:start`, and the section's height
-  now falls out of actual content instead of a guessed constant. Also caught (via a live
-  `getBoundingClientRect()` check, not visual inspection) that the top-right and bottom-right labels'
-  first-draft offsets (`label:[1.03, …]`) rendered past the browser viewport's right edge at a normal
-  desktop width — pulled both inward (`[0.8,-0.06]` and `[0.84,1.05]`) so they read on-screen at any
-  reasonable width instead of being clipped.
-- Mobile (`@media(max-width:760px)`): `.product-visual` becomes a normal static full-width block below
-  the copy, the SVG leader-line overlay is hidden, and the 4 `.product-annotation` divs fall back to a
-  simple stacked list (red index number + title + note, hairline top border) — reusing the same visual
-  grammar the old `.final-specs` mobile rule used, since a corner-offset floating annotation doesn't
-  read cleanly at phone width.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and live dev-server checks: sampled
-  every annotation's real `getBoundingClientRect()` to confirm none overflow the viewport, screenshotted
-  the full section top-to-bottom (headline upper-left, product dominant on the right, all 4 short
-  leader lines landing cleanly on grip/display geometry with no crossing, red used only on the index
-  numbers/dots), and confirmed the mobile stacked-list fallback via a scratch `!important` CSS override
-  at the current viewport (the same technique other entries in this file use for the same
-  non-resizable-automation-viewport limitation).
-
-### 06 / SKETCH PROCESS — card background lightened then walked back to a softer charcoal (not full light, not near-black); white line art tried as black, then reverted; red index numbers removed; intro paragraph forced to 2 lines (this session)
-- Sylvia's first ask: `.sketch-process-grid figure`'s dark card background (`var(--dark)`,
-  `#1b1f1e`) felt too jarring against the page's light overall palette — asked to swap it to a
-  light background and recolor the sketches' white line work to black to match.
-- Confirmed via `sharp` (raw pixel histogram) that the 4 `06-sketch-process/refinement-*.png`
-  files are white line art on a transparent background, antialiased through the **alpha**
-  channel at a near-constant white RGB (~250-255), not through RGB blending — plus a separate
-  pink/magenta annotation color untouched by any of this work. Backed up the 4 originals to the
-  session scratchpad, then recolored every grayscale ("white ink") pixel to pure black
-  (`(0,0,0)`, alpha left untouched) in place with a `sharp` raw-buffer script, leaving the pink
-  annotation pixels alone — verified after the fact via a fresh pixel histogram (0% white pixels
-  remained, black + pink present in the expected proportions) and again by fetching the actual
-  served asset bytes in-browser (not a cached copy) and sampling them the same way. Card
-  background changed to `var(--paper)` to match.
-- Sylvia's follow-up: "看来似乎不能换成黑色的线条" (turns out we can't switch to black line
-  work after all) — read as: black ink didn't hold up visually, most likely because a lot of
-  this line art's own alpha is well below 100% throughout the stroke (not just at antialiased
-  edges — confirmed earlier via direct pixel sampling, e.g. alpha values of 51-238 scattered
-  across "solid" strokes), so a black stroke at, say, 50% alpha over near-white paper reads as a
-  faint light gray — much lower contrast than the same 50%-alpha *white* stroke over a dark
-  card. Reverted: restored the 4 original white-line PNGs from the scratchpad backup (confirmed
-  via a fresh pixel histogram: white ink pixels back to 70-85% of non-transparent pixels per
-  file), and re-asked for "较深但不是全黑" (dark, but not full black) instead of a full light
-  background. `.sketch-process-grid figure` background changed to `#3c403d`, a soft charcoal —
-  clearly dark enough to keep the white line work legible (same contrast logic the assets were
-  originally authored for) while reading softer than `var(--dark)` against the surrounding light
-  page. No named CSS token was introduced for this one-off value — only one selector uses it.
-- Removed the red `01`/`02`/`03`/`04` index number shown on each card (Sylvia: "不要卡片上的红色
-  数字"): deleted the `<span>0{index + 1}</span>` in `page.tsx`'s `.sketch-process-grid` map
-  (and the now-unused `index` param from the `.map()` callback) and the matching
-  `.sketch-process-grid figure span` rule in `halogrip.css`.
-- `.sketch-process-intro`'s intro paragraph ("Once the pull-out wheel was chosen...") was
-  wrapping to 3 lines at its `max-width:620px`; Sylvia asked for 2 ("变成两行"). Measured live in
-  the dev server (temporarily overriding `max-width` and reading `getBoundingClientRect().height`
-  against the computed line-height) that the 3→2 line threshold sits at exactly 750px, and that
-  760px onward gives a well-balanced split ("...working through the interaction " / "points that
-  make it function: authorization, the pull-out mechanism, and on-wheel controls." — a
-  106-vs-98-character split, close to even). Set `max-width:780px` for a small safety margin
-  above the threshold. No mobile-breakpoint override existed or was needed — mobile's own
-  narrower viewport already constrains the paragraph well below 780px regardless.
-- Verified via `npx tsc --noEmit` and `npm run build` (clean at every step) and live checks in
-  the dev server throughout — the actual served image bytes were sampled directly (via `fetch` +
-  `createImageBitmap` + `OffscreenCanvas`, not the cached DOM `<img>`) both when converting to
-  black and again after reverting to white, and the intro paragraph's final rendered line count
-  was confirmed at exactly 2 lines. Live screenshots of this page are unreliable in this
-  environment (see the extensive WebGL-tab-capture notes elsewhere in this file) — pixel/DOM
-  verification was used throughout instead of relying on screenshots.
-
-### 05 / CONCEPT EXPLORATION — sketch cards enlarged (root cause: an undocumented "fit to one viewport" constraint was starving the deck of space), a resulting overlap bug fixed, the heading replaced, and the on-card label removed (this session)
-- Sylvia: "section 5 图片太小了，看不清" (section 5's images are too small, can't see clearly).
-  Measured live in the dev server rather than guessing from CSS: the active `.concept-deck-card`
-  was rendering at only 224×157px. Root cause traced to a desktop-only `@media(min-width:761px)`
-  block in `halogrip.css` (not documented elsewhere in this file — apparently added in an
-  undocumented session) that fits the whole section — eyebrow, heading, intro paragraph, the
-  sketch stage, and the below-stage copy — inside one viewport with no internal scrolling.
-  `.concept-deck-row`'s `min-height:200px` was meant to be a last-resort safety floor, but in
-  practice the heading/copy/padding overhead routinely pushed the row down to exactly that floor
-  even on ordinary-height screens, and `.concept-deck-card{width:66%}` only filled two-thirds of
-  the already-small resulting stage.
-- Fix prioritizes legibility over the strict one-viewport fit: raised `.concept-deck-row`'s floor
-  from `200px` to `420px`, and `.concept-deck-card`'s fill of the stage from `66%` to `80%`. The
-  section's `min-height:100vh` (not `height:100vh`) already tolerates growing past one viewport
-  and letting the page scroll a little more on short screens — an intentional existing fallback,
-  not a new risk — so trading some of the "always fits in one screen" guarantee for a legible
-  card (571×399px after the fix, confirmed live) was the accepted call. No changes needed in
-  `concept-carousel.tsx`'s `STAGE_RATIO` or its `ResizeObserver` sizing logic — they simply
-  resolve larger once the CSS inputs changed.
-- **Regression found and fixed from the enlargement itself**: the four faded "fanned" background
-  cards are positioned by GSAP `xPercent`/`yPercent` on `SLOT_STYLE` in `concept-carousel.tsx`,
-  which resolve as a percentage of each card's own (now much bigger) untransformed box — so the
-  same percentages produced a much larger absolute pixel spread than before, and the upper corner
-  cards bled up into the heading/intro-paragraph area. Sylvia flagged this directly, having seen
-  it before the cause was identified: "这行小字现在被挡住了" (this line of small text is now
-  covered). Tightened `ul`/`ll`/`ur`/`lr`'s `yPercent` (the only axis implicated) from
-  `-31/35/-33/36` to `-18/21/-20/22`, verified live via `getBoundingClientRect()` until there was
-  clean positive clearance (13-17px) on both sides again.
-- **Heading replaced**: "HOW SHOULD CONTROL APPEAR IN A VEHICLE DESIGNED WITHOUT IT?" was the
-  only question-form `<h2>` anywhere on the page (every other section heading is a short,
-  declarative, period-ended statement) — Sylvia flagged it as weak copy. Presented 4 alternatives
-  in the page's existing voice via `AskUserQuestion`; she picked **"FIVE DIRECTIONS FOR
-  CONTROL."** — echoes section 06's own "REFINING THE SELECTED DIRECTION." right after it, and
-  being one line avoids the 3-line-wrap-eats-vertical-space issue an earlier session had already
-  flagged on this exact heading.
-- **On-card label removed** (Sylvia: "卡上的CONCEPT 04A / Touch Screen 这种小字删掉"): deleted the
-  `<span className="concept-deck-card-label">` (concept number + title, shown on every card) from
-  `concept-carousel.tsx` and its 3 matching CSS rules (`.concept-deck-card-label`, `...-label em`,
-  `...-label-text`) — the concept name still shows in the readout below the stage for whichever
-  card is active, just not duplicated on the card itself anymore.
-- Verified via `npx tsc --noEmit` and `npm run build` (clean throughout) and live interaction
-  testing in the dev server: re-measured card/stage geometry before and after each change,
-  confirmed clean clearance around the corner cards with no overlap, and — after ruling out a
-  false alarm that first looked like a real bug (GSAP's per-card opacity/scale momentarily out of
-  sync with React's own `index` state; matches a previously-documented Fast-Refresh artifact in
-  this exact component, confirmed by re-testing with a clean settle time and no concurrent file
-  edits in flight) — confirmed a full arrow-key run through all 5 concepts: correct opacity/scale
-  per step, and the final card correctly fades every other sketch to `opacity:0` while showing
-  "SELECTED DIRECTION — CONCEPT 02" / "Pull-Out Wheel" alone.
-
-### 09 EMERGENCY HANDOVER's 5 story-grid PNGs recolored in place to close the seam the previous entry flagged (this session, follow-up)
-- The previous entry's `.journey` change left a real, flagged seam: the 5
-  `09-handover/{01-authorize,02-activate,03-reposition,04-park,05-complete}.png` storyboard
-  sketches have their canvas background baked in at `#f3f2ee`, and the section around them had
-  just moved to `#f9f9fa`. Sylvia asked directly whether the images' own backgrounds could be
-  changed, so — unlike the "flag, don't touch assets" stance earlier in this same session, which
-  was about *silently* patching a mismatch with a filter/blend-mode hack — this is an explicit,
-  scoped request to edit these 5 files for real.
-- Edited the pixels directly with `sharp` (already a transitive dependency via Next's image
-  pipeline, no new package installed): measured each file's dominant fill color first
-  (histogram of raw RGB — `#f3f2ee`/`(243,242,238)` was 51-76% of every image's pixels, confirming
-  a flat baked canvas, not a photo), then shifted every pixel *toward* `(249,249,250)` by an
-  amount proportional to how close that pixel already was to the old background color: pixels
-  within a tight radius of pure `#f3f2ee` get the full `+6/+7/+12` shift, pixels farther than a
-  slightly wider radius (i.e. actual pencil/ink strokes, the black border, the red annotation
-  marks) get none, and pixels in between — the anti-aliased blend between ink and canvas — get a
-  proportional partial shift, which is the physically-correct way to recolor a canvas under
-  antialiased line art without banding at stroke edges. Verified after the fact, not just assumed:
-  every pixel darker than a mid-gray threshold (luminance <180 — i.e. all real artwork, borders,
-  and annotations) diffed at exactly 0 against a backup of the originals; only near-background
-  pixels moved. Post-edit, each file's new dominant color samples at exactly `(249,249,250)`.
-- Originals backed up to the session scratchpad before editing (not committed anywhere) in case a
-  future session needs to re-derive a different target color; the working files in
-  `public/media/halogrip图片/09-handover/` are the edited versions.
-- Verified with a live screenshot + zoom crop across a panel edge in the dev server: no visible
-  seam anywhere around any of the 5 images, on the now-flat `--paper` `.journey` background.
-
-### Background system simplified further: the "local diagram backdrop" tone dropped, every light surface is now flat --paper (this session, follow-up)
-- Right after the two-tone pass below shipped, Sylvia said to collapse it further: "浅色除去开头
-  动画还是都改成#F9F9FA吧" (make every light color #F9F9FA too, except the opening animation) —
-  she didn't want a second light-gray "panel" tone at all, just one flat main background
-  everywhere light, with the pinned 3D intro's own scene left alone (it already resolves to
-  `--paper` at rest, so nothing further was needed there).
-- `halogrip.css`: removed the `--paper-light` custom property entirely and rewrote the `:root`
-  comment to describe one `--paper` token. Its 3 remaining consumers were repointed straight at
-  `--paper`: `.concept-deck-arrow`, `.interaction`, and `.journey`.
-- **`.journey` (09 EMERGENCY HANDOVER) is the one place this has a real, flagged cost**: the
-  entry below explains that this section was deliberately kept at a hardcoded `#f3f2ee` because
-  the 5 `09-handover/*.png` story-grid images have that exact color baked into their own canvas
-  background — moving it to `#f9f9fa` (a ~6/255-per-channel shift) now puts a faint but real seam
-  around each of those 5 panels that didn't exist before this follow-up. Left a comment on the
-  rule explaining this is a known, accepted tradeoff per Sylvia's explicit instruction, not an
-  oversight — fixing it for real would mean re-exporting those 5 PNGs with the new background
-  baked in, which is an asset change, not a CSS one.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and a live computed-style
-  check confirming `body`, `.research`, `.principles`, `.concepts`, `.sketch-process`,
-  `.concept-deck-arrow`, `.interaction`, `.journey`, and `.scroll-intro` all resolve to
-  `rgb(249, 249, 250)`.
-
-### Background system unified: three tokens (main / local-diagram-backdrop / dark) replace a drifted mix of near-beige hexes (this session)
-- Sylvia asked to fix visible color banding between sections caused by several near-duplicate
-  off-white/warm-gray backgrounds (`#eaeae6`, `#f3f2ee`, plus one-off dark hexes) that had drifted
-  apart over many earlier sessions, and to consolidate them into a real system: one main
-  background, one "local diagram backdrop" tone for panels that host a graphic/demo rather than
-  running text, and the existing kept-dark display background — as CSS variables, not scattered
-  literals.
-- `halogrip.css` `:root`: `--paper` (main background) changed `#eaeae6`→**`#f9f9fa`**;
-  `--paper-light` (repurposed as the local diagram-backdrop tone — the interaction-model demo,
-  the concept-deck's arrow buttons) changed `#f3f2ee`→**`#eceef0`**; `--dark` (`#1b1f1e`) was
-  already the target value, unchanged. A `:root` comment documents each token's role. Every
-  selector that referenced these two tokens by name (body, `.scroll-intro`,
-  `.scroll-intro-preload`, `.concept-deck-arrow`, `.interaction`) picked up the new values
-  automatically; hardcoded literals equal to the old tokens were repointed at the variables
-  instead: `.overview-bg-fade`'s gradient (was raw `rgba(234,234,230,…)`, hardcoded rather than
-  `var()` since gradients needed a literal alpha at the time it was written), `.cabin-figure`'s
-  placeholder background (`#101211`→`var(--dark)`), `.dgs-fb-panel`'s reduced-motion fallback
-  background (`#050505`→`var(--dark)`), `scroll-intro.tsx`'s `PAPER` JS constant (the GSAP-tweened
-  color the pinned intro settles to right before `#product-intro`, `#eaeae6`→`#f9f9fa`, with a
-  comment to keep it in sync with the CSS token since GSAP can't read a CSS custom property here).
-- **`.research` moved off `--paper-light` onto `--paper`** — per Sylvia's explicit list, Research,
-  Design Principles, Concepts, and Sketch Process (03-06) should read as one continuous
-  main-background run, not have Research sit on the "panel" tone.
-- **`.principles` converted from a dark section to the same continuous main background** — this
-  was the actual fix for the "run of four," since Principles (`dark-section`, `var(--dark)`) sat
-  in the middle of that run and broke it. Removed `dark-section` from its `<section>` in
-  `page.tsx`; `halogrip.css` gives it its own explicit `background:var(--paper)`. Per Sylvia's
-  explicit follow-up instruction, every color that had been tuned for white-on-dark got adjusted
-  for the new light background: `.principles-intro>p` and `.principles-list article p` (both were
-  light grays like `#d2d4cf`/`#c9ccc7`) now use `var(--muted)`; `.principles-list article`'s
-  divider (`#515553`) now uses `var(--line)`. Headings/index numbers needed no change — they had
-  no explicit color, so removing `dark-section`'s `color:var(--white)` override lets them fall
-  back to `body`'s own `var(--ink)` automatically, and the red index numbers/accent span already
-  matched the exact pattern `.research-findings` uses on a light background.
-- **One deliberate exception, found by sampling the actual asset pixels, not assumed**: `.journey`
-  (section 09 / EMERGENCY HANDOVER) still hardcodes `background:#f3f2ee` — the *old*
-  `--paper-light` value — rather than following the token's new `#eceef0`. The 5 story-grid PNGs
-  under `09-handover/` have `#f3f2ee` baked into their own canvas per Sylvia's original spec for
-  that section (see the entry further below), confirmed by sampling a flat pixel region of
-  `01-authorize.png` directly (`~rgb(241,240,236)`, matching `#f3f2ee`, not `#eceef0` or the new
-  `#f9f9fa`) — moving this section onto the new panel tone would have introduced exactly the kind
-  of seam this whole pass was meant to remove. Left with an explanatory comment in the CSS so a
-  future session doesn't "fix" it back onto the token.
-- **Chapter-pause dividers added, whitespace trimmed slightly at the seams that got them**: now
-  that Research/Principles/Concepts/Sketch Process share one flat background with no color
-  contrast between them, a hairline `border-top:1px solid var(--line)` was added to `.principles`,
-  `.concepts`, and `.sketch-process` (not `.research`, which still follows the dark 02.4 scene —
-  contrast alone still signals that break) so each chapter start still reads as a deliberate pause
-  rather than a random line break. With the divider now doing some of that signaling work, the
-  padding immediately on either side of each new seam was trimmed ~15-25%: `.principles`'s
-  `padding-block` split into `padding-top:clamp(46px,6vw,84px)` (was 64/8vw/110, bottom kept
-  unchanged) + `padding-bottom:clamp(64px,8vw,110px)`; `.concepts.section`'s `padding-top`
-  (761px+ media query) `clamp(48px,6vw,84px)`→`clamp(40px,5vw,72px)`; `.sketch-process`'s
-  `padding-block` `clamp(63px,8.5vw,105px)`→`clamp(52px,7vw,90px)`. Mobile breakpoint values were
-  not touched (same reasoning as every earlier density pass in this file: the complaint/fix here
-  is about desktop's now-redundant color+whitespace double-signal, not mobile).
-- **Considered and rejected**: recoloring `.concept-deck-card` (the sketch-carousel's white card
-  panel, section 05) from `#fff` to the new `--paper-light` as a "local diagram backdrop" — sampling
-  all 5 `05/concept-*` sketch images directly showed they're flat `#ffffff`, an exact match to the
-  card's existing background; recoloring the card to `#eceef0` would have *created* a seam around
-  every sketch that doesn't exist today, the opposite of this session's goal. Left untouched.
-- **3D intro scene checked, not touched**: `scroll-intro-scene.tsx` sets no `scene.background` or
-  renderer clear color of its own — the `<canvas>` is `background:transparent` and shows whatever
-  sits behind it in the DOM, so once `.scroll-intro`/`.scroll-intro-preload`/the `PAPER` tween
-  above were repointed at the new token, the opening scene's resting-state background matches the
-  rest of the page automatically. No material or lighting code in that file was touched.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean, run twice), computed-style
-  checks in the dev server confirming every listed selector resolves to the intended hex, and —
-  unusually for this project (most earlier sessions in this file hit a WebGL-tab-capture bug that
-  produced blank screenshots, documented at length elsewhere here) — real, successful screenshots
-  this time: confirmed the `.principles`→`.concepts` hairline divider renders as a clean, subtle
-  seam on a continuous background, confirmed Design Principles itself now reads correctly as dark
-  ink-on-light-paper with legible muted body copy and dividers, confirmed the `sketches.webp`
-  sheet (section 06) blends into the new `#f9f9fa` background with no visible edge in practice
-  despite the two tones not being bit-identical, and confirmed the 09-handover storyboard panels
-  still sit on their originally-matched `#f3f2ee` with no seam.
-- **Asset boundaries checked directly (pixel-sampled via `sharp`, not guessed) — none need fixing
-  yet, none were modified**: `sketches.webp`'s own background samples at `#fffffe`-ish, technically
-  not bit-identical to the new `#f9f9fa` main background it now sits directly against with no
-  frame, but the gap is small enough (~6/255 per channel) that it read as invisible in an actual
-  screenshot — flagging in case a future, more color-critical pass wants it closer. No other
-  asset showed a mismatch worth flagging: the `05/concept-*` sketches and `09-handover/*` PNGs are
-  exact-matched to the panels holding them (see above); `product-front.webp`/`product-detail.webp`/
-  `product-side.webp` all decode with real alpha transparency (not a flat color), so they have no
-  background of their own to clash with anything; `id-one.webp`/`id-two.webp`/`hud.webp` are
-  intentionally dark opaque UI-screen mockups sitting on a light section by design, not an
-  accidental beige/white mismatch. Per Sylvia's instruction, no filter or blend-mode was added or
-  removed on any of these to mask a boundary — the two pre-existing `mix-blend-mode:multiply` uses
-  (`.product-detail>img`, `.interaction-demo>img`) were left exactly as found.
-- Not touched, out of scope for this pass: copy, content order, model animation, and the page's
-  overall layout — confirmed by keeping every edit to `background`/`color`/`border-color`/
-  `padding` declarations (plus the two class-list changes needed to move Principles off
-  `dark-section`), never touching a selector's structural properties.
-
-### 02.2 REAL-WORLD NEED — route line now draws itself in, synced to the annotations/frame/stat (this session)
-- Sylvia asked for animation on the previously fully-static 02.2 poster: the route line should
-  draw itself in, with the text/annotations appearing one by one as the line reaches each point
-  ("字也有跟着线的显示一个个出现"), and confirmed (via `AskUserQuestion`) this should extend to
-  every element on the poster — the vehicle frame + "74" stat and the `RESPONSE ORIGIN` block too
-  — synced to the line's own draw progress, not a fixed independent stagger. Per the section's
-  existing design (a static, percentage/`vw`-positioned "poster" — see the entry below on why),
-  this is a one-shot reveal-on-scroll-into-view, not a scroll-scrubbed or pinned scene — no
-  `pin-coordinator.ts` wiring needed since this creates no pin.
-- Extracted the section out of `page.tsx` into a new client component, **`app/work/halogrip/
-  need-scene.tsx`** (`NeedScene`, `"use client"`), following the same per-scene-file convention as
-  `overview-backdrop.tsx`/`design-gap-sequence.tsx`/`concept-carousel.tsx`. `page.tsx` now just
-  renders `<NeedScene />`.
-- **The draw-in mechanism**: `.need-route`/`.need-route-glow` already carry their own
-  `stroke-dasharray` for visual styling (a dashed line + a blurred glow), so animating their own
-  `stroke-dashoffset` for a reveal would fight that pattern. Instead added an invisible solid copy
-  of the same path inside a new `<mask id="need-route-reveal">`; on mount, JS measures
-  `getTotalLength()`, sets that copy's own `stroke-dasharray`/`stroke-dashoffset` to its full
-  length (hidden), and a GSAP tween counts `dashoffset` down to 0 — revealing the real two paths
-  underneath via the mask without ever touching their own dash styling.
-- **Timing is derived from the path's real geometry, not hand-picked percentages**: a
-  `fractionAt(x, y)` helper samples the path (400 steps via `getPointAtLength`) to find what
-  fraction of the total length the draw-in reaches by the time it passes closest to a given
-  target point. This is used to time every other reveal off the same GSAP timeline: annotation
-  `01 BLOCKED ROADS` fades in (opacity+`y`) right as the line passes its dot, the vehicle frame +
-  "74" stat fade in as the line passes the frame's left edge, then `02`/`03` as the line reaches
-  their own dots, then `RESPONSE ORIGIN` + the source line once the line finishes drawing (at
-  fraction 1). SVG elements (leader lines/dots, the frame's rect/corner paths) animate opacity
-  only; HTML elements (the annotation `<div>`s, stat, origin, source) also get a small
-  translateY. Triggered via a plain one-shot `ScrollTrigger.create({ start:"top 70%", once:true,
-  onEnter })`, deferred behind `onPinsReady(["scroll-intro"], ...)` (consuming only — this
-  component doesn't register itself in `pin-coordinator.ts`'s `Source` union since nothing
-  downstream depends on it) so its trigger measures against the final, post-pin document layout
-  rather than baking in a too-short pre-pin position.
-- `prefers-reduced-motion` skips building the timeline entirely: the mask's dashoffset is set
-  straight to 0 and the poster just renders in its finished state, no motion — matching every
-  other reduced-motion fallback on this page. No new CSS was needed for the pre-reveal hidden
-  state (GSAP sets `opacity:0` directly only when it's actually going to animate something in, so
-  a no-JS/reduced-motion visitor never sees anything stuck invisible).
-- **Fixed a real static-layout issue found while building this**: the route's own coordinates ran
-  straight through the red frame box in the middle (flat at `y=500` across `x745-960`, inside the
-  frame's own `y435-670` span) — the dashed line visibly cut across the boxed stalled vehicle.
-  Sylvia's first ask was to reroute the path around the box; she then clarified she actually wanted
-  the line to simply stop before the box and resume after it, reading as passing *behind* the box
-  rather than bending around it ("框原本的那段不显示，过了框以后再续上"). Implemented with a second,
-  static mask (`#need-frame-cutout`): a full-canvas white rect with a black rect cut out over the
-  frame's own bounds (plus a small pad for the glow's blur), nested as an outer `<g>` wrapping the
-  reveal-mask `<g>` from above — so the line's rendered stroke is unconditionally absent inside the
-  frame's footprint regardless of draw progress, while the path's real (unbent) geometry is still
-  what every `fractionAt()` timing calculation runs against.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and real mouse-wheel scrolling
-  in the dev server: confirmed the pre-reveal state (dashoffset at full length, every synced
-  element at opacity 0) before the section enters view; confirmed the line draws left-to-right and
-  visibly disappears under the frame box and reappears cleanly on the other side with no line
-  crossing the box; confirmed `01`/`02`/`03`, the frame+"74" stat, and `RESPONSE ORIGIN`+source
-  each appear in the correct order tied to the line's own progress (checked both via screenshots
-  and by reading `getComputedStyle().opacity`/`strokeDashoffset` mid-scroll); confirmed no console
-  errors across two fresh page loads.
-
-### Section padding-block tightened ~30% after the mason-wong.com resize made the page feel "too zoomed in" (this session, follow-up)
-- Right after the previous entry's literal-pixel resize, Sylvia reported the whole page now feels
-  too large/dense — needing to zoom the browser out to 60-75% to see a full section at once. An
-  Explore agent audit ruled out the font sizes themselves as fixed-container overflow bugs (the
-  handful of fixed-height containers it flagged — `.close-project`, `.interaction-buttons button`,
-  `.final-specs` — all use `min-height`/auto-growing layout, so bigger text just grows the box, it
-  doesn't clip); the real cause is additive density: HALOGRIP has far more small-text elements per
-  page (metadata grids, findings lists, footers, index numbers) than mason-wong.com's sparser
-  layout, so flattening every small tier to mason's 12px floor compounds across dozens of elements
-  even though each individual change was small. Sylvia's explicit direction (confirmed via
-  `AskUserQuestion`): don't touch font sizes again — they should stay pinned to mason's numbers —
-  tighten the surrounding whitespace instead.
-- Cut the 7 largest section-level `padding-block` values in `halogrip.css` by ~30% (min/max/vw all
-  scaled down together, selectors untouched): `.section` `clamp(108px,15vw,205px)`→
-  `clamp(76px,10.5vw,144px)`, `.challenge-scene` `clamp(100px,14vw,170px)`→`clamp(70px,10vw,120px)`,
-  `.principles` `clamp(135px,17vw,220px)`→`clamp(95px,12vw,154px)`, `.concepts` (bottom only)
-  `160px`→`112px`, `.sketch-process` `clamp(90px,12vw,150px)`→`clamp(63px,8.5vw,105px)`, `.journey`
-  `clamp(130px,16vw,205px)`→`clamp(91px,11vw,144px)`, `.site-footer` `130px 40px`→`92px 40px`. The
-  `@media(max-width:760px)` mobile overrides for these same selectors were deliberately **left
-  untouched** — Sylvia's complaint was specifically about desktop browser zoom, and mobile was
-  already noticeably tighter than desktop before this change; `--gutter` (horizontal shell padding)
-  was also left alone since the complaint was about vertical density, not horizontal.
-- While investigating, the Explore agent flagged `.concept-deck-card-label` (section 05's per-card
-  "CONCEPT 01 / Screen + External Device" label) as a possible risk: it sits `flex:none` above a
-  `flex:1` image inside an `aspect-ratio`-locked (not auto-height) card, so if the label text
-  wrapped to 2 lines it would visibly steal height from the image. Live `getBoundingClientRect()`
-  checks initially looked alarming (heights up to 58px against an 18px single-line baseline) —
-  but cross-checking against `offsetHeight` (which ignores CSS transforms) showed every label is
-  actually a clean single line at 18px; the inflated `getBoundingClientRect()` numbers were purely
-  a side effect of the non-active cards' GSAP rotation transform enlarging their axis-aligned
-  bounding box, not real text wrapping. **No live bug existed**, but added a small defensive fix
-  anyway since it's free insurance against a genuinely long future concept title: wrapped the label
-  text in its own `<span className="concept-deck-card-label-text">` in `concept-carousel.tsx` and
-  gave it `flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis` in
-  `halogrip.css` (plus `flex:none` on the sibling `<em>` concept-number badge so it never shrinks)
-  — a too-long label now truncates with an ellipsis instead of ever being able to wrap.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean, run twice) and live
-  `getComputedStyle`/`offsetHeight` checks in the dev server confirming the new padding values
-  are live and that all 5 concept-deck-card labels render at a single-line 18px `offsetHeight`.
-  **Screenshot verification was not possible this round** — this session's automated browser tab
-  returned a flat blank frame at every scroll position tried on `/work/halogrip`, matching the
-  known WebGL-tab-capture issue already documented at length elsewhere in this file (this page's
-  persistent React Three Fiber canvas breaks this particular browser extension's tab-capture, not
-  a page bug) — confirmed by reproducing the same blank result at the very top of the page too,
-  ruling out a scroll-position problem. A future session with working screenshots should do a
-  visual before/after density check if this becomes load-bearing.
-
-### Font-size tokens re-pinned to mason-wong.com's actual pixel numbers, not just consolidated (this session, follow-up)
-- Immediately after the previous entry's token-consolidation pass (same session), Sylvia asked to go
-  further: "我想要mason的字号数字套到我的case里" — don't just organize HALOGRIP's own sizes into named
-  tokens, actually replace their *values* with the specific pixel numbers measured off mason-wong.com.
-  Two real constraints surfaced and were resolved with her before editing (via a plan-mode
-  `AskUserQuestion`/plan-file round): (1) mason's numbers are static px, not fluid — HALOGRIP's desktop
-  rules lean on `clamp(min,vw,max)`; resolved by keeping every existing clamp's `min`/`vw` slope
-  untouched and only replacing the `max` ceiling with mason's number, so large-screen sizing now
-  genuinely matches mason while the 760px-breakpoint fluid scaling behavior is undisturbed. (2) mason
-  never uses anything below 12px anywhere on either page it was inspected on (home or `/liverpoolfc`)
-  — HALOGRIP's `--fs-label`/`--fs-caption`/`--fs-micro` were 10/9/8px. First proposed leaving those
-  three untouched (mason has no equivalent to copy); Sylvia rejected that and said explicitly "我想所有
-  字都12px以上的，和mason一样" (I want everything 12px or above, same as mason) — so all three now sit
-  at 12px too, same as `--fs-body`. This is a real, visible change: every eyebrow/footer/index-
-  number/caption on the page got noticeably bigger, confirmed intentional rather than incidental.
-- New `:root` values in `halogrip.css` (only the token *values* changed, no selectors touched — every
-  selector already referenced these tokens from the prior consolidation pass): `--fs-hero` max
-  270→**167** (mason's own Liverpool-FC-page project-title size — same role, a case study's own H1),
-  `--fs-display-1` 205→**158**, `--fs-display-2` 147→**120**, `--fs-display-3` 138→**86**, `--fs-title`
-  90→**80** (mason's Liverpool-page section-heading size), `--fs-stat` 76→**74**, `--fs-heading-lg`
-  58→**61**, `--fs-heading-sm` 38→**37** (mason's Liverpool-page "Mobile app" sub-heading, exact
-  match), `--fs-card-title-lg` 29→**34**, `--fs-meta-stat` max 27→**25**, `--fs-card-title-sm`
-  22→**24**; body tiers `--fs-body-lg` 12→**14** (mason's nav/label size), `--fs-body` 11→**12**
-  (mason's paragraph size), and `--fs-label`/`--fs-caption`/`--fs-micro` all 10/9/8→**12** per above.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and live `getComputedStyle` checks
-  in the dev server (`.hero-heading h1`→167px, `.overview-copy h2`→80px, `.overview-copy>p`→14px,
-  `.eyebrow`/`.research-findings article p`/`.footer-bottom`/`.final-specs small`→12px, confirming
-  nothing on the page renders below 12px anymore) plus a screenshot of the hero section.
-
-### HALOGRIP's type system swapped to Koulen + Roboto Mono (mason-wong.com's own font pairing), and its scattered font sizes consolidated into named tokens (this session)
-- This followed a separate conversation where Sylvia asked to inspect the font system on
-  https://www.mason-wong.com/ (and its `/liverpoolfc` case-study page) via live browser
-  `getComputedStyle` inspection — confirmed that site's headings are all set in **Koulen**
-  (Google Fonts, SIL OFL 1.1, free to use commercially) and its body/UI text in **Roboto Mono**
-  (Google Fonts, Apache 2.0, free commercially); the site also uses a decorative Chinese
-  calligraphy typeface (HanyiSentyFoundation — free for personal use only, commercial use needs
-  a paid Hanyi license) and two minor accent faces (Pinyon Script, Albert Sans for bracket
-  glyphs) that Sylvia explicitly asked to skip. Confirmed with Sylvia via `AskUserQuestion` before
-  touching code that "套用大小" meant: swap the fonts, and reorganize HALOGRIP's own existing
-  (already fluid/`clamp()`-based, already tuned across many earlier sessions per the entries
-  below) font sizes into a named tier system — not overwrite them with mason-wong's literal
-  pixel numbers, which belong to a completely different, much simpler page layout.
-- **Font loading** (`app/work/halogrip/page.tsx`): added `Koulen` (`weight:["400"]` — it's a
-  single-weight display face, so `font-weight:700` on headings synthesizes/faux-bolds in the
-  browser, same as it would with any single-weight display font) and `Roboto_Mono`
-  (`weight:["400","500","700"]`) via `next/font/google`, following the exact route-scoped
-  pattern `scroll-intro.tsx` already established for Poppins — variables land on `<main
-  id="top">` via `className`, never touching the root layout or `/`. The old self-hosted
-  `@font-face` rules (Nimbus Sans Narrow, DejaVu Sans Mono) were deleted from `halogrip.css`;
-  the actual font files stay on disk unused, per this project's convention for superseded
-  assets.
-- **A real scoping bug hit and fixed**: `--halogrip-display`/`--halogrip-mono` (the CSS custom
-  properties next/font/google's `variable` option defines) only exist on `#top` and its
-  descendants — but `halogrip.css`'s `--display`/`--mono` tokens, and `body`'s own
-  `font-family`, live on `:root`/`body`, which are *ancestors* of `#top`. CSS custom properties
-  only inherit downward, so `:root` referencing `var(--halogrip-display)` was invalid at that
-  scope and silently fell through to the fallback stack (confirmed live: computed
-  `font-family` was resolving to the browser's generic `ui-sans-serif`/`Courier New`, not
-  Koulen/Roboto Mono, even though the variables themselves were correctly defined one level
-  down). Fixed with a second rule, `#top{--display:var(--halogrip-display),...;--mono:
-  var(--halogrip-mono),...;font-family:var(--mono)}`, added right after `:root` — since `#top`
-  wraps 100% of this route's rendered markup, redeclaring both the tokens and the base
-  `font-family` there (rather than on `body`, which sits one level too high to see the
-  variables) is what actually gets every element on the page onto the new fonts. `:root`'s
-  copies of `--display`/`--mono` were reduced to plain fallback stacks (`'Arial Narrow',
-  sans-serif` / `'Courier New',monospace`) so they're never invalid, just unused once `#top`'s
-  override applies.
-- **Font-size consolidation**: added ~14 named tokens to `halogrip.css`'s `:root` — heading
-  tiers `--fs-hero` (the H1 only) / `--fs-display-1/2/3` / `--fs-title` / `--fs-heading-lg/sm` /
-  `--fs-card-title-lg/sm` / `--fs-stat` / `--fs-meta-stat`, and body tiers `--fs-body-lg` (12px)
-  / `--fs-body` (11px) / `--fs-label` (10px) / `--fs-caption` (9px) / `--fs-micro` (8px) — then
-  replaced essentially every hardcoded `font-size` in the file's *desktop* rules with the
-  matching token. This is a **consolidation, not a redesign**: most selectors just got their
-  existing exact value wrapped in a shared, named variable (e.g. every already-identical 9px
-  caption across `journey-lede`/`story-grid article>p`/`interaction-footer`/etc. now reads
-  `var(--fs-caption)`), and only genuinely-drifted near-duplicates were snapped together (e.g.
-  the card-title cluster 20/22/24/29/31px collapsed to two tokens, `--fs-card-title-sm`(22)/
-  `-lg`(29)). The `@media(max-width:760px)` block was **not touched** — it overrides the same
-  selectors with its own fixed px values regardless of what the desktop rule resolves to, so it
-  keeps working unchanged. `.need-*` (section 02.2's photo-overlay annotations, coordinate-matched
-  pixel-for-pixel against a reference image per an earlier session's entry) was **deliberately
-  excluded** from size consolidation — only its font-family changes via the shared token, its
-  sizes are untouched, since nudging them risks misaligning text against the SVG leader-lines.
-- **Letter-spacing cleanup**: removed the negative tracking (`-.01em` to `-.026em`) that every
-  Koulen-driven heading selector had inherited from Nimbus Sans Narrow. Koulen is already a
-  tightly-set condensed display face (confirmed against mason-wong.com's own CSS, which uses
-  `letter-spacing:normal` throughout) and reads cramped with extra negative tracking on top.
-- `design-gap-sequence.css` and `scroll-intro.css` need no direct edits — both already reference
-  `var(--display)`/`var(--mono)` rather than hardcoding a font name, so they picked up
-  Koulen/Roboto Mono automatically once the shared tokens changed. Updated two stale code
-  comments in `scroll-intro.tsx`/`scroll-intro.css` that described Poppins as "a deliberate,
-  scoped exception to this page's Nimbus Sans Narrow" to say Koulen instead — Poppins itself is
-  untouched, still exclusive to `.scroll-intro`.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean, run twice — once before the
-  `#top` scoping fix, once after) and live `getComputedStyle` checks in the dev server across
-  representative elements (`.hero-heading h1`, `.overview-copy h2`/`>p`, `.eyebrow`, `.research-
-  findings h3`, `.wordmark`, `body`, `#top`) confirming Koulen/Roboto Mono actually resolve (not
-  just that the token chain looks right on paper) — this is what caught the `#top`-scoping bug
-  above, a plain visual screenshot would not have surfaced it since the fallback stacks
-  (`ui-sans-serif`, `Courier New`) don't look obviously broken. Also confirmed visually via
-  screenshots at the hero, `02.3 CURRENT RESPONSE`, `01 OVERVIEW`, and `03 PROBLEM STATEMENT`
-  sections post-fix.
-
-### Section 6 replaced: PROTOTYPE TESTING out, SKETCH PROCESS in — reusing a previously-shelved sketch-sheet asset (this session)
-- Sylvia asked to put `public/media/halogrip图片/other/sketches.webp` (a wide hand-sketch summary
-  sheet: 6 rounds of grip-form iteration converging on a pink-highlighted "Final" form) into the
-  current section 6, replacing it entirely. This file was a previously shelved asset — an earlier
-  session had deliberately dropped it from the page ("for now") while keeping it on disk for
-  later; this session reactivates it. Confirmed three open questions with Sylvia via
-  `AskUserQuestion` before touching code: (1) the old section 6 content is deleted outright, not
-  relocated; (2) the new section uses a full-width layout, not the old section's 50/50 photo/copy
-  split — this project has repeatedly hit "dense sketch sheet unreadable when squeezed into a
-  half-width slot" (see the several 05-concept-carousel sizing rounds elsewhere in this file), so
-  full width was the safe default for legibility; (3) yes, write a small amount of draft copy
-  (eyebrow + one-line heading + a caption), flagged for her review rather than leaving the section
-  bare.
-- **Old section removed wholesale**: `.testing`/`#testing` — a two-column section with
-  `prototype.webp` (physical foam-prototype photo) on the left and "TEST. LEARN. REFINE." +
-  three evaluation findings (LOWER PIVOT / BIGGER CONTROLS / TWO-STEP ACCESS, the `iterations`
-  array in `page.tsx`) on the right. That content described physical-prototype evaluation, a
-  different story from sketch-stage form iteration, so it was deleted rather than kept or moved —
-  per Sylvia's explicit call, not an assumption.
-- **New `<section className="sketch-process section shell" id="sketch-process">`** in `page.tsx`:
-  eyebrow `[ 06 / SKETCH PROCESS ]`, a draft `<h2>FROM WHEEL TO GRIP.</h2>` (own
-  `// TODO(sylvia): draft heading` comment), then a `<figure>` with the sketch sheet at full
-  section width (`width:100%;height:auto`, no `object-fit` crop — the whole point given this
-  project's history of illegible cropped sketch sheets) and a draft `<figcaption>SIX ITERATION
-  ROUNDS / FINAL FORM SELECTED</figcaption>` (own `TODO(sylvia)` comment). Both text strings are
-  my drafts for Sylvia to confirm or replace, not treated as final copy.
-- `halogrip.css`: replaced the old `.testing`/`.testing-photo`/`.testing-copy`/`.iteration-list`
-  rule block (desktop + the `max-width:760px` override) with a much smaller `.sketch-process`/
-  `.sketch-process-figure` block. Also removed `.testing-copy h2` from the shared oversized-title
-  selector on the `.principles` line (that selector's other members — `.final-content h2`,
-  `.journey-inner h2`, `.site-footer h2` — are unrelated hero-scale headings; the new section's
-  `h2` uses its own smaller rule, sized like `.concept-heading h2` rather than a full-bleed hero
-  headline) and dropped a now-dead `.iteration-list h3` from the `.principles-list h3,.story-grid
-  h3` shared selector.
-- No nav link pointed at `#testing`, so renaming the section id to `#sketch-process` was safe
-  (confirmed by grep before renaming).
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean, run twice — once after the
-  initial edit, again after the CSS dead-selector cleanup). **Browser screenshot verification hit
-  the same known issue documented elsewhere in this file** (`document.hidden`/`visibilityState`
-  reporting `"hidden"` for this session's automated tab — an environment characteristic, not a
-  page bug) — screenshots came back blank even though the page was live. Verified instead via
-  direct DOM/network checks: fetched the image URL directly (200, `image/webp`, natural size
-  1920×1080 matching the source file), confirmed the rendered `<img>`'s on-page aspect ratio
-  matches that natural ratio exactly (no distortion from the `height:auto` CSS), confirmed
-  eyebrow/heading/caption text render as authored, and confirmed the new section's top/bottom
-  edges land exactly on the previous section's (`#concepts`) bottom and the next section's
-  (`#solution`, 07 FINAL CONCEPT) top with zero gap or overlap.
-
-### 09 / EMERGENCY HANDOVER five-step scenario rebuilt from a supplied asset pack; new one-time section-fade-in helper added (this session)
-- Sylvia supplied a zip, `public/media/halogrip图片/other/halogrip-scenario-assets-F3F2EE.zip`
-  (5 storyboard frames — Authorize/Activate/Reposition/Park/Complete — plus a `README.txt`
-  stating the canvas/background color is exactly `#F3F2EE` and that the 5 images already have
-  that color composited into their own backgrounds, so the page should use
-  `background-color:#F3F2EE` rather than loading the included reference PNG), with an explicit
-  spec: use the 5 images in that order: set the section's entire background to `#F3F2EE`; no
-  cards/shadows/borders/white containers around the images (their backgrounds already match);
-  all 5 steps equal size/weight in one horizontal row; restrained red only on the step numbers
-  and a thin connecting line; reuse the existing condensed heading/mono body fonts; a single
-  subtle whole-section fade-in (8px upward, 600ms) with no per-step animation, no pinning, no
-  scroll-progress linkage; stay responsive; don't touch any other section.
-- Extracted the 5 PNGs to `public/media/halogrip图片/09-handover/` (own per-section folder, same
-  convention as `03/`, `2.1`-`2.4`, `05-iteration/`). `#F3F2EE` is exactly this file's existing
-  `--paper-light` token, so no new color was introduced — `.journey` (section 09's own class)
-  now sets `background:var(--paper-light)`, matching how `.interaction` (section 08, just above
-  it) already uses the same token.
-- **`dark-section` removed from section 09.** It was previously a `<section className="journey
-  dark-section">`; with `--paper-light` as the new background, keeping `dark-section` (`background
-  :var(--dark);color:var(--white)`) would fight the new bg. Removing it lets every descendant fall
-  back to `body`'s own `color:var(--ink)` for free — the only follow-up needed was recoloring a
-  handful of colors that had been hand-picked light-gray-on-dark literals (`#c8cbc6`, `#c4c7c1`,
-  `#555956`, etc., on `.journey-lede`, `.story-grid article>p`, `.access-detail>p`/`.hud-detail>p`,
-  `.system-detail`'s border) over to the existing `var(--muted)`/`var(--line)` tokens.
-- `steps` in `page.tsx` renamed to match the supplied filenames — `IDENTIFY`→`AUTHORIZE`,
-  `RELEASE`→`COMPLETE` (`ACTIVATE`/`REPOSITION`/`PARK` unchanged) — each entry now also carries
-  its asset's filename stem so the map can build the `/media/halogrip图片/09-handover/<file>.png`
-  src directly. The old `story-N.webp` images (a different, non-matching asset set) are no longer
-  referenced by this section; left on disk untouched, same as every other superseded-but-kept
-  asset in this project's history.
-- **Connecting line**: each step is `<img> → .story-step (number + line) → h3 → p`, where
-  `.story-step` is a flex row of the red index number plus a `flex:1` 1px red line
-  (`opacity:.35`) filling the rest of that step's own column width; the last step's line is
-  `visibility:hidden` (nothing to connect to after it). This reads as one continuous line across
-  the row at normal viewing sizes, with only the 16px grid gap between columns as an unbridged
-  gap — a deliberate simplification over precisely bridging every grid gutter, in keeping with
-  "restrained." `.story-grid article img` switched from `object-fit:cover` (with a `var(--paper)`
-  crop fallback, no longer needed) to `object-fit:contain` at `aspect-ratio:1.618/1` (the 5 new
-  PNGs' own real ratio, read directly from their PNG headers — 1.607–1.627 across the 5 files,
-  close enough to treat as one shared ratio) — since the images' own backgrounds already match
-  the section's, `contain` shows each frame in full with no visible letterboxing seam.
-- **New `app/work/halogrip/section-reveal.tsx`** (`SectionReveal`, "use client"), a small generic
-  wrapper — renders the `<section>` itself (not an extra nested `<div>`) — that fires a plain
-  `IntersectionObserver` once, adds `is-visible`, then disconnects: no continuous scroll linkage,
-  no per-child animation, matching the "don't animate individual steps / don't pin / don't
-  connect to scroll progress" constraint exactly. `page.tsx`'s section 09 now renders
-  `<SectionReveal id="handover" className="journey">` instead of a plain `<section>`. CSS
-  (`halogrip.css`): `.section-reveal` defaults to `opacity:1` (so content already in the DOM
-  without JS, or before the observer fires, is never stuck invisible); only once the component
-  has mounted does it add a second class, `section-reveal-armed`, and only under `@media
-  (prefers-reduced-motion:no-preference)` does `.section-reveal-armed` actually go to `opacity:0;
-  translateY(8px)` with a `.6s` transition, with `.is-visible` bringing it back to
-  `opacity:1;translateY(0)` — so reduced-motion visitors and no-JS visitors both just see the
-  section, no animation, no flash of hidden content.
-- Not wired into any other section — `SectionReveal` exists as a reusable helper now, but per
-  the brief ("do not modify other sections") only section 09 uses it this session.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and direct DOM/computed-style
-  inspection in the dev server: `#handover`'s background resolves to `rgb(243,242,238)`
-  (`#F3F2EE`); `.story-grid` lays out as 5 equal `204.97px` columns with the images loading `200`
-  and rendering at the real `1.618/1` ratio; each step number and its connecting line compute to
-  `rgb(201,55,49)` (`--red`), with the 5th step's line `visibility:hidden`; `.system-detail`'s
-  recolored border/paragraph text resolve to the `--line`/`--muted` token values; and injecting
-  the file's existing `@media(max-width:760px)` rules as a scratch override (this session's
-  automated browser can't actually resize its viewport — same tooling limitation noted elsewhere
-  in this file) confirms the grid collapses to 2 columns with the 5th step spanning full width.
-  **Pixel screenshots of this page could not be used for verification this session** — every
-  screenshot attempt (fresh load, after `_scrollTop()` jumps, after real incremental mouse-wheel
-  scrolling, at section 09 and also at the untouched section 08 above it) came back a flat blank
-  frame despite `getComputedStyle`/`elementFromPoint` on the same live tab confirming fully
-  opaque, correctly colored, correctly positioned content at that exact moment — almost certainly
-  the browser extension's tab-capture mechanism breaking against this page's persistent React
-  Three Fiber/WebGL canvas (a known class of Chromium tab-capture bug), not a real rendering
-  defect. Flagging in case a future session hits the same thing: don't trust a blank screenshot
-  on `/work/halogrip` as evidence of a bug without cross-checking computed styles first.
-
-### 05 / CONCEPT EXPLORATION deck — concept numbers made explicit after Sylvia flagged the "1 3 4 2" card order as confusing (this session, follow-up)
-- Immediately after the previous entry's asset switch, Sylvia noticed the on-card labels' own
-  ppt numbering ("1.", "3.", "4a.", "4b.", "2.") reads as a strange, non-sequential order when
-  browsed in deck position order, and — more importantly — that landing on the final card never
-  actually told a viewer *which* concept number they'd arrived at ("不过现在这个顺序 1 3 4 2 是
-  不是有点奇怪，而且没有显示我最后选择了2" — isn't this 1/3/4/2 order a bit odd, and it doesn't
-  show I ultimately picked [concept] 2). Both are the same root cause: the deck's position order
-  (dictated by "selected direction must be the last card revealed," unchanged from every earlier
-  round's spec) and the ppt's own concept numbering are two different sequences, and showing only
-  the ppt number with no framing made the mismatch read as a mistake instead of two intentionally
-  separate axes.
-- Fix, `concept-carousel.tsx`: added a `conceptNumber` field to each `Concept`
-  ("CONCEPT 01"/"03"/"04A"/"04B"/"02", the ppt's own numbering, unchanged) and stopped folding
-  that number into `label` (label is now just the plain title — "Screen + External Device",
-  "Pull-Out Wheel", etc.). Each on-sheet card now shows `CONCEPT NN` (red, `.concept-deck-card-
-  label em`) next to the title on every card consistently, so the ppt numbering reads as its own
-  labelled axis wherever a viewer is in the deck, distinct from the position counter (`01/05`
-  etc.) already shown below. The final reveal's eyebrow changed from a bare "SELECTED DIRECTION"
-  to "SELECTED DIRECTION — CONCEPT 02", directly answering "which concept did I land on."
-  `halogrip.css`: `.concept-deck-card-label` is now `display:flex;gap:10px` to lay the number and
-  title side by side; new `.concept-deck-card-label em{font-style:normal;color:var(--red)}` rule
-  for the number.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and a live dev-server check:
-  read all 5 card labels (confirmed "CONCEPT 01" through "CONCEPT 04B" render on their respective
-  cards) and clicked through to the last card, confirming the eyebrow reads exactly
-  "SELECTED DIRECTION — CONCEPT 02".
-
-### 05 / CONCEPT EXPLORATION sketch deck switched back to the slides 11-15 asset set — the illegibility was never a sizing problem (this session, follow-up)
-- Mid-session Sylvia pointed straight at the fix: "你是不是不知道原稿的草图在哪里，在这里
-  `public/media/halogrip图片/other`" (do you not know where the original sketches are? they're
-  here). Opening the files in that folder (and the sibling `public/media/halogrip图片/05/`
-  folder, which turned out to hold the same set at full size) showed the real problem: the
-  `05-iteration/` sketches used since the previous "sketch deck" rebuild (extracted directly out
-  of the pptx zip, slides 18-22) are raw, white-on-black scans — dense overlapping pencil
-  strokes, handwritten pink annotations, and a lot of dead black canvas around a comparatively
-  small drawing. No CSS card-size increase was ever going to fix that (three separate rounds of
-  enlarging tried and failed) because the useful content was always a small fraction of each
-  image's own bounds — enlarging the card just enlarged the dead space along with it.
-  `public/media/halogrip图片/05/concept-*.{jpg,png}` — the slides 11-15 "Ideation - Concepts
-  Exploration" set this same section used in its very first round, before later rebuilds drifted
-  onto the 18-22 set per an earlier explicit instruction — turned out to already be clean,
-  well-composed, black-on-white line art at the same 2048x1431 (1.431 ratio) size. Confirmed by
-  opening all 5 files directly: no illegibility issue at all, just normal design-sketch density.
-- **`concept-carousel.tsx`**: `CONCEPTS` now points at the 5 existing `05/concept-*` files
-  instead of `05-iteration/sketch-*`: Screen + External Device, Detachable Steering Device,
-  Touch Screen, HUD + Joystick, and Pull-Out Wheel last as the `selected` (SELECTED DIRECTION)
-  card — same card order and same "final card = selected direction" narrative structure as
-  before, only the underlying image set and per-card labels/alt text changed to match this
-  content. The `05-iteration/` folder and its pptx-extracted images are left on disk, unused,
-  same as every other superseded asset folder in this project's history — not deleted.
-- **`halogrip.css`**: removed the `contrast(1.18) brightness(1.1)` filter on
-  `.concept-deck-card img` — that was compensating for the old dark/muddy scans and has no
-  purpose (and no real effect worth keeping) on the new clean white-background art.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean), plus a live check in the dev
-  server: `fetch()`'d all 5 new image paths (200, correct content-type, byte sizes matching the
-  files read directly), then clicked through to the final card and confirmed
-  `SELECTED DIRECTION` / `PULL-OUT WHEEL` renders with `concept-2-pullout-wheel.jpg` as the
-  active image.
-
-### 05 / CONCEPT EXPLORATION sketch deck sized up twice more after Sylvia reported the cards still illegible (this session, follow-up to the follow-up)
-- Sylvia's report after the previous round's size bump ("48vh→68vh" stage, "44%→56%" card) was
-  blunt: "草图都不对，全部都看不清晰为什么" (the sketches are all wrong, none can be seen
-  clearly, why?), then mid-session, live: "图片还是太少，看不清楚" / "太小" (still too
-  small/sparse, too small). The previous round's fix wasn't enough — this round drops the
-  viewport-height cap entirely and sizes the deck primarily off the container width instead.
-  `.concept-deck-stage` went from `width:min(100%,calc(68vh * 1.7))` to `width:min(100%,1040px)`;
-  `.concept-deck-card` went from `44%` (Round 8's original) → `56%` (previous round) → `66%` of
-  the stage (this round). At a typical ~960px-wide container the active card is now ~634px wide —
-  roughly 2.8x its original size. Contrast/brightness filter on the sketch `<img>` bumped slightly
-  further (`contrast(1.18) brightness(1.1)`, was `1.15/1.08`) and the card label font/padding grew
-  a notch too. Mobile override (`@media(max-width:760px)`) updated to match:
-  `.concept-deck-stage{width:100%}` (was `calc(52vh * 1.7)`), `.concept-deck-card{width:78%}`
-  (was `66%`).
-- The four background sketch sheets' `SLOT_STYLE` offsets in `concept-carousel.tsx` are
-  percentage-based (`xPercent`/`yPercent`, self-relative to each card's own — now much bigger —
-  box), so they scaled up proportionally with the active card automatically; no changes needed
-  there, and a live geometry check (`getBoundingClientRect()` on the arrows and all 5 cards)
-  confirmed no overlap with the arrow buttons at the new size.
-- **Verification note — this session's browser automation was itself unreliable**: screenshots
-  repeatedly came back solid blank even though `document.querySelector` confirmed all content
-  (including the always-visible fixed `CLOSE PROJECT` pill) was correctly laid out and painted
-  colors were set — traced to `document.hidden`/`visibilityState` reporting `"hidden"` for the
-  automated tab (an OS/window-focus issue with the Chrome extension on this machine this session,
-  not a page bug). Visual confirmation of the final size was therefore done via direct DOM
-  geometry checks (`getBoundingClientRect` on the stage/cards/arrows, `img.naturalWidth` to
-  confirm all 5 sketch assets decode correctly) rather than screenshots.
-- **Also found and diagnosed, not a real bug**: mid-session, clicking through multiple concepts in
-  quick succession sometimes left the GSAP-driven card transform/opacity visually frozen at an
-  earlier index while React's own state (`aria-hidden`, the `01/05`-style counter, the `SELECTED
-  DIRECTION` copy) had already correctly advanced further. Console logs showed repeated
-  `[Fast Refresh] rebuilding` events landing in the same windows as the test clicks, and the
-  system's own file-watcher reminders confirmed `halogrip.css` was being edited on disk by a
-  concurrent process throughout this session — i.e. Next.js dev-mode Fast Refresh was remounting
-  the component (resetting its GSAP mount baseline) mid-test because of unrelated concurrent
-  edits, not because of a flaw in `concept-carousel.tsx`'s own logic. Confirmed clean: on a fresh
-  page load with no concurrent edits in flight, a single click (and a verified 4-click sequence
-  through to the final `SELECTED DIRECTION` / `PULL-OUT WHEEL` state, checked via
-  `getComputedStyle().transform`/`.opacity` on all 5 cards) drives the GSAP transform to exactly
-  the slot `slotFor(i, index)` predicts every time. No code change was made for this — flagging it
-  here in case a future session sees the same symptom and wonders whether the carousel logic
-  itself is broken; it isn't, verified by hand-deriving `slotFor()`'s expected output and matching
-  it against the live DOM transform matrices.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean).
-
-### 05 / CONCEPT EXPLORATION replaced again — the click-gallery is out, a scattered "sketch deck" (five overlapping paper sheets) is in; assets switched to ppt slides 18-22's iteration sketches (this session, follow-up)
-- Sylvia sent a real mockup she'd made herself,
-  `public/media/halogrip图片/other/skets reference.png`, and asked for the section to match it:
-  five overlapping paper-sheet cards (one large/sharp/centred, four smaller/faded/rotated behind
-  it), switching only via left/right circular arrow buttons — no pagination boxes, no big
-  "SELECTED" button (both explicitly asked to be removed) — with a bottom-left "SELECTED
-  DIRECTION / PULL-OUT WHEEL" reveal on the last card. This is a layout/interaction reference,
-  not literal content: it uses placeholder sketch names ("Pop-up yoke," "Sliding control
-  handle") that don't exist in the project. The actual content came from a separate, explicit
-  instruction — "use the real sketches from PPT pages 18-22" — which is a *different* slide
-  range than every earlier round of this section (those all used slides 11-15's "Concepts
-  Exploration" filmstrip).
-- **Re-extracted the full pptx** (a previous partial extraction in the scratchpad only had
-  slides 9 and 11-15 cached from earlier rounds) and read slides 18-22: four "iteration" sketches
-  (ppt's own numbering, `Sketch 1-4`) each pairing a shape/mechanism/interaction choice — 1:
-  D-shaped wheel + single pedal + mechanical pull-out + HUD; 2: U-shape yoke + on-screen +
-  electrical insert; 3: oblique ellipse + NFC + aircraft-throttle-style speed control; 4: classic
-  round + electrical slide rails + voice control — converging on slide 22's own "Final" sketch,
-  whose on-slide handwritten text literally reads "Final = B pillar + Mechanical + HUD + U-shape
-  + attached to dashboard": the pull-out wheel. That's a direct, ppt-sourced justification for
-  the "5th card = selected direction" structure, not an assumption. Copied the 5 real images
-  (`ppt/media/image23.png`/`24`/`25`/`26`/`28.jpg`) to
-  `public/media/halogrip图片/05-iteration/sketch-{1-4}-*.png` +
-  `sketch-5-final-pullout-wheel.jpg` — the previous round's `05/` folder assets (from slides
-  11-15) are now unused but left on disk, same as every other superseded-but-kept asset folder in
-  this project's history.
-- **`app/work/halogrip/concept-carousel.tsx` rewritten again.** Click/keyboard-only (Left/Right
-  arrow keys), exactly as before — nothing new added around scroll/wheel/drag. New per-card
-  positioning model: each non-active concept is assigned one of four fixed background slots
-  (upper-left/lower-left/upper-right/lower-right) by its position in the array *relative to
-  whichever is currently active* (recomputed every index change via `slotFor()`), so the
-  background cards visibly reshuffle into their new slots rather than jumping. GSAP tweens each
-  card's `xPercent`/`yPercent`/`rotation`/`scale`/`opacity` to match. On the final card
-  (`index===LAST`), every non-active card's target opacity is forced to `0` instead of its usual
-  background-slot opacity — a full fade-out, not just a dim — matching "fade the other sketches
-  out" from the brief.
-- **A real centering bug found and fixed.** First pass set each card's *initial* position via a
-  raw multi-function CSS `transform` string in a React inline `style` prop (`translate(...%, ...%
-  ) rotate(...) scale(...)`), then handed the element to GSAP's `xPercent`/`yPercent` for
-  subsequent tweens. Confirmed directly via `getBoundingClientRect()`: the "centre" slot
-  (`xPercent:0, yPercent:0`, meant to be a no-op offset) rendered ~290px off from the stage's
-  actual measured centre. Root cause: GSAP must parse and internally decompose whatever
-  transform already exists on an element the first time it tweens it, and a multi-function
-  string it didn't itself author doesn't decompose cleanly into the xPercent/yPercent baseline it
-  expects. Fixed by never writing a raw CSS `transform` at all — an additional `useEffect(() =>
-  {...}, [])` calls `gsap.set()` (not `gsap.to()`) once on mount to establish GSAP's own
-  baseline for every card, before the index-driven effect's `gsap.to()` calls ever run on them.
-  Re-verified after the fix: stage centre and the centred card's own centre matched to within
-  rounding.
-- Verified via `npx tsc --noEmit` and `npm run build` (clean) and dev-server interaction:
-  confirmed the centred card sits precisely centred with symmetric background cards on both
-  sides (not just visually — re-checked computed rects), clicked through all 5 sketches via the
-  arrow buttons, confirmed the readout text/labels match each sketch's real ppt content, and
-  confirmed the final click shows "SELECTED DIRECTION" (red) / "PULL-OUT WHEEL" with every other
-  sketch faded to fully invisible, matching the supplied mockup.
-
-### 05 / CONCEPT EXPLORATION gallery — sizing pass: frame and both headings shrunk (this session, follow-up)
-- Sylvia's next look at the new click-controlled gallery (previous entry): "图片和字都太大了看不清"
-  (the image and text are all too big, hard to see clearly). Two separate, real sizing problems,
-  both fixed in `halogrip.css` only (no JS/structure changes):
-  - **`.concept-gallery-frame`** was `width:100%;aspect-ratio:1.431` — at the shell's max width
-    (~1530px inside the 1700px shell minus gutters) that resolves to a ~1069px-tall box, taller
-    than most real browser viewports. The image was technically never cropped (per the previous
-    round's fix) but practically couldn't be *seen* — its top and bottom didn't fit on screen at
-    once, so seeing the whole sketch required scrolling within the section. Fixed by making
-    height the driving dimension instead of width: `width:min(100%,calc(52vh * 1.431))` (pure
-    CSS, no JS measurement) caps the frame at roughly 52% of viewport height — `aspect-ratio`
-    then derives width from that capped height — while `min(100%, ...)` still lets width (and so
-    height) shrink further on narrow viewports where 100% is the tighter constraint. Also added
-    `margin-inline:auto` since the frame no longer reliably fills the shell's width.
-  - **`.concept-heading h2`** (`page.tsx`'s "HOW SHOULD CONTROL APPEAR IN A VEHICLE DESIGNED
-    WITHOUT IT?", part of the section's outer heading block above the gallery component, not
-    the gallery itself) was `clamp(57px,7.4vw,98px)` — sized like the page's other big section
-    headlines, but those are short punchy phrases ("LISTEN BEFORE DESIGNING.") while this one is
-    a full question that wraps to 3 lines at that scale, eating a disproportionate amount of
-    vertical space. Sylvia called this heading out by name in her feedback, so it's fair game
-    despite being outside the gallery component proper. Reduced to `clamp(36px,4.4vw,58px)`
-    (mobile override 54px→32px) — now wraps to 2 lines and reads proportionate to the content
-    below it instead of dominating the section.
-  - `.concept-gallery-copy h3` (the per-concept title, e.g. "PULL-OUT WHEEL") was also nudged
-    down slightly, `clamp(22px,2.6vw,34px)` → `clamp(18px,1.8vw,26px)`, as part of the same pass.
-- Verified via `npx tsc --noEmit` and `npm run build` (clean) and dev-server screenshots: the
-  outer heading now wraps to 2 lines at a proportionate size, and the gallery frame (with its
-  title/eyebrow) fits comfortably within a normal viewport with room to spare — no more
-  scrolling within the section just to see one image top-to-bottom.
-
-### 05 / CONCEPT EXPLORATION replaced entirely — scroll/wheel-driven carousel out, click-controlled gallery in (this session, follow-up)
-- After three rounds of carousel fixes (see the two entries below this one), Sylvia's next
-  message wasn't a tweak — it was a full pivot away from the whole interaction model, delivered
-  as a complete, explicit spec (reproduced almost verbatim into the plan file this session, then
-  implemented directly per her own "implement the change directly rather than describing it").
-  Root complaint: **vertical page scroll should only ever move between page sections.** Every
-  carousel version up to this point intercepted scroll/wheel input inside 05 itself (first as a
-  `position:sticky` scroll-scrub, then as a wheel-capturing self-contained widget) — visitors
-  couldn't scroll upward through it, pause on one image, or skip past it naturally. That's gone
-  now: `concept-carousel.tsx` no longer reads scroll position, wheel deltas, or drag gestures at
-  all. It's a plain click/keyboard-driven index (`useState`, changed only by clicking a
-  selector/arrow or pressing Left/Right with the gallery focused) — nothing here can ever trap
-  or hijack the page's own scroll.
-- **Also reverses the dark full-bleed navy panel** from the previous two rounds (`#121B32`,
-  `left:50%;margin-left:-50vw` breakout) back to the page's normal warm off-white background,
-  sitting inline in the existing `.concepts.shell` padding like any other section content — no
-  more dark theme, no more edge-to-edge bleed. `page.tsx`'s `[ 05 / CONCEPT EXPLORATION ]`
-  eyebrow/heading/intro paragraph above the component were untouched throughout (never part of
-  the carousel component itself).
-- **Presentation order changed for storytelling**, asset identity did not: Screen + Pedal →
-  Modular Device → Touchscreen → HUD + Joystick → **Pull-out Wheel last**, labeled `SELECTED`
-  instead of `05` in the selector row. The Pull-out Wheel asset is still `concept-2-pullout-
-  wheel.jpg` internally (`id:"pullout-wheel"`) — moving it to the end of the *display* order is
-  not a relabel to "Concept 05." Titles reverted from round 3's full ppt sentences back to short
-  editorial names ("Screen + Pedal", "Modular Device", etc., matching what Sylvia's own spec
-  listed verbatim as the concept order) — this is a deliberate reuse of existing project wording,
-  not new copy invented for this round.
-- **Structure**: one `.concept-gallery-frame` (`aspect-ratio:1.431`, unchanged real ratio of all
-  5 sketch assets, so the box never resizes and the page never jumps switching concepts) with all
-  5 images stacked as absolutely-positioned layers from mount — only the active one is
-  `opacity:1`, the rest sit at `0`. Rendering all 5 up front *is* the preload Sylvia's spec asked
-  for (no flash switching, no separate `<link rel=preload>` needed). On index change, GSAP
-  crossfades the outgoing layer out (`opacity:0,x:-10`) while the incoming one fades in from the
-  opposite offset (`x:10→0,opacity:1`), ~250ms, `prefers-reduced-motion` skips the duration
-  entirely — restrained, matches the spec's 220-300ms/8-12px numbers, no scale/3D/bounce.
-- Below the image: 5 real `<button>` selectors (`01`/`02`/`03`/`04`/`SELECTED`) +
-  Previous/Next arrow buttons (disabled at either end). The `SELECTED` selector is styled in
-  `var(--red)` **unconditionally**, independent of `aria-pressed` — it reads as red from first
-  paint (concept 1 is what's actually shown on load, per spec) so a visitor can identify and jump
-  straight to the chosen direction without clicking through the other four; a separate
-  `aria-pressed="true"` style (bordered/ink-colored) marks whichever is currently *being viewed*,
-  so the two signals ("this is the selected direction" vs "this is what you're looking at right
-  now") stay visually distinct and can coexist once you land on it.
-- Clicking `SELECTED` swaps in the Pull-out Wheel image and switches the eyebrow from the plain
-  `01`-style number to `SELECTED DIRECTION` (red) with the title reading `PULL-OUT WHEEL` — same
-  crossfade as every other switch, no separate animation path, no dark treatment.
-- Removed entirely, all now dead: the `wheel` event listener and its threshold/cooldown
-  accumulator, the manual `pointerdown`/`pointermove`/`pointerup` drag tracking, the
-  `ResizeObserver`-measured filmstrip geometry (`cardW`/`cardH`/`step`/`xFor`/`FOCUS_SCALE`), the
-  background crossfade+tint+wash layers, the bottom progress rail, and — because this component
-  no longer mounts an async, non-trivial-height section — the `gsap`/`ScrollTrigger` import and
-  its `ScrollTrigger.refresh()` mount-effect workaround that every prior round of this component
-  needed (documented in each of the entries below) to counteract the site's
-  `normalizeScroll()` stale-max-scroll-bound bug. That bug was a symptom of async layout height
-  changes interacting with page-scroll bounds; a component that never captures scroll and has a
-  simple, CSS-fixed-aspect-ratio frame doesn't create the same failure mode, so the workaround
-  is gone along with everything else that needed it.
-- The old narrow-viewport (`<760px`) static-grid fallback (`ConceptFallback`) is also gone — that
-  existed specifically because the old pin/scroll-scrub mechanic got fragile on narrow viewports;
-  a click/tap-driven gallery has no such constraint, so the same component now serves every
-  viewport width, and `.concept-gallery-selectors` just wraps via `flex-wrap` at narrow widths
-  instead.
-- CSS: the entire `.concept-carousel*` (dark full-bleed hero) and `.concept-fallback*` (static
-  grid) blocks in `halogrip.css` were deleted and replaced with a new, much smaller
-  `.concept-gallery*` block — deliberately renamed off "carousel" since the mechanic it now
-  describes isn't a carousel at all.
-- Verified via `npx tsc --noEmit` and `npm run build` (clean) and dev-server interaction: real
-  mouse-wheel scrolling now passes straight through Section 05 in both directions with zero
-  interception (confirmed scrolling up back into it, not just down past it); clicked every
-  selector and the arrows; confirmed `SELECTED` reads red before ever being clicked; confirmed
-  clicking it shows the `SELECTED DIRECTION` label + `PULL-OUT WHEEL` title with the ordinary
-  crossfade only; confirmed Section 05 flows directly into the existing `06 / PROTOTYPE TESTING`
-  content with nothing else on the page disturbed.
-
-### 05 / CONCEPT EXPLORATION carousel — third round: cards no longer crop, copy replaced with the ppt's actual wording (this session, follow-up)
-- Sylvia flagged two more things after seeing the second (wheel/drag/GSAP) rewrite: unfocused
-  cards still felt "uncomfortable" because half of each was cropped away, and the copy on the
-  carousel ("SCREEN + PEDAL" / "Screen control paired with a floor pedal — space-intensive." —
-  carried over from the old static four-card grid, never actually sourced from the ppt) didn't
-  match what the ppt itself says. Both fixed together, same files
-  (`app/work/halogrip/concept-carousel.tsx`, `halogrip.css`), no plan-mode disagreement — just
-  finished the ppt-fidelity work the earlier rounds hadn't gotten to yet.
-- **No more cropping.** The half-height crop was inherited wholesale from the reference
-  `HeroCarousel`'s own mechanic (`fullH`/`halfH`, shared top edge, `object-position` picking
-  which half survives) — a deliberate choice *there* because it's built for portrait photography
-  (cropping a portrait to its top half still reads as "a person"). Applied to landscape technical
-  sketches, cropping to half just amputates the diagram. Replaced with: every card keeps the same
-  fixed box at the sketches' real, uncropped ratio (`aspect-ratio:1.431`, unchanged from before),
-  laid out at a constant `step` that never changes with focus — only the focused card's
-  `transform:scale()` changes (`FOCUS_SCALE=1.38`, `transform-origin:50% 50%`, matching the
-  centre-anchored growth already confirmed against the ppt's own coordinates in the previous
-  round's entry). Because scale doesn't reflow the row, `xFor`/`step`/drag-snap math needed zero
-  changes — only `.concept-carousel-card`'s box sizing and the per-card GSAP tween (now animating
-  `scale`+`zIndex`+`boxShadow` instead of `height`) changed. `track`/`strip` switched from
-  `align-items:flex-start` (needed for the old shared-top-edge crop) to `align-items:center`
-  (matches the confirmed centre anchor). `gap` widened (`cardW*0.16` vs the old `*0.05`) so a
-  scaled-up focused card has room before visually crowding its neighbours.
-- **Copy now sourced from the ppt itself**, not the old grid's paraphrase. Re-read
-  `ppt/slides/slide11-15.xml`'s body text and each sketch's own handwritten title bar (already
-  extracted once, in an earlier round's changelog entry) and built the new `STAGES` fields
-  directly from that: `conceptLabel` is the ppt's own numbering (`CONCEPT 01`../`03`, then
-  `4A`/`4B` — not sequential 04/05, that's a deliberate mismatch: the position rail below still
-  counts 01-05 sequentially through the 5 *cards*, while the headline's `conceptLabel` reports
-  the ppt's own concept numbering, which two of the five cards share); `title` is each slide's
-  body text verbatim (4a and 4b render the *identical* sentence, "Decision-making based steering
-  device" — that's not a copy-paste bug, the ppt genuinely repeats it); `variant` (new field,
-  `.concept-carousel-variant`, shown only on 4a/4b) is the one place the ppt actually distinguishes
-  the two in words — each sketch's own title-bar text, "Touch Screen" / "HUD + Joystick". The old
-  invented one-line justifications ("space-intensive," "potential misuse," "higher mental load" —
-  never in the ppt, carried over from the pre-rebuild static grid) are gone entirely rather than
-  kept alongside the real copy. "SELECTED DIRECTION" on Concept 02 was left alone — real site
-  content about which direction was chosen, not a ppt-fidelity question.
-- Verified via `npx tsc --noEmit` and `npm run build` (clean) and stepping through all 5 cards in
-  the dev server (arrow keys + click): every neighbour card now shows its complete sketch at
-  reduced size, the focused card is visibly larger without any crop boundary, and each card's
-  headline text (checked directly against the table in the previous round's own changelog entry)
-  matches — confirmed on-screen for Concept 01, 02 (tag renders cleanly beside the wrapped
-  two-line title), and 4B (variant line "HUD + JOYSTICK" renders under the shared 4a/4b title).
-
-### 05 / CONCEPT EXPLORATION rebuilt as a scroll-scrubbed filmstrip carousel, ported from `public/media/halogrip ppt.pptx` slides 11-15; `sketches.webp` hidden but kept on disk (this session)
-- Sylvia asked to replace the static 4-card `.concept-grid` with "the animation" from pptx
-  slides 11-15 ("Ideation - Concepts Exploration") — a Morph-transition sequence where each of
-  5 slides enlarges a different one of 5 sketch cards into a "spotlight" while the rest sit in a
-  row behind it. Ground truth pulled from the OOXML (`ppt/slides/slide11-15.xml`'s `<p:pic>`
-  `<a:off>`/`<a:ext>` values, confirmed `<p159:morph option="byObject">` on all 5) — see the note
-  below on why the literal per-slide EMU coordinates weren't ported 1:1.
-- Also asked to drop the `sketch-sheet` full sheet image (`sketches.webp`, the large hand-drawn
-  overview shown above the old grid) "for now" but keep the file on disk for later — removed only
-  the `<img className="sketch-sheet">` JSX line and its now-dead CSS (`.sketch-sheet` rule, both
-  desktop and the `max-width:760px` override); the file itself was left untouched in
-  `public/media/halogrip图片/other/`.
-- **New assets**: the pptx's own 5 sketch images (`ppt/media/image15-19.{jpg,png}`) were extracted
-  and copied to `public/media/halogrip图片/05/concept-{1-screen-pedal,2-pullout-wheel,
-  3-modular-device,4a-touchscreen,4b-hud-joystick}.{jpg,png}` — real filenames/captions read
-  directly off each sketch's own handwritten title ("① Screen + External Device", "2. Steering
-  wheel + Pull out + Functions", "Concept 3 Detachable Steering Device", "4a. L4-L2 Touch
-  Screen", "4b. L4-L2 HUD + Joystick"). This incidentally corrected a pre-existing mismatch: the
-  old `.concept-grid`'s `concept-screen.webp` (labeled "SCREEN + PEDAL" on the card) was actually
-  a crop of the "4a Touch Screen" decision-UI sketch, not a screen-and-pedal concept — confirmed
-  by opening the file directly. Not flagged further since this rebuild replaces that whole grid.
-- **New `app/work/halogrip/concept-carousel.tsx`** (`ConceptCarousel`, "use client") + matching
-  CSS in `halogrip.css` (`.concept-carousel*`, `.concept-fallback*`). What was ported from the
-  pptx is the animation's *grammar* — a row of cards drifting horizontally, continuous scale/
-  elevation falloff by distance from a fixed focus point, a connecting line with a filled
-  progress bar and per-stage dots, and a title/description readout synced to whichever card is
-  in focus — not the literal per-slide pixel coordinates: those aren't even self-consistent
-  slide-to-slide (the enlarge target's on-slide x position was hand-placed per slide by whoever
-  built the deck, not formulaic — verified by extracting and diffing all 5 slides' coordinates
-  before deciding this). Implementation: a tall (`(STAGES.length-1)*90+100`vh) container with a
-  `position:sticky` inner stage (mirrors `ScrollZoomImage.tsx`'s entry-progress technique, not
-  GSAP `ScrollTrigger.create({pin:true})` — deliberate, see below); scroll progress drives a
-  continuous `focus` value (0..4) via `-container.getBoundingClientRect().top / (containerHeight
-  - stageHeight)`; each card's scale/lift/opacity/z-index/shadow is a distance-from-focus falloff
-  written directly to refs per frame (no React state on the scroll path, matching
-  `design-gap-scene.tsx`'s established pattern); the nearest integer stage drives the text
-  readout via `setState` (only changes 4 times per full scroll, cheap). Kept "PULL-OUT WHEEL" as
-  the previously-`concept-selected` entry, now surfaced as a `SELECTED DIRECTION` tag next to its
-  title in the readout — see the outline bug note below for why it isn't a border on the card.
-- **A real bug hit and fixed during this build**: the site's global GSAP
-  `ScrollTrigger.normalizeScroll()` setup (the same mechanism behind `window._scrollTop()`,
-  documented elsewhere in this file) caches a max-scroll bound. This component's own tall
-  container doesn't exist in the DOM until after the `enhanced` check's first render pass, so
-  without a nudge the page becomes unscrollable past whatever bound was cached before this
-  component mounted — confirmed directly: `window._scrollTop(x)` would echo back `x` from its
-  getter while the page's *real* `window.scrollY` silently stayed capped at the old, shorter
-  bound. Fixed with one `ScrollTrigger.refresh()` call inside this component's mount effect.
-  This is a different code path from the pin-timing bug `./pin-coordinator.ts` documents (that
-  one is about an existing *trigger's own* `start`/`end` not responding to `refresh()` — this is
-  normalizeScroll's separate max-scroll-bound cache, which does respond to `refresh()`). No
-  `pin-coordinator` wiring was added for this component since it creates no GSAP pin of its own.
-- **Bug found and fixed mid-build**: the "selected" concept was first marked with a persistent
-  red `outline` directly on its card. Because adjacent cards overlap (card width 24% > the 21%
-  step spacing, an intentional filmstrip stacking look) and z-index is focus-driven, the outline
-  from the selected card could visually bleed out from behind whichever *other* card currently
-  had focus and a higher z-index — reads as "the wrong concept is marked selected." Fixed by
-  moving the "selected" signal off the card image entirely and into the text readout instead (an
-  `<em class="concept-carousel-tag">SELECTED DIRECTION</em>` next to the active title) — no
-  per-card outline at all now, so there's nothing for the stacking to expose incorrectly.
-- Reduced-motion / narrow-viewport fallback (`ConceptFallback`, same `canEnhance()` pattern as
-  `design-gap-scene.tsx`/`scroll-intro.tsx`): a plain static grid of all 5 stages, no scroll
-  scrubbing, reusing the same `STAGES` data and the same `SELECTED DIRECTION` tag treatment.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and dev-server screenshots
-  stepping through 4 of the 5 stages (Screen+Pedal → Pull-out Wheel, tag confirmed showing
-  cleanly with no stray outline → Modular Device → Decision UI/touchscreen), each showing the
-  correct spotlight card, correct line-fill percentage, correct highlighted dot, and correct
-  synced readout text; confirmed the page still scrolls normally into the sections below (09 /
-  EMERGENCY HANDOVER rendered correctly after scrolling past this one). The 5th stage (Decision
-  UI/HUD+joystick, `STAGES[4]`) was not independently screenshotted — it runs through the
-  identical code path as the other 4 confirmed stages, just a different array index, and repeated
-  large `window._scrollTop()` jumps in this session's automated browser became increasingly
-  unreliable deep into this component's own tall scroll range (real `window.scrollY` intermittently
-  drifted backward after being set, unrelated to any per-frame logic in this component — plausibly
-  GSAP's own resize-triggered auto-refresh cascading against this page's several other pinned
-  ScrollTriggers while lazily-loaded card images settled). Confirmed this is an automation-harness
-  characteristic, not a page bug, by reloading fresh and reaching well past this section (scrollY
-  21600 of ~23760 max, 09 / EMERGENCY HANDOVER rendering correctly) using many small incremental
-  jumps instead of a few large ones. A future session should re-confirm stage 5 specifically with
-  real mouse-wheel scrolling if this becomes load-bearing.
-
-### 05 / CONCEPT EXPLORATION carousel rewritten a second time — self-contained wheel/drag/click hero, ported from a reference `HeroCarousel` component (this session, follow-up)
-- The scroll-scrubbed version documented in the entry below this one shipped with three real
-  problems Sylvia found by actually looking at it: the cards read as too narrow to make out the
-  sketch detail, the background didn't match the ppt's dark navy slide, and the motion itself
-  ("动线") was wrong. Diagnosed by re-reading the ppt's own OOXML coordinates directly against
-  the shipped CSS/JS rather than guessing:
-  - **Narrow cards**: `.concept-carousel-card{width:24%;height:100%}` combined two unrelated
-    percentages into whatever aspect ratio fell out, which didn't match the sketches' real
-    1.431:1 ratio (verified: both card sizes in the ppt, 2245800x1569300 and 2831100x1978200
-    EMU, reduce to the exact same 1.431 — not a coincidence, it's the sketches' own aspect).
-    Mismatched ratio meant `object-fit:cover` was cropping the sides off, including the
-    handwritten labels near the edges of several sketches.
-  - **transform-origin bug, confirmed from the ppt's own numbers**: computing each spotlight
-    card's vertical centre (`y-offset + height/2`) across all 5 slides gives exactly 1811825
-    EMU every time — identical to the same slide's un-enlarged row's own vertical centre. The
-    ppt scales its spotlight card from the *centre*, not the bottom; the shipped code used
-    `transform-origin:50% 100%` (bottom-anchored), which read as the card bulging upward when
-    it grew instead of growing evenly.
-  - **The real "动线" bug**: `track` translated by `-focus*STEP%` while each card sat at its own
-    static `left:i*STEP%`, which nets out to the focused card always rendering at track x=0 —
-    i.e. pinned to the stage's left edge on every single stage, not just some of them. Enlarging
-    a card anchored at the left edge pushed its left half past the stage boundary into the
-    `overflow:hidden` clip.
-- Sylvia then supplied the actual fix in the form of a reference `HeroCarousel` component
-  (framer-motion, full source pasted in-conversation, not just a usage demo) and said to base
-  the carousel's motion on it directly. Confirmed with her before touching code: rebuild using
-  GSAP instead of adding framer-motion as a new dependency (this route uses GSAP exclusively —
-  `scroll-intro.tsx`/`process-scene.tsx`/`design-gap-scene.tsx` — and hand-written CSS, no
-  Tailwind, unlike the reference's Tailwind+`cn()` markup), porting the reference's actual
-  interaction model rather than literally its code.
-- **`app/work/halogrip/concept-carousel.tsx` rewritten from scratch**, dropping the entire
-  scroll-scrubbed architecture (the tall `position:sticky` spacer container, the
-  `IntersectionObserver`+`window.scroll` progress listener, the continuous-float `applyFrame`).
-  It's no longer tied to page-scroll position at all — matching the reference, it's a
-  self-contained widget:
-  - `index` is a discrete integer (`useState`), stepped by wheel, drag, a clicked card, or
-    arrow/Home/End keys — never a continuous scroll-driven float
-  - **The actual fix for the "动线" bug**: `xFor(i) = stageWidth/2 - (i*step + cardW/2)` — the
-    *track* translates on every index change (via `gsap.to()`) so the focused card is always
-    centred in the stage, with room on both sides. This is the reference's core trick and
-    directly replaces the old "focus pinned at track origin" bug above.
-  - Card sizing keeps the reference's "fixed height, width = height x aspect ratio, focused =
-    full height, others = half height, shared top edge" framework unchanged — the ratio-agnostic
-    part of it — with only `CARD_AR` swapped from the reference's 0.75 (portrait photography) to
-    `1.431` (the sketches' real, ppt-verified ratio, confirmed above)
-  - Wheel handling (accumulate delta into ±1 steps past a threshold, with a cooldown) is ported
-    with the reference's own numbers (`WHEEL_THRESHOLD=60`, `WHEEL_COOLDOWN=420`), including its
-    scroll-chaining behavior: at either end, wheel events aren't `preventDefault`'d, so hovering
-    this full-bleed block and continuing to scroll hands the gesture back to the page instead of
-    trapping it
-  - Drag: no framer-motion `drag` prop available, so this is manual `pointerdown`/`pointermove`/
-    `pointerup` tracking, live-writing the track's `x` via `gsap.set` during the drag and
-    snapping to the nearest card on release (`Math.round((stageW/2 - thrown - cardW/2)/step)`,
-    thrown = release position + a velocity nudge — same formula as the reference)
-  - Background: all 5 sketches stacked as permanently-mounted absolutely-positioned layers,
-    crossfaded via `gsap.to(el,{opacity})` on index change (simpler than the reference's
-    `AnimatePresence` mount/unmount — GSAP has no equivalent primitive, so this trades a little
-    always-loaded memory for not needing one). A single `#121B32` (the ppt's own navy) tint
-    layer sits on top via `mix-blend-mode:multiply` — deliberately *not* per-card accent hues
-    like the reference (Sylvia asked for one consistent dark navy background, not a different
-    colour per concept)
-  - Bottom-left rail (`01/05` counter + a sliding fill line) replaces the previous 5-dot
-    indicator — closer to the reference's own rail treatment
-  - `ResizeObserver`-driven measurement (not `window.innerWidth` breakpoints) means the whole
-    thing scales continuously with real measured stage size, the same technique the reference
-    uses — no separate `<760px` layout path needed
-- **`.concept-carousel` is now a genuine full-bleed panel** (`left:50%;margin-left:-50vw` etc.,
-  breaking out of the parent `.concepts.shell`'s max-width/padding), a deliberate default: the
-  `[ 05 / CONCEPT EXPLORATION ]` eyebrow + big headline + intro paragraph *above* it stay on the
-  page's normal light background, unchanged — only the carousel itself becomes the dark,
-  ppt-navy, edge-to-edge "hero" panel, matching how `.need-scene`/`.response-scene`/
-  `.design-gap-scene` already nest full-bleed dark scenes inside an otherwise-light page rather
-  than converting a whole numbered section to dark. Flagged to Sylvia as the default interpretation
-  in case she actually wants the outer heading dark too.
-- **`canEnhance()` simplified** to only check `prefers-reduced-motion` — the old `<760px` check
-  was there because a `position:sticky`+`ScrollTrigger`-scrubbed layout genuinely got fragile on
-  narrow viewports; wheel/drag/click/keyboard input has no such constraint, so the interactive
-  carousel now runs at any width and only the static `ConceptFallback` grid is reserved for
-  actual reduced-motion preference (also re-themed dark, to match).
-- **Hit the same normalizeScroll stale-max-scroll-bound issue as the previous version**, even
-  though this rewrite creates no `ScrollTrigger` of its own: the component still mounts `null`
-  on first paint then a real ~520-760px section once `enhanced` resolves, and that async height
-  change is enough to desync the site's cached scroll bound again. Same fix, `ScrollTrigger
-  .refresh()` in the mount effect — kept the `gsap`/`ScrollTrigger` import for exactly this one
-  call, nothing else in the rewrite touches ScrollTrigger.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and real interactive testing
-  in the dev server (mouse wheel over the carousel to step through, click-any-card, `Home`/
-  `ArrowRight` keyboard nav) — confirmed: focused card always centred with visible margin on
-  both sides (no more left-edge clipping), sketches render at full legible size uncropped when
-  focused, background is the dark navy from the ppt with a crossfade on every index change, the
-  "SELECTED DIRECTION" tag reads clearly on the dark background next to PULL-OUT WHEEL, and
-  wheel-scrolling past the last card correctly hands off to real page scroll (confirmed: scrolling
-  past index 5 lands cleanly on `[ 06 / PROTOTYPE TESTING ]`, not stuck).
-
-### 04 / DESIGN PRINCIPLES — heading downsized, intro image removed (this session, follow-up)
-- Sylvia asked to shrink "第四section的大字" (04's big heading) and drop "那个图片" (the
-  `product-detail.webp` close-up shot sitting under the intro paragraph in `.principles-intro`).
-  `page.tsx`: removed the `<img>` line entirely (no `TODO(sylvia)` — an explicit removal request,
-  not a missing asset). `halogrip.css`: `.principles-intro h2` was sharing one selector with
-  `.final-content h2`/`.journey-inner h2`/`.site-footer h2`/`.testing-copy h2` at
-  `font-size:clamp(73px,9vw,127px)` — split it into its own rule at `clamp(52px,6vw,92px)` so the
-  other four headings (which weren't mentioned) stay untouched. Removed the now-dead
-  `.principles-intro>img` rule (desktop) and its `max-width:760px` mobile override (was
-  `width:95%;margin-top:36px`), and shrank the mobile `.principles-intro h2` override from `77px`
-  to `54px` to match the new desktop scale down.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and a dev-server screenshot at
-  `#principles`: heading is visibly smaller, the image is gone, and the paragraph now sits with
-  clean whitespace above the principles list instead of a photo.
-
-### 03 / FIELD RESEARCH rebuilt as PROBLEM STATEMENT — content sourced from `public/media/halogrip ppt.pptx` slide 9 (this session)
-- Sylvia asked to replace the top-level chapter 03 section (`id="research"` in `page.tsx` —
-  distinct from the `02.x` THE CHALLENGE subsections; confirmed which one she meant via
-  `AskUserQuestion` before touching anything, since both are plausible readings of "第三章节")
-  with the content from page 9 of `public/media/halogrip ppt.pptx`, titled "PROBLEM STATEMENT -
-  USER STUDIES". That slide's ground truth was read straight out of its OOXML (unzip the pptx;
-  `ppt/slides/slide9.xml`'s `<a:t>` runs) and its speaker notes (`ppt/notesSlides/notesSlide9
-  .xml`), not just the on-slide labels — the notes are what actually explain each of the 4 navy
-  finding-box headers (OVERALL CONCERN ABOUT ROBOTAXI / CONTROL OVER VEHICLE BEHAVIOR /
-  INSUFFICIENT STRATEGIES / STANDARDIZATION).
-- The slide's own real photo (`ppt/media/image13.png`, a firefighter rope-rescue on an aerial
-  ladder platform) was extracted and copied to `public/media/halogrip图片/03/firefighter-rescue
-  .png`, following the same per-section-folder convention as `2.1`-`2.4`.
-- Old section (a 3-image `.research-gallery` grid — fire/prototype/city photos, no connection to
-  the actual field-research findings, just generic scene-setting) fully removed: `page.tsx`'s
-  `research` section JSX rewritten, `.research-gallery`/`.research-fire`/`.research-prototype`/
-  `.research-city` CSS deleted (desktop + the `max-width:760px` mobile block) and replaced with
-  `.research-layout` (photo left, findings list right) + `.research-findings article` (a red
-  index number + red uppercase meta line + body copy, deliberately reusing the same visual
-  grammar as `.principles-list article` just below it in the page, rather than porting the PPT's
-  own navy-box styling verbatim — per Hard Rule 1, the reference's content/structure was ported,
-  its Google-Slides visual identity was not). Eyebrow renamed `[ 03 / PROBLEM STATEMENT ]` (was
-  `[ 03 / FIELD RESEARCH ]`); `h2` copy ("LISTEN BEFORE DESIGNING.") and the closing
-  `research-bottom` stats/quote block (04 firefighter interviews / 02 fire stations / 76 survey
-  responses, the "FIVE TO TEN MINUTES ALREADY FEELS LONG" quote) were kept as-is — real validated
-  research data, not something the PPT slide's own content should displace.
-- The 4 finding bodies are original summaries of the notes' actual explanatory text (not just the
-  slide's short label + sub-label fragments), written in the site's existing short-declarative
-  voice — not flagged `TODO(sylvia)` since it's a faithful compression of her own PPT content, not
-  invented placeholder copy.
-- Verified via `npx tsc --noEmit` and `npm run build` (both clean) and dev-server screenshots at
-  both the default ~1568px-wide automation viewport and a single-column mobile check. Same
-  `resize_window`-doesn't-actually-resize tooling limitation noted elsewhere in this file applied
-  again here — the mobile `.research-layout{grid-template-columns:1fr}` collapse was verified by
-  injecting the new mobile-breakpoint rule as a scratch `!important` override at the current
-  viewport and confirming the photo/findings stack vertically, then removing it, rather than a
-  real narrow-viewport screenshot. Also hit (and worked around) a scroll-position issue while
-  testing: this page's GSAP `ScrollTrigger.normalizeScroll()`-style setup intercepts native
-  `window.scrollTo` during the pinned scroll-intro — it silently no-ops past a certain point — so
-  jumping to a specific section for screenshot purposes requires calling the page's own
-  `window._scrollTop(value)` (a getter/setter GSAP installs on `window`) instead of
-  `window.scrollTo`.
-
-### 02.3 CURRENT RESPONSE rebuilt as a single cinematic scene image, replacing the flat-card timeline; pin-timing bug fixed with a dependency-ordered coordinator (this session)
-- **Content/visual rebuild.** `process-scene.tsx` was fully rewritten. The previous
-  implementation (a flat DOM timeline: small glass-panel cards, an SVG process path, a grid
-  background, a bottom DETECTED/CONNECTED/VERIFIED progress bar, a vehicle-stalled icon — see
-  the "02.3 CURRENT RESPONSE — pinned scroll-driven process diagram" entry further below for how
-  that version was built) was deleted outright, all matching `.process-*` CSS removed from
-  `halogrip.css` (desktop + mobile), and replaced with: one full-viewport scene image
-  (`public/media/halogrip图片/2.3/2.3-scene-clean.png` — moved here from a misplaced `2.4/`
-  location; it already contains the first responder, glass process panels, red response path and
-  robotaxi baked in as a single photo, so none of that is rebuilt in HTML/CSS/SVG anymore), a
-  readability gradient, and real HTML label/headline/paragraph. Section label renamed
-  `[ 02.3 / CURRENT RESPONSE ]` (was `CURRENT SOLUTION`) per Sylvia's explicit instruction — do
-  not rename it back.
-- Motion is now minimal by design: image opacity 0→1 + scale 1.025→1 on scroll-into-view (once,
-  `toggleActions:"play none none none"`, not scrubbed), a small always-on horizontal parallax
-  (Β±6px, scrubbed, disabled below 760px), and a short fade-up stagger on the label/headline/
-  paragraph. No canvas, no per-node reveal choreography, no line-drawing animation — 02.4 is
-  where the major transformation animation lives, 02.3 is deliberately a calm establishing shot.
-- **Known geometric tension, resolved via the gradient, not fully eliminated:** the source
-  image's first glass panel sits close to the left edge (~13% of the image's own width), and the
-  spec'd headline/copy footprint (large condensed type, ~520-540px column) is wide/tall enough
-  that on short viewports the headline can visually reach the panel's position. Confirmed
-  directly (Sylvia flagged it live: "字好像有点挡后面背景的字"). Fixed by biasing
-  `object-position` toward the image's left edge (`.response-scene-image`, more of the panel's
-  clearance is preserved) and switching the readability gradient from a shallow linear fade to a
-  strong `radial-gradient` anchored near the upper-left (`.response-scene-gradient`, 96%→0%
-  opacity, anchor `6% 12%`) so the panel underneath is genuinely subdued rather than competing
-  with the text, plus a tightened line-height (`.9`, still inside the spec's 0.9-0.95 range) and
-  text-shadow on the paragraph. This was verified as a real improvement (panel text goes from
-  clearly legible to a barely-visible ghost) but **not fully verified at the three target widths
-  (1280/1440/1920)** — this session's automated browser has a fixed, non-resizable ~639px-tall
-  viewport (`resize_window` calls report success but don't change `window.innerHeight`), which is
-  a much wider/shorter aspect (2.0-3.0) than any real monitor at those widths (1280x800/1440x900/
-  1920x1080 are all ~1.6-1.78). The `object-fit:cover` math was worked through by hand for those
-  three real aspect ratios and gives meaningfully more clearance than what's visible in this
-  session's own test screenshots; a future session with real viewport-resize should re-check
-  before trusting this fully solved rather than just improved.
-- **Pin-timing bug found and fixed** (this was the actual root cause of a report that read at
-  first like "02.3 shows up twice with a blank gap in between" — right after the opening 3D
-  model, then correctly again after 02.2): `process-scene.tsx` (and `overview-backdrop.tsx`)
-  used to create their GSAP `ScrollTrigger`s synchronously on first mount, before `scroll-intro
-  .tsx`'s own real pin (which is itself deferred to a second, hydration-safe render pass, and
-  under real page load — heavy JS payload, WebGL setup — has been measured taking up to ~1s, not
-  one frame) existed. That bakes in a `start`/`end` measured against a document that's still
-  short. Calling `ScrollTrigger.refresh()` afterward does **not** fix an already-created trigger
-  — verified directly from the browser console: a trigger's start/end survive `refresh()`
-  unchanged no matter when it's called, while creating a brand-new trigger at that same later
-  moment measures correctly on the first try. **New `app/work/halogrip/pin-coordinator.ts`**
-  (replaces `scroll-refresh.tsx` below, which is now deleted — that file's refresh-after-the-fact
-  approach was the first fix attempt and didn't work) is the real fix: `markPinReady(source)` /
-  `onPinsReady(deps, callback)`, a small dependency graph so each section defers its own
-  `ScrollTrigger` creation until everything above it has already landed. Wiring: `scroll-intro`
-  has no deps; `process-scene` and `overview-backdrop` depend on `["scroll-intro"]`;
-  `design-gap-scene` depends on `["scroll-intro","process-scene"]` (comes right after 02.3 in the
-  DOM). `process-scene.tsx` also calls `markPinReady("process-scene")` essentially immediately
-  (it has no pin/spacer of its own anymore, so nothing needs to wait on *it* for layout reasons —
-  reported early purely so `design-gap-scene.tsx`'s own dependency resolves promptly instead of
-  falling back to the coordinator's 4s safety timeout). Verified against a production build
-  (`next build && next start`) with real mouse-wheel scrolling: 02.3 now pins/reveals exactly
-  once, only after 02.2, no early appearance, no blank gap.
-- If a future session touches `scroll-intro.tsx` or `design-gap-scene.tsx`'s own `enhanced`-flip
-  gating, remember both must keep calling `markPinReady` on **every** code path (including the
-  "decided not to enhance" branches) or a sibling waiting via `onPinsReady` will silently stall
-  until the 4s timeout.
-
-### 02.4 DESIGN GAP rebuilt as a bespoke pinned scroll transition; new ScrollRefresh helper added (outside this session, documented now)
-- **Superseded**: the `ScrollRefresh` component described below (including its un-removed
-  `TEMP-DIAGNOSTIC` flag) has been deleted and replaced by `pin-coordinator.ts` — see the entry
-  above this one. Its refresh-after-creation approach didn't actually fix the stale-trigger bug
-  it was written for. Also, this entry's description of `process-scene.tsx`'s six-step node-card
-  content is now stale — 02.3 was rebuilt as a single scene image (see the entry above).
-- `page.tsx`'s 02.4 section — previously the plain `PlaceholderImage`-based scaffolding from the
-  "THE CHALLENGE (02) split..." entry further below — was replaced with `<DesignGapScene />`
-  (`app/work/halogrip/design-gap-scene.tsx` + `design-gap-scene.css`, new files, not built in this
-  session; documenting now so the structure reference stays accurate). `PlaceholderImage` is no
-  longer imported anywhere in `page.tsx` — all four THE CHALLENGE subsections (02.1-02.4) now have
-  real bespoke content; the placeholder-scaffolding phase is fully superseded.
-- `DesignGapScene` is a pinned, scroll-driven GSAP/ScrollTrigger sequence (`pin:true, end:"+=250%"`,
-  same pin/scrub pattern as `scroll-intro.tsx`) that visually compresses `process-scene.tsx`'s
-  (02.3) six-step external-dependency chain (INCIDENT → CONTACT OPERATOR → VERIFY → REMOTE
-  AUTHORIZATION / ON-SITE DISPATCH → MOVE OR TOW) into a single "local control" line (FIRST
-  RESPONDER → LOCAL CONTROL → MOVE → ROBOTAXI) — same panel ids/titles/meta copy and icon set as
-  02.3, by design, so it reads as compressing that specific diagram rather than inventing a new
-  one. Real assets: `public/media/halogrip图片/2.4/assets/{design-gap-background,first-responder,
-  robotaxi}.png` (verified present). Company names/invented timestamps are deliberately excluded,
-  same reasoning as `process-scene.tsx`.
-- Has its own reduced-motion/narrow-viewport fallback (`DesignGapFallback`, mirrors
-  `scroll-intro.tsx`'s `canEnhance()` pattern — `prefers-reduced-motion` or `<760px` viewport skips
-  the pin+scrub and renders a static two-column "EXTERNAL DEPENDENCY → LOCAL CONTROL" list instead.
-- **New `app/work/halogrip/scroll-refresh.tsx`**, rendered once at the very end of `<main>` in
-  `page.tsx`. Not a visual component (`return null`) — it exists because some sections
-  (`scroll-intro.tsx`, `design-gap-scene.tsx`) defer their real pin-creating ScrollTrigger to a
-  second, hydration-safe render pass, while others (`process-scene.tsx`, `overview-backdrop.tsx`)
-  create theirs synchronously on first mount, against a document that's still the short, unpinned
-  fallback layout — so their start/end pixel positions can get baked in against the wrong page
-  height. `ScrollRefresh` calls `ScrollTrigger.refresh()` after two `requestAnimationFrame`s (past
-  the enhanced-state-flip re-render cascade), again once `document.fonts.ready` resolves, and again
-  on `window.load`, so every ScrollTrigger on the page ends up anchored to the final layout.
-- **Flagging, not fixing**: `scroll-refresh.tsx` has a `// TEMP-DIAGNOSTIC: expose for console
-  inspection, remove before finishing.` comment directly above `(window as any).__ST = ScrollTrigger;
-  (window as any).__gsap = gsap;` — by its own comment this should have been removed already and
-  wasn't. Left as-is since removing it wasn't requested; flag to Sylvia before shipping.
-- `process-scene.tsx` (02.3) also picked up minor spacing/sizing tweaks outside this session
-  (tighter `.process-node` cards, smaller intro-copy type scale, `.process-intro` no longer carries
-  the `shell` class) — noted for completeness, not re-verified in depth here.
-
-### Scroll-intro: stopped showing the old static hero as the 3D scene's loading placeholder (this session)
-- Sylvia reported a flash of "the old intro" before the 3D model appears on `/work/halogrip`.
-  Root cause: `scroll-intro.tsx`'s `HeroFallback` (the pre-3D-redesign hero — headline + metadata
-  grid + full-bleed product photo — explicitly commented `"The original static hero, verbatim.
-  Also used as the loading state of the 3D path."`) was being rendered a *second* time as an
-  opaque full-screen overlay (`.scroll-intro-preload`, z-index 6) while the 3D scene's GLB model
-  fetched/parsed/baked its environment, only crossfading out once `ready`. So every load, capable
-  browsers genuinely saw the old design twice — once as the pre-hydration first paint (correct,
-  unavoidable, SSR-hydration-safe), then again as a held loading placeholder for a variable
-  (sometimes long) duration — before landing on the sparse 3D resting pose (ghost wordmark only,
-  product parked off-screen). Not a misperception; the old hero really was flashing.
-- Fix (scroll-intro.tsx lines 534-538): the `.scroll-intro-preload` overlay no longer renders
-  `<HeroFallback />` as a child — it's now an empty `aria-hidden` div that relies on its own
-  existing CSS background (`var(--paper-light)`) to show a blank screen during the load window,
-  then crossfades into the 3D scene exactly as before (no timing/opacity/CSS changes). The *real*
-  fallback — permanently shown to visitors with no WebGL, `prefers-reduced-motion`, or a
-  narrow/mobile viewport (`canEnhance()`, scroll-intro.tsx:184-196) — is untouched: `HeroFallback`
-  is still used, unchanged, at the top-level `if (!enhanced) return <HeroFallback
-  titleId="project-title" />` branch (line 447), confirmed by grep to be the only remaining call
-  site. Explicitly confirmed with Sylvia this fallback role must stay exactly as-is.
-- Side benefit: also removes a redundant second fetch/mount of `hero.webp` (the preload's old
-  `HeroFallback` was re-rendering the same `fetchPriority="high"` image the real fallback had
-  already fetched once on first paint).
-- Verified via `npm run build` (clean) and a dev-server screenshot sequence: immediately after
-  navigation the screen is blank paper background (`.scroll-intro-preload`'s `innerHTML` confirmed
-  empty via devtools), then crossfades cleanly into the 3D scene's ghost-wordmark resting state
-  with the old hero never reappearing.
-
-### 02.1 CABIN SHIFT rebuilt to match Sylvia's reference story-prototype mockup, then bridge line removed (this session)
-- Fills half of the documentation gap the "Fixed site-wide broken images..." entry below flags
-  ("02.1 CABIN SHIFT ... subsequently rebuilt ... structure not fully re-documented here yet";
-  the other half, 02.2, is now covered by the entry directly above this one). Sylvia supplied a
-  standalone reference mockup at `public/media/section 2 reference/index.html` + `styles.css` (a
-  self-contained HTML/CSS "story prototype" not built by this session — its own `README.txt` says
-  to port its section structure/copy into the real React page) and asked for 02.1 specifically to
-  be recreated to match its `#shift` section, using the real cabin photo at
-  `public/media/halogrip图片/2.1/robotaxi-cabin.png`.
-- The reference's `#shift` section is a two-column grid: copy on the left, a `<figure>` on the
-  right holding the cabin photo with a `figcaption` overlay of two "signal" rows (a red `+` for
-  "More flexible passenger space", a grey `−` for "Traditional controls removed"), plus a
-  right-aligned "bridge line" strip under the whole section ("The driver may disappear. The need
-  to intervene does not.").
-- Rebuilt `page.tsx`'s 02.1 section to match: replaced the old single-column
-  `PlaceholderImage`-based scaffolding (described in the "THE CHALLENGE (02) split..." entry
-  further below) with a new `.cabin-shift-layout` grid (`.challenge-scene-copy` +
-  `<figure className="cabin-figure">` with the real photo + figcaption signal rows). Image is
-  sourced directly from `/media/halogrip图片/2.1/robotaxi-cabin.png` via `encodeURI(...)` —
-  matching the non-ASCII-path convention 02.2's `need-scene` background already established —
-  rather than copying the file into a flat `public/media/` location.
-- New CSS in `halogrip.css`: `.cabin-shift-layout`, `.cabin-figure` (+ `figcaption`, `.signal`,
-  `.signal-plus`, `.signal-minus`), restyled with HALOGRIP's own established tokens (`--red
-  #c93731`, `--dark`, `--white`, Nimbus Sans Narrow / DejaVu mono) instead of the reference
-  mockup's own separate palette (`--red:#df4435`, `--blue:#0c78b8`) — per Hard Rule 1, the
-  reference's layout was ported but not its visual identity. Mobile override added to the
-  existing single `@media(max-width:760px)` block.
-- The bridge-line strip was ported first (own `.bridge-line`/`.bridge-line span` CSS, right-aligned
-  under a `shell`-classed `<p>`), then Sylvia asked to remove it — the paragraph and both CSS
-  rules (desktop + the mobile-breakpoint override) were deleted outright, not just hidden.
-- Verified via `npm run build` (clean) and a dev-server screenshot at `#challenge-cabin-title`:
-  two-column layout, real cabin photo, and the plus/minus signal callouts render correctly; the
-  section transitions cleanly into 02.2 with the bridge line gone.
-- Not touched: 02.3/02.4's current state wasn't reverified in this session.
-
-### 02.2 REAL-WORLD NEED rebuilt as a bespoke cinematic scene matching a supplied reference (this session)
-- Replaced the placeholder `.challenge-scene challenge-scene-need` skeleton (eyebrow → heading/body
-  copy → one `PlaceholderImage`) with a fully bespoke, full-bleed section (`.need-scene` in
-  `page.tsx`/`halogrip.css`) built to match two assets Sylvia supplied directly: a background photo
-  and a finished visual-target reference, both at `public/media/halogrip图片/2.2/2.2 background.png`
-  / `2.2 reference.png` (1672×941, exactly 16:9). Only the background photo is ever rendered on the
-  page — the reference image is a design target, not an asset — and the section's body-copy
-  paragraph from the old skeleton was dropped entirely since the reference has no equivalent block.
-- `.need-scene` is `position:relative;aspect-ratio:1672/941` with the photo as a `background-size:
-  cover` layer (`.need-bg`) plus a top/bottom gradient scrim for text legibility. Everything else —
-  eyebrow, headline, the three numbered leader-line annotations (`01 BLOCKED ROADS` / `02 BLOCKED
-  FIRE STATION EXITS` / `03 DISRUPTED FIREFIGHTING`), the glowing dashed red route line, the red
-  technical frame + corner brackets around the stalled car, the giant "74" stat, the stat caption,
-  the "RESPONSE ORIGIN / FIRE STATION 12" bracket block, and the bottom source note — is positioned
-  with `left/top` percentages (or, for the route/leader-lines/frame, one `<svg viewBox="0 0 1672
-  941" preserveAspectRatio="none">` overlay) computed directly from pixel coordinates read off the
-  reference image, so every element's position is proportional to the same 1672×941 grid the photo
-  itself is on.
-- This is why the section scales responsively without a mobile media-query rewrite (unlike every
-  other stacked section in this file, which gets bespoke `@media(max-width:760px)` overrides): the
-  container keeps its aspect ratio at any width, and since virtually all sizing is `vw`-relative
-  (wrapped in `clamp()` with a legibility floor for narrow screens and a ceiling for very wide ones,
-  same pattern as the rest of the file's `clamp()` usage) percentages and `vw` values stay accurate
-  to the same composition at any viewport width — "responsive" here means "the same poster scaled
-  down," not "content reflows."
-- The existing global `.close-project` pill (fixed top-right, already rendered on every route) is
-  what supplies the reference's top-right `CLOSE PROJECT` control — no second one was added for
-  this section.
-- Verified with `npm run build` and `npx tsc --noEmit` (both clean) and side-by-side dev-server
-  screenshots against `2.2 reference.png`: eyebrow/headline position and size, route path shape,
-  annotation/leader-line placement, frame+"74" placement, and the bottom-left bracket/source-note
-  blocks all match closely. Full-width in-browser resize testing wasn't possible this session (see
-  the tooling-limitation note in the "THE CHALLENGE (02) split..." entry below — window resize
-  doesn't reliably change the automated browser's actual viewport here); responsiveness was instead
-  verified by reasoning through the `vw`/`clamp()`/percentage math above rather than a real
-  narrow-viewport screenshot.
-- `// TODO(sylvia)` carried forward on the "74" stat and the bottom source line (`01 — SOURCE
-  PENDING VERIFICATION.`) — the reference bakes the pending-verification caveat into the design
-  itself as in-scene text, so it's flagged in both the JSX comment and literally on the page.
-
-### Fixed site-wide broken images after a `public/media/` reorg (this session)
-- `public/media/`'s flat image files (`hero.webp`, `emergency.webp`, `product-*.webp`,
-  `story-*.webp`, `id-one/two.webp`, `hud.webp`, `sketches.webp`, `prototype.webp`,
-  `night-city.webp`, `concept-*.webp`, `Bild1.png`, etc.) were moved into a new
-  `public/media/halogrip图片/other/` folder (with `2.1`/`2.2`/`2.3`/`2.4` subfolders holding new
-  bespoke assets for the CABIN SHIFT / REAL WORLD NEED work below) outside this session — by the
-  time this session picked up, `page.tsx`'s two newest sections (02.1 CABIN SHIFT, 02.2 REAL
-  WORLD NEED) already correctly pointed at the new `halogrip图片/...` paths, but every other
-  image reference across the page (`overview-backdrop.tsx`'s background photo, the research
-  gallery, design-principles product shot, concept-exploration sketches/grid, prototype-testing
-  photo, final-hero background, product-detail shot, `interaction-deck.tsx`'s control image, the
-  emergency-handover story grid + ID/HUD images, `scroll-intro.tsx`'s hero image, and the page's
-  OpenGraph/Twitter metadata images) still pointed at the old flat `/media/*.webp` paths, which no
-  longer resolve — this is what made the OVERVIEW background photo (and effectively every other
-  image on the page) disappear.
-- Fixed by repointing every stale reference to `/media/halogrip图片/other/<file>`, each wrapped in
-  `encodeURI(...)` (matching the convention the two newer sections already used for the non-ASCII
-  folder name — plain unencoded template-literal paths with non-ASCII segments are the kind of
-  thing that can silently 404 depending on how the string reaches the browser). Verified every
-  referenced filename actually exists under the new path (`ls`/`find`), `npm run build` stayed
-  clean, and confirmed in-browser that the OVERVIEW photo and other previously-broken images
-  render again.
-- Note for future sessions: `scroll-intro-scene.tsx`'s `/media/image2.png` mention is just a code
-  comment referencing a path *inside* the source `.pptx` zip (`ppt/media/image2.png`), not a real
-  asset reference — left alone, not part of this bug.
-- Also note: the "THE CHALLENGE split into 4 placeholder subsections" entry directly below this
-  one (from earlier in this session) is now partly superseded — 02.1 CABIN SHIFT and 02.2 REAL
-  WORLD NEED were subsequently rebuilt with real bespoke layouts/imagery/copy (outside this
-  session's own edits, structure not fully re-documented here yet); 02.3 CURRENT SOLUTION and
-  02.4 DESIGN GAP were still the plain `PlaceholderImage` scaffolding described below as of this
-  writing.
-
-### THE CHALLENGE (02) split into 4 placeholder subsections: CABIN SHIFT / REAL WORLD NEED / CURRENT SOLUTION / DESIGN GAP (this session)
-- Replaced the single `.challenge` hero section (full-bleed `emergency.webp` background, REMOTE
-  HELP / PUSH-TOW / NO OVERRIDE three-reasons grid) with 4 stacked sibling sections — `[ 02.1 /
-  CABIN SHIFT ]`, `[ 02.2 / REAL WORLD NEED ]`, `[ 02.3 / CURRENT SOLUTION ]`, `[ 02.4 / DESIGN
-  GAP ]` — at Sylvia's request, as placeholder scaffolding only; she'll give real content/design
-  direction for each in a future session.
-- Deliberately lightweight: everything is plain inline JSX in `page.tsx` (no new component
-  files, no GSAP/ScrollTrigger, no custom SVG, no reveal-on-scroll animation) — this project's
-  history shows these exact scenes (`real-world-scene.tsx`, `response-scene.tsx`,
-  `design-gap-scene.tsx` from the reverted `60bad72`/"26082602" checkpoint) got fully rewritten
-  from scratch once real direction arrived, so there was no benefit to building bespoke structure
-  now. Each of the 4 sections shares one skeleton: eyebrow → heading+body copy → one
-  `PlaceholderImage` (`app/components/PlaceholderImage.tsx`, imported via
-  `../../components/PlaceholderImage`).
-- Copy is a draft carried over from the reverted `60bad72` version's wording (per Sylvia's
-  choice), not freshly invented — every heading/body block has its own
-  `{/* TODO(sylvia): draft copy carried over from an earlier revision (commit 60bad72) —
-  review/replace headline + body */}` comment, and every `PlaceholderImage` has its own
-  `{/* TODO(sylvia): replace with a real ... */}` comment above it (per Hard Rule 5). The old
-  "CURRENT RESPONSE" label is now "CURRENT SOLUTION" per Sylvia's explicit renaming — its copy
-  still covers the same call/verify/authorize-or-dispatch/move-or-tow process, just relabeled.
-  02.2's "74 AV-related disruptions" stat carried its existing `TODO(sylvia): verify and cite the
-  source` flag forward.
-- CSS: removed all 8 old `.challenge*` rules from `halogrip.css` and added a shared
-  `.challenge-scene` base (padding-block + a `border-top` seam between subsections, sized to
-  match `.principles`/`.journey`'s stacked-section rhythm) plus `.challenge-scene-inner`/
-  `-copy`/`-image`. The 4 per-section modifier classes (`.challenge-scene-cabin`, `-need`,
-  `-solution`, `-gap`) are wired into the JSX as hooks but intentionally carry no CSS of their
-  own yet — no per-section tweaks were invented ahead of real design direction. Updated the
-  shared display-font selector (`.hero-heading h1,.section h2,...`) to point at `.challenge-scene
-  h2` instead of the removed `.challenge h2`. Mobile override (the file's one
-  `@media(max-width:760px)` block) updated in place to match the new classes.
-- Verified via `npm run build` (clean) and dev-server screenshots scrolling through all 4
-  sections into `#research` (no overlap, seams render correctly); the mobile CSS rule was
-  sanity-checked by injecting the new mobile-breakpoint rules as a scratch `!important` override
-  at the current ~1536px automation viewport (confirms the `PlaceholderImage` aspect-ratio
-  actually switches to `1.4/1` etc.) rather than a real narrow-viewport resize, then removed —
-  same technique other sessions in this file have used for the same tooling limitation.
-
-### Git history: reverted to the 26082601 snapshot, then re-applied just the OVERVIEW change (this session)
-- The working tree had drifted through several dated checkpoint commits (`26082601` →
-  `26082602` → `26082603` → two follow-up commits literally titled "破了，得重新做"/"垃圾" —
-  "broken, redo"/"garbage" — indicating that work regressed). At Sylvia's request the tree was
-  restored to match the `26082601` commit's content, twice (`git rm -rf .` +
-  `git checkout <commit> -- .` + a new commit, not `reset --hard`, so full history stays intact
-  and nothing was force-pushed). In between she asked to check `26082602` specifically to see
-  whether THE CHALLENGE (02) had already been split into subsections there (it had — 4 files:
-  `challenge-chapter.tsx`, `design-gap-scene.tsx`, `real-world-scene.tsx`, `response-scene.tsx`)
-  before deciding to land on `26082601` instead, which predates that split entirely.
-- Net effect: this file, `app/work/halogrip/page.tsx`, and `app/work/halogrip/halogrip.css` are
-  currently at the `26082601` shape (THE CHALLENGE is still the old single `.challenge` section
-  with the REMOTE HELP / PUSH-TOW / NO OVERRIDE three-reasons grid — **not** the 5-scene
-  `ChallengeChapter` described in older revisions of this file's history). If a future session
-  finds this file's "Structure reference" not mentioning `challenge-chapter.tsx` etc., that's why
-  — it's not a documentation gap, the files really aren't here right now.
-- With the tree at `26082601`, Sylvia asked for just the OVERVIEW (section 01) content/layout
-  edit that `26082602` had introduced — without pulling back the THE CHALLENGE split — so it was
-  re-applied by hand on top of the reverted tree (not by re-merging `26082602`):
-  headline changed to "WHEN THE VEHICLE STOPS,<br/>THE RESPONSE SHOULD NOT.", body copy collapsed
-  to one line ("HALOGRIP is a compact, low-speed fallback interface that lets authorized first
-  responders reposition a stalled robotaxi on site."), and the `<figure className="city-banner">`
-  (city photo + "74 AV-related disruptions" `stat-panel` figcaption) was deleted outright — same
-  content edit `26082602` made, same reasoning: the "74" stat wasn't otherwise used anywhere in
-  this `26082601`-based tree, unlike in `26082602` where it had already moved into
-  `real-world-scene.tsx`'s 02.2 scene. `.overview` went from a 2-column grid to
-  `display:grid;place-items:center;text-align:center`; `.city-banner`/`.stat-panel*` rules were
-  deleted from `halogrip.css` as dead CSS.
-- Follow-up bug found by Sylvia after that edit: the OVERVIEW background photo
-  (`overview-backdrop.tsx`'s `.overview-bg`, `position:absolute;inset:0`) was rendering narrow —
-  capped to `.shell`'s `width:min(100%,1700px)` instead of full-bleed — because `shell` was on
-  the outer `<section className="overview section shell">` itself, so the absolutely-positioned
-  background's containing block was that already-narrowed section. Fixed by moving `shell` off
-  the outer section onto a new inner `<div className="overview-content shell">` wrapping just the
-  eyebrow marker + copy (mirrors how `.challenge`/`.challenge-content` already split
-  background-vs-content this exact way): outer section keeps `overview section` only, background
-  is now full-bleed to the viewport, content stays constrained/centered inside the new wrapper.
-  Added `overflow:hidden` to `.overview` to match `.challenge`'s pattern.
-- Second follow-up: `.overview{min-height:850px}` didn't fill the viewport on the reviewer's
-  actual screen (a 2560×1271 display — 850px left visible empty space above/below). Changed to
-  `min-height:100vh` so the section is full-screen the moment it's scrolled into view, matching
-  Sylvia's ask ("看到overview的时候是满屏"). The `max-width:760px` mobile override
-  (`.overview{min-height:auto;padding-block:90px}`) was left untouched — not requested, and mobile
-  intentionally sizes to content there rather than forcing full-screen.
-- Verified via `npm run build` (clean each step) and dev-server screenshots at `#overview`'s live
-  scroll position (same "layout can shift mid-scroll" caveat as other sessions in this file — this
-  page's pinned `ScrollIntro` GSAP timeline affects document height while scrolling).
-
-### Multi-project restructure (earlier session)
-- Moved the entire former `app/page.tsx` (the HALOGRIP case study) to `app/work/halogrip/page.tsx`
-  unchanged, with its CSS split out into `app/work/halogrip/halogrip.css` and its
-  `interaction-deck.tsx` moved alongside it.
-- Trimmed `app/globals.css` down to a shared Tailwind setup + `@theme` design tokens for the new
-  homepage.
-- Built a new `app/page.tsx` homepage cloned from Sylvia's Framer site
-  (https://sylviaxie.framer.website/), using Tailwind utility classes throughout, with 1 real
-  project card (HALOGRIP) + 3 "coming soon" placeholder cards.
-- Added `next/font/google` (Inter Tight, Inter, DM Mono) to `app/layout.tsx` and split metadata
-  so the root layout is generic and HALOGRIP's specific metadata lives on its own page.
-- Fixed a cascade-layer bug where an unlayered `a{color:inherit}` reset was overriding Tailwind
-  utility text colors (see Hard Rule 3 above).
-- **Not yet done**: redeploying this to Vercel — the live site still shows the old single-page
-  version as of this writing.
-
-### Homepage real assets + animation pass (this session)
-- Wired real images/logos into every homepage placeholder slot: header avatar, about-section
-  portrait, all 4 logo-marquee marks (Cstrider/Volvo/Chalmers/Autoliv, recolored solid black,
-  equal-size slots), and 3 of 4 project card covers (HALOGRIP, Maritime HMI Design, Truck Sensory
-  Design, Maize Drying System). Source files moved from `public/mainpage picture/` into a clean
-  `public/home/` structure (see that folder for the mapping); one file
-  (`Namnlös design (1).jpg`) is still unused, left in place.
-- Renamed all 4 project card titles to Sylvia's confirmed real names (`app/data/projects.ts`);
-  the 3 non-HALOGRIP cards stay `comingSoon: true` / no `href` per Hard Rule 6, just with real
-  photos and captions instead of gray placeholders.
-- Compared homepage animations against the Framer reference and fixed mismatches:
-  - `Hero.tsx`: added a letter-by-letter blur-in reveal for "Industrial Designer" (own `<style>`
-    keyframe block, no `globals.css` change).
-  - `SiteHeader.tsx`: fades in ~1.25s after the hero reveal finishes (was simultaneous before).
-  - `LogoMarquee.tsx`: keeps its auto-scrolling marquee (confirmed with Sylvia this should stay,
-    despite the reference itself appearing static when inspected).
-  - New `ScrollZoomImage.tsx` (`"use client"`): wraps each project card cover in a scroll-linked
-    zoom — scale ~1.0 when the card is vertically centered in the viewport, growing to ~1.22 near
-    the top/bottom edges, measured directly off the reference site's own scroll behavior.
-  - `ProjectCard.tsx`: subtitle is now hover-only (`group-hover:opacity-100`), and hovering
-    reveals a full-width scrolling tag-pill ticker over the cover image (placeholder tags for now,
-    `app/data/projects.ts`).
-- `npm run build` failed at the time on a TypeScript error in
-  `app/work/halogrip/scroll-intro-scene.tsx` (`OrthographicCamera.aspect`) from in-progress work
-  on the HALOGRIP scroll-intro scene that this session didn't touch — since fixed (see the
-  scroll-intro entry below); `npm run build` is clean again as of this writing. All homepage work
-  above was verified via the dev server + browser inspection instead (computed styles,
-  `getAnimations()`, console-error checks), not `npm run build`.
-
-### Homepage polish pass — corrections after direct reference-site instrumentation (this session)
-Several follow-up rounds, each fixing a specific mismatch found by measuring the live reference
-site's DOM/computed styles rather than guessing:
-- `ScrollZoomImage.tsx`: the scroll-linked zoom was rebuilt from a symmetric
-  distance-from-viewport-center formula to an **entry-progress-from-the-bottom-edge-only**
-  formula (`entryProgress = clamp01((viewportH - rect.top) / rect.height)`). The old version also
-  re-zoomed as a card exited near the top edge; the reference only reacts to the bottom edge —
-  confirmed by polling the reference's own `getBoundingClientRect()`/`matrix3d` during scroll.
-- `ProjectCard.tsx`, three separate bugs/mismatches found and fixed:
-  - The hover tag-ticker used `animation-play-state: paused/running` toggling, which does **not**
-    reset a CSS animation's progress — every hover resumed from wherever it last stopped instead
-    of starting at `translateX(0)`. Fixed by only attaching `group-hover:animate-[tag-ticker_...]`
-    at all on hover (no animation in the default state), so it's always fresh. Ticker background
-    also changed from a dark gradient to the reference's measured `#f4f4f6`.
-  - The title/subtitle caption was a detached block below the image with a gap; the reference
-    fuses it to the image's bottom edge as one rounded card. Rounding/clipping moved from
-    `ScrollZoomImage`'s className up to the card's root element; the caption is now
-    `absolute inset-x-0 bottom-0` with `bg-[#f4f4f6]`, growing its `max-height` on hover
-    (bottom-anchored, so it visibly grows *upward* into the photo) to reveal the subtitle stacked
-    below the title, rather than the title/subtitle sitting side-by-side.
-  - Sizing iterated up in a few rounds per Sylvia's feedback: title is `text-xl` (was `text-lg`),
-    ticker padding/text bumped to `px-6 py-5`/`text-sm` (was `px-4 py-2`/`text-[10px]`).
-- `app/globals.css`: `--radius-card` reduced from `52px` to `20px` — matches the reference card's
-  measured `border-radius` exactly (`getComputedStyle` on its outer `<a>`). Affects every
-  `rounded-card` use (project cards, about-section portrait).
-- `ContactSection.tsx`: added the "Contact" eyebrow pill above the heading (same pattern as
-  About/Experience/Testimonials — was missing entirely). "Let's talk" button flipped from solid
-  black/light-text to the reference's actual style: light pill (`bg-bg text-ink`, matching its
-  measured `rgb(249,249,250)`/`rgb(20,20,21)`), bigger padding, plus a blurred orange-red radial
-  glow (`rgba(255,77,46,...)`) sitting behind/under it, reproducing the reference's glow div.
-  `SiteFooter.tsx` deliberately left alone — Sylvia confirmed the reference has no equivalent
-  footer but wants to keep ours anyway.
-- Added a **`CLOSE PROJECT` button** to `/work/halogrip` (`page.tsx` + `.close-project*` rules in
-  `halogrip.css`) — Sylvia's request, not a reference-site match. `position: fixed` top-right,
-  black pill/white text, stays visible through the whole scroll (verified past 1500px of scroll).
-  Hover reveals a duplicate stacked copy of the label sliding up (`translateY(-38px)`, one
-  line-height) to read as "selected." Hit one bug while building it: `align-items: center` on the
-  outer pill centered the two-line text track inside the clipped window, showing the seam between
-  both copies instead of one clean line — fixed with `align-items: flex-start`.
-
-### HALOGRIP scroll-intro: ported 1:1 from PowerPoint reference (this session)
-- The pinned scroll-driven 3D opening (`scroll-intro.tsx` / `scroll-intro-scene.tsx` /
-  `scroll-intro.css`, R3F + `three` + GSAP `ScrollTrigger`, real product model at
-  `public/models/halogrip.glb`) was rebuilt to match a reference animation Sylvia had already
-  designed in PowerPoint (`public/media/Final Presention for claude12.pptx`, a real embedded 3D
-  Model object + Morph transitions across 9 slides), rather than the text-brief guess a first
-  pass had shipped. Ground truth (exact per-slide pitch/yaw/roll, on-screen frame, text, colors,
-  font, and a custom directional-arrow shape) was extracted straight from the `.pptx`'s OOXML —
-  it's a zip; `ppt/slides/slideN.xml`'s `<am3d:model3d>` element and `<p:xfrm>` have the numbers.
-- Confirmed with Sylvia and implemented: accent color is `#2D5391` (`--accent` in
-  `halogrip.css`, replacing an earlier invented `--navy`), font is **Poppins** via
-  `next/font/google` scoped to this route only (not the page's usual Nimbus Sans Narrow — a
-  deliberate, confirmed exception for just this section). The part-callout stage is one static
-  text block (not per-part 3D-tracked labels), and the Forward/Brake/Reverse stage keeps the
-  model's **3D** pose frozen at the side view (there is no separate Neutral state).
-- The Forward/Brake/Reverse stage does rock the product, and that rock is not a 3D move: every
-  one of slides 4-9 freezes `<am3d:rot>` at the side view, and what Morph actually animates is
-  the `rot` attribute on each slide's `<p:graphicFrame>`'s `<p:xfrm>` — a flat, in-the-picture-
-  plane turn of the whole rendered frame. Decoded (60000ths of a degree, clockwise, absent = 0)
-  that is one continuous sweep, never doubling back: slide 4 = 0, slides 5-6 = +15.12, slides
-  7-8 = 0, slide 9 = -22.79 (stored as 337.21). It rides on its own `SceneState.tilt` channel,
-  deliberately not on `pitch` — `pitch` is the slide 1-4 approach and stays parked afterwards.
-  The scene applies it to the `place` group, i.e. about the camera's own view axis, *outside*
-  the pose rotation. Do not fold it into pitch/yaw/roll: at yaw -90 both of the other Euler
-  channels have landed on world X, so composing there foreshortens the side view instead of
-  rocking it (an earlier draft's bug). Note it disagrees in direction with
-  `interaction-deck.tsx` further down the page, whose FORWARD is -16 (anticlockwise) against
-  this stage's +15.12 (clockwise) for the same word — the deck's numbers are that component's
-  own, the intro's come from the PPT; flagged for Sylvia, not reconciled.
-- Camera is `OrthographicCamera`, not perspective — required so the model's on-screen size
-  matches the deck's frame percentages exactly at every pose; a perspective camera measurably
-  over-sized the side-view pose.
-- Verified: `npm run build` and `npx tsc --noEmit` both clean; scroll sequence checked stage by
-  stage against the deck's own rasterized per-pose renders (`ppt/media/image*.png` inside the
-  pptx) since the paired screen-recording video wouldn't play back reliably in-browser; reversal
-  (scroll to bottom then back to top) mirrors correctly; mobile/no-WebGL/reduced-motion fallback
-  still renders the plain static hero.
-- Slide 3's second copy of the model is now in (Sylvia confirmed she wants it). That slide layers
-  two instances, so `scroll-intro-scene.tsx` renders two: the persistent one the whole timeline
-  scrubs, and a stage-2-only backdrop that fades in and out on the callout block's exact beats
-  (`SceneState.backdrop`, tweened at 0.30 and 0.40 alongside `calloutRef`). Per-instance notes:
-  - The fit mechanism is the standalone `fitToFrame(place, rotate, pose, silhouette, lens,
-    scratch, depth)` — it takes an instance's pose and frame as arguments, so the scrubbed
-    `SceneState` and the backdrop's frozen `Pose` run through identical code.
-  - Which slide-3 pose belongs to which instance was corrected once and is now confirmed: the
-    persistent model takes the **left** pose (26.5/-50.4/-20.7, `POSE_CLOSE_UP`) and the backdrop
-    the **right** one (43.1/29.8/24.6, `POSE_CLOSE_UP_BACKDROP`) — matching slide 3's own z-order,
-    where the left copy is the later shape and therefore on top. This also makes the whole
-    sequence turn 0 -> -50 -> -90 in one direction instead of doubling back.
-  - `Object3D.clone()` shares material references (checked against this GLB: 21 meshes, 13
-    materials, all shared), so the backdrop clones its own or fading it would fade the primary.
-  - The backdrop's meshes get an explicit near-to-far `renderOrder`. Without it a translucent
-    solid double-blends wherever the default back-to-front order applies, and the instance comes
-    out visibly blotchy rather than uniformly faded.
-- Nothing from this pass has been committed to git — changes are sitting in the working tree.
-
-### HALOGRIP scroll-intro: pacing, arc, and lighting fixes (this session)
-- **Pacing.** The PPT's own timing (unzip the pptx, `ppt/slides/slideN.xml`'s `<p:transition>`)
-  is a consistent 1500ms Morph on every slide 2-9, plus a 2000ms hold (`advTm="2000"`) on slides
-  1-3 before auto-advancing — roughly a 43:57 move:hold ratio. The first PPT-accurate pass didn't
-  reproduce this: pose/opacity tweens spanned almost the entire width of each scroll stage,
-  leaving near-zero dwell time, so elements (the callout block, the stage-2 backdrop instance)
-  were still mid-fade when the next stage already started clearing them. Fixed by raising the pin
-  distance from `+=550%` to `+=750%` (shrinking tween durations inside the same budget would just
-  make the same distance mostly dead, not add real dwell time) and rebalancing every content stage
-  to roughly that 43:57 ratio, with fades landing on the *same* beat as the pose/element they
-  belong to rather than trailing it. New stage boundaries: S0 0-0.06, S1 0.06-0.19, S2 0.19-0.36,
-  S3 0.36-0.50, S4 0.50-0.63, S5 0.63-0.79, S6 0.79-0.95, S7 0.95-1.0 (S5/S6 each now carry two
-  beats, since they each cover two source slides).
-- **Lighting / "buttons look black instead of silver."** Root cause: six of the GLB's thirteen
-  materials ("纹理铝") are `metalness:1, roughness:0.1` — a pure metal has no diffuse term, so
-  under point/directional lights alone it can only return a few specular pinpoints and otherwise
-  reads as black. The missing input was an environment, not more lamps. Fixed in
-  `scroll-intro-scene.tsx`: added a `StudioEnvironment` (three's built-in `RoomEnvironment`, no
-  network fetch, baked once via `PMREMGenerator` into `scene.environment`), and replaced the
-  placeholder lighting with the deck's own real rig, read straight out of `<am3d:model3d>`'s
-  `<am3d:ambientLight>`/`<am3d:ptLight>` elements: ambient (.5,.5,.5 @ illuminance 0.5) plus a warm
-  key / cool fill / violet rim point light at the PPT's own colors and a 9.77 : 12.25 : 3.13
-  intensity ratio (positions used as normalized directions at a fixed radius, `decay={0}` so
-  brightness doesn't shift when `fitToFrame` rescales the model). Verified side-by-side against
-  the deck's own cached `ppt/media/slide2.png`-equivalent render.
-- **Backdrop opacity.** Was capped at a deliberate 0.5 (invented, to keep the callout text
-  legible over it) — but neither `<am3d:model3d>` shape in the deck has any alpha effect; the
-  ground truth is fully opaque. Changed `BACKDROP_OPACITY` to 1. No legibility conflict in
-  practice: the backdrop's frame bottoms out at 57% viewport height, the callout starts at 68.1%,
-  they don't overlap.
-- **Arc/arrowhead — two real bugs, not one.** (1) `ARC_PATH` had originally been built by treating
-  the PPT arc preset's `adj1`/`adj2` as literal ellipse parametric angles; they're true geometric
-  angles and the `arc` preset applies its own `atan2`-based conversion first — on a 500x143 box
-  this put both path endpoints tens of px off and the end tangent ~30° out, which is what first
-  showed up as a misaligned triangle. Recomputed from the real conversion (verified against
-  PowerPoint's own exported slide images to sub-pixel accuracy). (2) After that fix, the triangle
-  was still visibly wrong in a way that turned out to have nothing to do with the earlier flip
-  (`scaleX(-1)`) suspicion — a controlled test proved the CSS mirror was rendering a faithful,
-  undistorted mirror image both times. The actual cause: DrawingML shortens a line by the
-  arrowhead's own length so the head sits neatly *on* the stroke's end; SVG `marker-end` does not
-  — the stroke kept running full-length underneath the triangle, so its butt cap poked out past
-  one flank (the "notch"), the arc's own curvature across that span misaimed the auto-oriented
-  head (the "squashed diamond"), and the tip never actually cleared the line (it read as buried,
-  not pointed). Fixed by cutting the stroke back to the head's base and replacing the
-  `orient="auto"` `<marker>` with an explicitly-computed triangle polygon (tip position kept from
-  the earlier fix; base/axis computed from the *chord* across the head — not the end tangent or
-  base tangent, chord is what PowerPoint itself orients an arrowhead to; head size kept at 3x
-  stroke width per the deck's own `<a:tailEnd type="triangle" w="med" len="med"/>`). Verified with
-  tight zoomed screenshots on all three states (Forward/Brake/Reverse): clean triangular tip
-  clearly proud of the line, no notch, symmetric barbs, in every state.
-- Nothing from this pass has been committed to git either — still sitting in the working tree.
-
-### Post Harvest: narrative phase rail — real chapter-to-chapter spacing, and the 04 Deliver rail merged (this session)
-
-Four rounds of iteration on the left sticky phase rail added in an earlier session (see
-"Narrative phase rail added" above), all in `app/work/post-harvest/page.tsx` and
-`post-harvest.css`.
-
-**Round 1** ("A BUILDABLE SYSTEM" reading flush against "05"): added
-`margin-bottom: clamp(96px, 11vh, 144px)` to `.ph-phase-descriptor`. Turned out to only
-delay when the sticky rail *text* releases/re-pins, not the actual boundary — the real fix
-came in round 3.
-
-**Round 2** (the phase-boundary hairline read as "two stacked boxes"): the old
-`border-top: 1px solid var(--line)` on `.ph-phase:not(.ph-phase-discover)` was first
-re-scoped to `> section:first-of-type` so it stopped crossing the rail column, then removed
-outright once it still read as a cut-off, partial-width line stopping short of the rail.
-Chapter breaks are whitespace-only now — no line anywhere in the rail or the content column.
-
-**Round 3, root cause found** ("03 Develop 和 04 Deliver 之间还是完全没有 spacing"): a
-read-only Explore agent plus live `getBoundingClientRect()` calls confirmed
-`.ph-phase-develop` and `.ph-phase-deliver-dark` sat flush at 0px in document flow — round
-1's `margin-bottom` lives inside `.ph-phase-rail-inner` and never moves the `.ph-phase`
-wrapper `<div>` itself, so `.ph-phase-deliver-dark`'s full-row `background: var(--blue)`
-(colouring both grid columns) snapped on with zero gap the instant 03's content ended,
-regardless of the rail-text delay. Fixed with real space in normal flow instead:
-`.ph-phase:not(.ph-phase-discover) { margin-top: clamp(64px, 8vh, 96px); }`. Verified with
-`getBoundingClientRect()` on all five `.ph-phase` wrappers: every real boundary now measures
-exactly 64px, independent of background colour or scroll/sticky timing.
-
-**Round 4, went through Plan Mode** (this reversed an earlier explicit decision, so it went
-through `AskUserQuestion` rather than being assumed): Deliver had been two physical
-wrappers, `ph-phase-deliver-dark` (07 alone, rail inverted to ivory/white against `--blue`)
-and `ph-phase-deliver-light` (08-09, rail repeated dark-on-light) — Sylvia's own brief from
-the original phase-rail session, quoted in the code comments at the time: "为什么不是常驻
-侧边栏" (why isn't it a persistent sidebar), explicitly rejecting a merged rail. Revisited
-this round: the repeated rail was now reading as "04 Deliver" appearing twice, glued
-together. Merged into one `.ph-phase-deliver` wrapper spanning 07-09 with a single
-`<PhaseRail>` call (the `dark` prop dropped from the component entirely — confirmed dead
-first, `.ph-phase-rail-dark` had zero CSS rules referencing it already). Trade-off Sylvia
-picked over a JS-scroll-synced alternative: the rail no longer inverts colour as the
-background behind it changes — it stays plain ink-on-light for the whole phase.
-`background: var(--blue)` moved off the wrapper (which used to colour both grid columns)
-onto `.ph-fc` itself, section 07's own element, so the colour still bleeds fully across the
-content column at its own edges and never touches the rail/gutter column. Confirmed first
-that every `.ph-fc-ov-*` text overlay inside section 07 already carries its own explicit
-`--on-blue`/`--on-blue-dim`/`--ink` colour rather than inheriting from the wrapper, so this
-move didn't touch any text colour inside 07.
-
-Verified throughout: `npx tsc --noEmit` clean; `getBoundingClientRect()` confirms uniform
-64px gaps at all four real chapter boundaries (01→02, 02→03, 03→04, 04→05); scrolled the
-merged 07→08→09 span confirming one continuous rail with no release/re-pin and no duplicate
-"04 Deliver".
+directly. Replaced the old two-column layout (tall portrait photo, rounds list, an
+annotation-code legend SVG, a three-equal-card strip with a "picked" blue frame) with four
+beats: a small wide fieldwork photo beside a first-evaluation/potential-bias/method-
+adjustment sequence; a large centred carousel (Drying Tower dominant, Table/Box smaller on
+either side); a compact response line; a resolved "SELECTED DIRECTION" statement.
+
+**Four follow-up rounds, same session:**
+1. Arrows didn't do anything and the 3D tilt wasn't visible ("为什么现在那两个箭头无法被
+   点击，然后图片也没有perspective"). Both real: arrows were decorative `<span>`s — pulled
+   the carousel into a client component (`concept-carousel.tsx`) with real click-driven
+   state. The tilt was technically applied (`matrix3d` confirmed) but the concept webps are
+   themselves near-white, so a rotated image had no contrast against the page background to
+   read the tilt against — gave `.ph-06-carousel-frame` a white card surface + `box-shadow`
+   (which follows the transformed layer, unlike the img's `filter: drop-shadow`).
+2. Click produced a jarring snap, tilt still invisible, and a stray edge cut through the
+   shadow. Root cause of the snap: items moved between slots via flexbox `order`, which
+   isn't itself animatable — it swaps instantly, so `order`'s new arrangement always
+   preceded the transition, reading as a jump. Rebuilt with `position: absolute` items
+   where `data-position` only ever changes `transform`/`opacity` (both animatable). The
+   "still can't see it" + stray-edge complaints traced to the same oversized card: a forced
+   `width` made cards much wider than the sketch's own aspect, so most of what was rotating
+   was blank space, and `overflow: hidden` on the wide card clipped straight through its own
+   shadow. Removed the forced width (absolutely-positioned items shrink to content by
+   default) and the clip; angle brought down from a since-rejected 50deg/900px to
+   34deg/1400px.
+3. Centre image too small to read ("图片太小了，看不清") — a real regression from fix #2:
+   shrinking the card to fit content also shrank the ceiling the DOMINANT image could grow
+   to. Gave the centre position its own, much larger `max-width`/`max-height` cap.
+4. "现在这些草图下面太多没有用的内容了... 参考halogrip的[ 05 / CONCEPT EXPLORATION ]的结构"
+   — a structural ask, not sizing. HALOGRIP already has exactly this pattern
+   (`app/work/halogrip/concept-carousel.tsx`): cycling to the last card fades the others
+   out and swaps in a "SELECTED DIRECTION" callout, with one quiet name label under the
+   deck otherwise. Removed the process line and the always-visible selected-direction block
+   entirely; `content.ts`'s `concepts.options` reordered so the selected concept is last in
+   the array (required for "reaching the end" to mean anything); the carousel component
+   itself now derives the "final" state from `options[center].selected`.
+
+### Section 04's spatial composition rebuilt, then section 05's "define problem" area redesigned against a mockup (this session)
+Section 04 ("Finding the focus"): a first pass (removing step-index numbers, alignment
+tweak) was rejected as too minimal ("still feels like several small elements floating in a
+very large blank viewport"). Root cause found on the second pass: one shared
+`--ph-04-stage-h` variable sized BOTH the text column and the sticky visual, so a couple of
+lines of text sat `align-content: center`'d inside a box nearly a full viewport tall — that
+centring-in-an-oversized-box is what read as floating. Fixed by decoupling into
+purpose-built `--ph-04-lead-gap`/`--ph-04-step-h`/`--ph-04-visual-h` variables, `align-
+content: start` on the text step, and a `.ph-04-stage` wrapper capping the composition
+narrower than the canvas at wide viewports. Two unrelated pre-existing bugs fixed in the
+same pass: the "Finding the focus" eyebrow duplicated the heading (content.ts's `label`
+field was identical to `title` for this one section only); the two large 04 diagrams never
+displayed in full because a sitewide `.ph-svg-body svg { min-width: 760px }` floor wasn't
+actually overridden for them despite a comment claiming it was.
+
+Section 05 ("Defining the challenge") "define problem" area, against
+`public/post-harvest/photo/define problem reference.png`: the three-threats-plus-narrower-
+Weevils row unified into one `.ph-strip-4`; a new `.ph-priorities` strip added; the lower
+composition rebuilt as a 65/35 split with the requirement-list checklist demoted to a small
+preview that opens full-size in a new `requirement-lightbox.tsx` (portal-rendered,
+Escape/click-outside/focus-return, same conventions as `handbook-reader.tsx`); removed a
+paragraph implying the final concept solved carrying/transport, which was never validated.
+One bug caught before shipping: the lightbox's close button first sat at the exact fixed
+`top:20px;right:20px` spot the site's persistent "Close project" pill already occupies —
+moved into the dialog's own normal-flow layout instead.
+
+### Section 02 rebuilt against a mockup, then a narrative phase rail added (this session)
+Five asks in sequence. (1) Section 02 rebuilt against a supplied prototype/mockup as "one
+continuous narrative" instead of a card grid — chapter head → location band → evidence rail
+→ documentary photo pair. (2) Two refinements (road photo height, a connector line from map
+to photo). (3) "为什么这么糊啊" (why is it so blurry) — not a bad export, a `sizes` hint
+that undershot the actual rendered column width by 5-10%, so Next served a smaller srcset
+candidate than the box needed. (4) Header realigned to the location band's own grid columns
+after a first pass (its own separate column split) was rejected as inconsistent. (5) The
+largest piece: a narrative phase rail, five semantic phases (Discover/Reframe/Develop/
+Deliver/Reflect) grouping the ten existing numbered sections, structurally referenced from
+a supplied prototype HTML file but restyled in Post Harvest's own visual system. Section
+04's animation was the explicit, highest-priority constraint ("do not modify the existing
+animation or scrolling behaviour") — `.ph-phase` is a bare `display: grid` with no
+`overflow`/`transform`/`filter`, so section 04's sticky elements keep resolving containing
+blocks exactly as before. A real bug caught during verification: the rail's `grid-row: 1/-1`
+only resolves against an *explicit* row definition, which `.ph-phase` never declares, so
+`-1` silently collapsed to the first implicit row — the rail was releasing one section
+early on every multi-section phase. Fixed with `grid-row: 1 / span 99`. Then Sylvia flagged
+"好多数字好奇怪" (a lot of the numbers look strange) — the new phase number and the existing
+per-section chapter label were near-identical in typography, reading as one skipping
+sequence; resolved (through Plan Mode, three options offered, Sylvia picked her own answer
+instead) by dropping the number from the section chapter label and keeping it only on the
+phase rail.
+
+CLAUDE.md updated in the same stretch: added Post Harvest to "what this project is", a hard
+rule for its three different container widths (`.ph-canvas`/`.ph-shell`/`.ph-04-canvas`,
+after several sessions' worth of back-and-forth working out why they're different — see
+below), the full Post Harvest file structure, and its own open `TODO(sylvia)` items.
+
+### Container widths: several sessions converging on three deliberately different values
+Long-running thread across many sessions, worth reading as one story since it kept
+resurfacing as "wide screens still have too much whitespace":
+
+- `.ph-canvas` (`--canvas`, the shared default) started at 1480px, widened to **1600px**
+  after Sylvia reported "还是两边大量留白" post-04-fix — the earlier fixes had only ever
+  touched section 04, and every *other* section was still on the original, unwidened shared
+  class. `--canvas` is a `min(Xpx, ...)` formula and, like any such formula, stops growing
+  past its cap — expected behaviour, not a bug, but easy to mistake for one on very wide
+  monitors.
+- `.ph-04-canvas` (section 04 only): its own fluid container, `min(1680px, calc(100% -
+  clamp(48px,8vw,160px)))`, built specifically because section 04's sticky two-column
+  scrollytelling stage has its own legibility floor (see below) and was capped at the
+  shared `--canvas`'s (then 1480px) ceiling on every desktop width — confirmed live, no
+  wider than a 1400px viewport.
+- `.ph-shell`/`--shell` (1700px, sections 09-10 only): Sylvia asked to measure section 09
+  directly against HALOGRIP's own `#concepts` at the same viewport rather than guess — the
+  numbers disproved her own "shell is too narrow" theory (09's checklist was already
+  proportionally *ahead* of HALOGRIP's own card), but did surface a real, 1.7x heading
+  font-size gap between the two pages, which was reported but deliberately NOT touched
+  (CLAUDE.md's own hard rule: each case study keeps its bespoke type voice). `.ph-shell`
+  itself already existed as dormant, unused CSS (`--shell: 1960px`) sharing HALOGRIP's own
+  `.shell` mechanism almost exactly — revived at HALOGRIP's own number (1700px) rather than
+  its old dormant one, and wired onto 09's three wrappers, then 10's (to close a new 50px
+  seam widening only 09 had introduced between two adjacent sections).
+- Section 10 separately had a real bug, not a canvas problem: `.ph-insight`'s `max-width:
+  44ch` was capping the WHOLE reflection block (numeral, heading, rule and all), not just
+  its prose — leaving each of four blocks at less than half its actual grid cell width.
+  Moved the cap onto just the two pieces of running prose that needed it.
+- `.ph-04-canvas`/`.ph-09-canvas`/`--canvas` were each independently re-verified as
+  unaffected by every other one's changes throughout this thread — they use literal pixel
+  values in their own formulas, not a shared token, by design.
+
+### Section 04 scrollytelling: several rebuilds, ending on plain CSS + GSAP-free triggers (multiple sessions, superseded by the "fixed stage" entry above)
+Long thread, now fully superseded by the CSS-overlay rebuild above, kept here for the
+lessons: an early GSAP `ScrollTrigger` version picked the "active" step by intersection
+RATIO (intersecting area / step's own area) rather than a fixed reading line — a
+one-sentence step could "win" the instant it was fully inside the trigger band and lose
+again almost immediately, while a three-paragraph step kept winning purely because it had
+more area. Fixed at the time with one trigger per step at a fixed `"top 48%"`/`"bottom 48%"`
+line. Real bug hit building that: creating every `ScrollTrigger` in the same effect that
+armed the layout measured pre-arm (pre-`min-height`) geometry, since React hadn't yet
+committed the re-render — split into two effects so triggers are created strictly after the
+class (and the layout it drives) has committed. `ScrollTrigger.refresh()` on an
+already-created trigger does NOT re-measure its `start`/`end` — confirmed directly; only
+creating a fresh trigger at the later moment works. This is the same category of bug this
+project's `pin-coordinator.ts` (HALOGRIP) exists to solve — see below.
+
+Diagram sizing, several rounds: `max-height` on an SVG with a `viewBox` does not shrink a
+replaced element proportionally — it letterboxes, so a capped box can make a diagram
+render *smaller* while still occupying the same footprint (one diagram was found scaled to
+0.639 with labels at 6.1px, `max-height` fully to blame — likely the source of several
+"好多奇怪的留白" reports). SVGs are now excluded from that cap; width alone bounds them. A
+12px minimum-label-size floor across every diagram was reasoned as `12px ÷ smallest
+declared label × viewBox width` per drawing, not eyeballed, after finding it silently
+unenforced between 768px and desktop width.
+
+### Section 02 locator map: rebuilt from real geodata, then two colour/accuracy fixes (multiple sessions)
+Went through: (1) a water/land figure-ground fix (the lake was filled a near-white that
+read as land, not water — fixed with colour only, tracing untouched). (2) A full redraw
+generated from real open geodata (`scripts/build-seme-locator.mjs`, Natural Earth +
+geoBoundaries, gitignored cache) instead of a hand-traced shape, as a two-level
+country-then-detail composition. (3) Rebuilt again into two clearly separated panels with a
+"ZOOM IN" arrow between them (Sylvia: the previous projection-cone connector "looks like an
+accidental construction line"), **and a real factual correction**: the field site is in
+**Kisumu County, not Siaya** — verified two ways (grid-sampling the Seme polygon against
+every county boundary: 99.7% inside Kisumu; and Seme's known population/area matching the
+site's existing "~450/km²" stat exactly) — the booklet's own "Siaya" heading was wrong.
+`content.ts`'s `dateline`/`captions.locator` corrected; flagged to Sylvia in case the
+booklet's wording was deliberate for some reason not visible in the geodata.
+
+### Section 07 (handbook): several rounds narrowing from "dominant band" to a secondary link (this session)
+The handbook's entrance to its 53-page in-page reader went through multiple shapes as its
+role in the page's hierarchy was clarified: a full-width "paper on blue" CTA band → a small
+bordered secondary button (still too detached, floating alone) → finally folded into the
+previews' own header row as a plain text link, no box, sized to its own label. Along the
+way: `finalConcept.heading` renamed "The Drying Tower" → "The Drying Tower Handbook";
+`--on-blue-dim` (every caption/body colour on the section's navy field) raised from 0.62 to
+0.82 alpha for contrast; a `.ph-07-close` box-model inconsistency was fixing two symptoms at
+once (a 64-80px gap ask and a top-alignment ask both traced to one child carrying leftover
+margin/border meant for a different context). Separately: the handbook was corrected from 7
+pages to the real 53 (the original estimate came from leftover probe renders of only a
+slice of it — rescanned the source PDF page range directly). The reader overlay is mounted
+at `.ph-root` level, not inside its own section — `position: fixed` escapes layout but not
+CSS cascade, and mounting it inside the section it opens from picked up that section's own
+local image-sizing rules.
+
+### Site infrastructure renamed from "halogrip-portfolio" to "sylviaxie" (this session)
+Sylvia: "halogrip只是我这个项目的名字" — HALOGRIP is one case study, not the whole site.
+GitHub repo renamed (auto-redirects), Vercel project renamed (did NOT move the live
+`.vercel.app` alias on its own — had to explicitly `vercel domains add` the new domain as a
+first-class project resource to get it past the project's SSO-protection exemption, then
+remove the old alias per Sylvia's explicit choice not to keep it redirecting).
+`metadataBase` in both layout files, `package.json` name/description, and CLAUDE.md's own
+Deployment section all updated to match. Verified live: new domain 200s, old one 404s.
+
+## HALOGRIP
+
+### Concept exploration (05): rebuilt many times before landing on a plain click-driven deck (many sessions)
+The most-rebuilt single component on the HALOGRIP page. Worth reading as one arc: started
+as a static 4-card grid → a scroll-scrubbed pinned filmstrip (ported from the source pptx's
+own Morph-transition slide coordinates) → a self-contained wheel/drag/click "hero" carousel
+(rebuilt against a supplied reference `HeroCarousel` component, ported to GSAP since this
+route doesn't use framer-motion) → **finally a plain click/keyboard-only deck** after
+Sylvia's explicit root complaint: page scroll should only ever move between sections, and
+every scroll/wheel-intercepting version up to that point trapped it inside the component.
+The current `concept-carousel.tsx` reads no scroll/wheel/drag input at all — `useState` on
+a discrete index, GSAP only used to tween each card's `xPercent`/`yPercent`/`rotation`/
+`scale`/`opacity` into one of four fixed background slots recomputed relative to whichever
+card is active. Real, reusable lessons from the earlier rounds:
+- GSAP must own an element's transform from its very first frame — setting an *initial*
+  position via a raw CSS `transform` string (even matching values) confuses GSAP's own
+  decomposition the first time it tweens that element (confirmed: a "centred" slot with
+  `xPercent:0` rendered ~290px off). Fix: `gsap.set()` once on mount to establish GSAP's own
+  baseline before any `gsap.to()` call ever touches the element.
+- The site's global `ScrollTrigger.normalizeScroll()` caches a max-scroll bound; any
+  component that mounts `null` then a real, taller section on a later render (common for
+  `canEnhance()`-gated components) can desync that bound and leave the page stuck
+  unscrollable past the stale max. Fix used throughout: one `ScrollTrigger.refresh()` call
+  in the component's own mount effect. (`pin-coordinator.ts`, below, is the *separate* fix
+  for a different symptom — an already-created trigger's own `start`/`end` not responding
+  to `refresh()` at all.)
+- Asset choice matters more than card size: three separate rounds of enlarging a card tried
+  to fix "sketches too small to read" before finding the actual cause — the asset set in use
+  (extracted from one range of pptx slides) was raw white-on-black scans with a lot of dead
+  canvas around a small drawing; switching to a different, cleaner slide range (this
+  project's own original slides-11-15 export) fixed legibility immediately with zero CSS
+  changes.
+- A file-hash/histogram diff proves two files differ; it does not prove their *content*
+  differs. Sylvia caught a case where two "different" image sets were actually re-exports
+  of the same four source sketches — worth actually opening and looking at images before
+  asserting "these are different."
+
+Two smaller, still-live follow-ups on this component: concept numbers were made explicit
+(`CONCEPT 01`/`03`/`04A`/`04B`/`02`, distinct from the deck's own 1-5 position counter,
+after Sylvia flagged the ppt's non-sequential numbering as confusing with no explanation);
+and — much later — a legibility pass (cards were rendering at 224x157px against an
+undocumented "fit everything in one viewport" `min-height:200px` floor) traded a strict
+one-screen-fit guarantee for a legible 571x399px card, which also exposed and fixed a
+GSAP-percentage regression where the four background "fanned" cards bled up into the
+heading area once the active card (and therefore their own untransformed box) got bigger.
+
+### 02.3/02.4: rebuilt, then a real GSAP pin-timing bug fixed with a dependency coordinator (this session)
+02.3 ("Current Response") replaced a flat DOM timeline (cards, an SVG process path, a
+progress bar) with one full-viewport scene photo that already bakes in the process visually
+— motion reduced to a single opacity/scale reveal-once plus a small parallax, deliberately
+calm since 02.4 carries the section's real transformation animation. **The actual bug** a
+report of "02.3 shows up twice with a blank gap" traced to: `process-scene.tsx` and
+`overview-backdrop.tsx` created their `ScrollTrigger`s synchronously on first mount, before
+`scroll-intro.tsx`'s own real pin (deferred to a second, hydration-safe render, measured
+taking up to ~1s under real load) existed — baking in `start`/`end` measured against a
+still-short document. `ScrollTrigger.refresh()` does NOT fix an already-created trigger's
+`start`/`end` (confirmed directly from the console — they survive `refresh()` unchanged no
+matter when it's called). Fix: new `app/work/halogrip/pin-coordinator.ts`
+(`markPinReady(source)` / `onPinsReady(deps, callback)`), a small dependency graph so each
+section defers creating its own trigger until everything above it has already landed. This
+replaced an earlier, non-working attempt (`scroll-refresh.tsx`, deleted) that tried calling
+`refresh()` after the fact instead. Rule for later: any component gated by an `enhanced`
+flip must call `markPinReady` on **every** code path, including "decided not to enhance," or
+a sibling waiting on it will stall until the coordinator's 4s safety timeout.
+
+### Type system swapped to Koulen + Roboto Mono, font sizes re-pinned to mason-wong.com's actual numbers (this session, two passes)
+Inspected mason-wong.com live via `getComputedStyle` (Sylvia's request) and confirmed its
+pairing: Koulen (headings) + Roboto Mono (body/UI), both free Google Fonts. First pass
+consolidated HALOGRIP's own already-fluid `clamp()` sizes into named tokens without
+changing their values. Sylvia then asked to go further and actually match mason's pixel
+ceilings — resulting `:root` tokens keep each existing clamp's `min`/`vw` slope but replace
+the `max` with mason's measured number (`--fs-hero` 270→167, `--fs-title` 90→80, etc.), and
+— after Sylvia explicitly rejected leaving the smallest tiers alone — every size floor was
+raised to 12px minimum ("我想所有字都12px以上的，和mason一样"), a real, visible, intentional
+change across every eyebrow/footer/caption on the page.
+
+Real scoping bug hit while wiring the fonts in: `next/font/google`'s CSS variables only
+exist on `#top` and its descendants, but the file's `--display`/`--mono` tokens and `body`'s
+own `font-family` live on `:root`/`body` — ANCESTORS of `#top` — so `:root` referencing the
+font variable was invalid at that scope and silently fell through to the system fallback
+(confirmed: computed `font-family` was the browser default, not Koulen, even though the
+variables were correctly defined one level down). Fixed by redeclaring both the tokens and
+`font-family` on `#top` itself.
+
+### Background system unified into `--paper`/`--paper-light`/`--dark`, then collapsed further to one flat tone (this session, two passes)
+Several near-duplicate off-white hexes (drifted apart across many earlier sessions) were
+consolidated into two named light tokens plus the existing dark one; `.principles`
+converted from a dark section to the same continuous light background as the three
+sections around it (the actual fix for a "run of four sections" Sylvia wanted read as one
+continuous background). Sylvia then asked to collapse further — drop the second light tone
+entirely, one flat `#f9f9fa` everywhere light. **One deliberate, flagged exception**:
+section 09's `.journey` keeps its old hardcoded `#f3f2ee` — its five story-grid PNGs have
+that exact colour baked into their own canvas backgrounds (confirmed by pixel-sampling the
+files directly), and moving the CSS without re-exporting the assets would introduce exactly
+the seam this whole pass was meant to remove. Left with an explanatory comment so a future
+session doesn't "fix" it back onto the shared token. (A later, explicit ask DID recolour
+those five PNGs in place via a `sharp` script — shifting only near-background pixels
+proportionally to how close they already were to the old colour, verified after the fact
+that every real-artwork pixel diffed at exactly 0 against a backup.)
+
+### PRODUCT OVERVIEW rebuilt from a spec grid into pixel-sampled annotation callouts (this session, two passes)
+Replaced a flat 2x2 spec-card grid with four industrial-design-style leader-line callouts.
+Anchor points were pixel-sampled from the product photo's real alpha channel via `sharp`,
+not guessed, so every dot lands on real opaque product surface and every label lands in
+genuinely empty space. A real layout bug (the visual was `position:absolute` inside a
+hand-picked `min-height`, contributing zero to flow height, leaving ~300px of dead
+whitespace below it) was found and fixed by rebuilding the section as a real CSS grid
+instead. Follow-up pass, after Sylvia found the result crowded: recomputed anchor points
+further inward from the image's outer edge (her direct correction: "现在的字怎么向内扣，
+向外更好啊" — the first "inward" attempt had it backwards), dropped the annotation type
+scale to a clearly secondary 16px, and shifted the whole visual left for clearance from the
+fixed CLOSE PROJECT pill.
+
+### 06 / Sketch Process: several content/visual passes, ending on a 3-stage story with a soft-charcoal card (this session)
+Went from a "Prototype Testing" section (physical-prototype photo + evaluation findings) —
+deleted outright per an explicit ask, replacing a different story than sketch-stage
+iteration — through: a wide single sketch sheet; a "3 stages" structure once Sylvia
+clarified an existing asset folder actually belonged here, not to section 05 (confirmed
+scope explicitly before touching anything — she did not want section 05 touched); a
+lightened-then-reverted card background (white background + black line art was tried,
+reverted after Sylvia reported it didn't read well — the assets' ink alpha is well below
+100% through most strokes, so black-on-white reads as faint grey where the same alpha
+white-on-dark reads clearly; landed on a soft charcoal, dark enough for the line art,
+softer than the page's near-black token); red per-card index numbers removed; and, after
+Sylvia caught that two of the three "stages" were actually re-exports of the same four
+source sketches (verified by opening the pixels directly, not by file hash), the duplicate
+stage was removed and the remaining two restructured into an explicit "4 dark exploration
+sketches converge on 1 light result" layout with a connecting arrow.
+
+### Sketch/concept lightboxes and card-hover interactions rebuilt to spec (this session)
+The sketch-process card hover (red border on click) turned out to be a `:focus-visible`
+ring, not `:hover` — these cards are a `<figure role="button">`, and Chromium shows a
+focus ring on plain mouse clicks for non-native interactive elements. Rebuilt the whole
+interaction (lift + image scale + no full-card border) so a click never reads as a
+persistent "selected" state. The concept sketch lightbox was rebuilt from an image-only
+preview into a two-column media+info editorial panel per an explicit brief ("not a browser
+image preview"), with a light frosted backdrop instead of a dark scrim.
+
+### CLOSE PROJECT pill made background-adaptive (this session, three iterations)
+First attempt used `mix-blend-mode: difference` with no fill — rejected by Sylvia
+("这个按钮怎么会透背景啊") since a diff-blended fill shows the actual inverted pixels behind
+it, reading as translucent over a photo rather than solid. Rebuilt as two fully opaque
+states toggled by an `IntersectionObserver` watching every dark section. A remaining gap
+Sylvia caught directly ("经过图片的时候也要保持实心"): the toggle is section-level, so a
+nominally light section with a locally dark photo patch under the button still looked
+low-contrast. Fixed generally (not per-image) with a border whose colour is always the
+opposite tone from the pill's own fill, so the chip's edge is legible from its own internal
+contrast regardless of what's behind it.
+
+### Scroll-intro (pinned 3D opening) ported 1:1 from a PowerPoint reference, then pacing/lighting/arrow fixed (this session, two passes)
+Rebuilt to match an existing PowerPoint animation Sylvia had designed (real embedded 3D
+model + Morph transitions across 9 slides) rather than a text-brief guess — ground truth
+(exact rotation per slide, on-screen frame, text, colours, a custom arrow shape) extracted
+directly from the pptx's own OOXML. Key confirmed facts, worth not re-deriving: accent
+colour `#2D5391`; font is Poppins, scoped to this one route only (a deliberate exception to
+the page's usual Nimbus Sans Narrow); camera is `OrthographicCamera`, required so the
+model's on-screen size matches the deck's own frame percentages (a perspective camera
+measurably over-sizes the side-view pose); the Forward/Brake/Reverse "rock" is a flat,
+in-picture-plane sweep on its own `tilt` channel, not part of the 3D pose — folding it into
+pitch/yaw/roll foreshortens the view instead of rocking it.
+
+Follow-up pass: **pacing** was rebalanced to the pptx's own real per-slide timing (1500ms
+Morph + 2000ms hold — a first pass had this ratio wrong, leaving near-zero dwell time).
+**Lighting** — "buttons look black instead of silver" traced to several materials being
+`metalness:1,roughness:0.1` with no environment map to reflect (a pure metal has no diffuse
+term); fixed by adding three's built-in `RoomEnvironment` plus the deck's own real light rig
+read out of the pptx's `<am3d:model3d>` element, not invented. **The directional arrow**
+had two independent bugs, not one: the arc's own path was computed by treating the pptx's
+`adj1`/`adj2` as literal ellipse angles when the `arc` preset applies its own conversion
+first; and separately, SVG `marker-end` doesn't shorten its line the way DrawingML shortens
+a line by the arrowhead's own length, so the stroke ran full-length under the triangle,
+producing a "notched, squashed, buried" head — fixed by cutting the stroke back and
+computing an explicit triangle from the arc's chord rather than relying on `marker`'s
+auto-orient.
+
+### Multi-project restructure, then homepage assets/animation (two sessions)
+Moved the single-page HALOGRIP site into `app/work/halogrip/`, trimmed `app/globals.css` to
+a shared Tailwind + `@theme` base, and built a new homepage cloned from Sylvia's Framer
+reference site. Follow-up: wired real images into every placeholder slot, added a
+letter-by-letter hero reveal, a scroll-linked project-card zoom (`ScrollZoomImage.tsx`,
+formula later corrected from a symmetric centre-distance curve to an entry-progress-from-
+bottom-edge one after measuring the reference site's own scroll behaviour directly), and a
+hover tag-ticker on project cards (had a real reset bug — `animation-play-state` toggling
+does not reset a CSS animation's own progress, so every hover resumed from wherever it last
+stopped; fixed by only attaching the animation class on hover at all).
+
+Git history note: mid-session the tree was reverted to an earlier dated checkpoint
+(`26082601`, via `git checkout <commit> -- .` + a new commit, never `reset --hard`) after a
+few checkpoints had regressed ("破了，得重新做"). THE CHALLENGE section briefly existed as a
+5-scene split in a later checkpoint that was NOT kept — if a future session doesn't find
+`challenge-chapter.tsx` etc., that's why, not a documentation gap.
+
+---
+
+*(Earlier entries — the original section-02 CHALLENGE placeholder scaffolding, the initial
+broken-image fixes after a `public/media/` reorg, and 04's very first diagram-legibility
+pass — are fully superseded by later entries above and were cut rather than condensed;
+see git blame on this file before 2026-09-09 if the literal old text is ever needed.)*

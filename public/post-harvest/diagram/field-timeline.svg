@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 200" width="1000" font-family="Geist, system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif" role="img" aria-label="Field timeline, March to May 2024. Six dates, with the five-week period in Seme marked.">
 <rect width="1000" height="200" fill="#fbfbfa"/>
-<text x="14" y="24" class="m" font-size="16" letter-spacing="0.11em" fill="#787d85">FIELD PERIOD &#183; BOOKLET P.3</text>
+<text x="14" y="24" class="m" font-size="16" letter-spacing="0.11em" fill="#787d85">FIELD PERIOD</text>
 <rect x="244.4" y="119" width="511.20000000000005" height="10" fill="#e6ebf4"/>
 <path d="M244.4,146 L244.4,154 L755.6,154 L755.6,146" fill="none" stroke="#17357a" stroke-width="1.2"/>
 <text x="500" y="176" text-anchor="middle" class="s" font-size="16.5" font-weight="600" fill="#17357a">Five weeks in Seme</text>

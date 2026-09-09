@@ -1,7 +1,7 @@
 <svg font-family="Geist, system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 812" width="920" role="img" aria-label="Requirement list, eighteen requirements with empty checkboxes">
 <rect width="920" height="812" fill="#fbfbfa"/>
 <text x="26" y="40" class="s" font-size="21" font-weight="600" fill="#14161a">Requirement list</text>
-<text x="894" y="40" text-anchor="end" class="m" font-size="11.5" letter-spacing="0.09em" fill="#787d85">SET BEFORE CONCEPT WORK · BOOKLET P.26</text>
+<text x="894" y="40" text-anchor="end" class="m" font-size="11.5" letter-spacing="0.09em" fill="#787d85">SET BEFORE CONCEPT WORK</text>
 <line x1="26" y1="56" x2="894" y2="56" stroke="#14161a" stroke-width="1.4"/>
 <text x="26" y="90" class="m" font-size="11" letter-spacing="0.12em" fill="#787d85">MANDATORY</text>
 <rect x="26" y="120" width="15" height="15" rx="2" fill="none" stroke="#14161a" stroke-width="1.3"/>

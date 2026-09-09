@@ -1994,6 +1994,34 @@ figure { margin: 0; }
 .ph-v2-blue .ph-quote blockquote { color: var(--on-blue); }
 .ph-v2-blue .ph-quote .who { color: var(--on-blue-dim); }
 
+/* ---- 09 dark variant. Three passes, per Sylvia, each one refining the last:
+   1. "Status / What we completed, and what remained open 这个部分也换成黑色背景" --
+      the completed band (`.ph-v2-ink` below) was already `--ink` black; make the rest
+      of the section match.
+   2. "下面部分你...也搞成黑色了，不需要" -- not ALL of it: the checklist/why/forward
+      block should stay on its original light ground. `.ph-v2-dark` pulled back to wrap
+      just the heading + the already-dark `.ph-v2-ink` band; see `.ph-status-light`
+      further down for how the checklist block keeps its light ground even though the
+      section around it is now dark by default.
+   3. "这句话下面加个白线，还有...严丝合缝...现在有个白条，换成黑色" -- a divider under
+      the heading, and no light gap where this section's own top padding met section
+      08's blue field above. `#status` itself now carries the dark background (not just
+      `.ph-v2-dark`), so that top padding renders black too; `.ph-v2-dark` still does
+      the actual text re-tinting, scoped to its own descendants only. */
+.ph-v2-dark { background: var(--ink); color: var(--paper); padding-block: clamp(24px, 2.8vw, 38px); }
+.ph-v2-dark .ph-chapter-label { background: transparent; padding: 0; border-radius: 0; color: rgba(251, 251, 250, 0.55); }
+.ph-v2-dark .ph-v2-head h2 { color: var(--paper); }
+#status { background: var(--ink); }
+/* The line Sylvia asked for, directly under the heading sentence. rgba(251,251,250,X)
+   again, matching this section's own established dim-on-black alphas. */
+#status .ph-v2-head { border-bottom: 1px solid rgba(251, 251, 250, 0.3); padding-bottom: clamp(18px, 2vw, 26px); }
+/* Punches a light patch back through `#status`'s now-dark background for the
+   checklist/why/forward block -- it sits OUTSIDE `.ph-v2-dark` in the markup (a sibling,
+   not a descendant), so none of that class's text re-tints apply here; `.ph-lbl`,
+   `.ph-body`, `.ph-open-claim`, `.ph-forward`'s border and the checklist's `.ph-svg-body`
+   border all just fall back to their ordinary light-mode colours, unchanged. */
+.ph-status-light { background: var(--paper-sunk); color: var(--ink); padding-block: clamp(30px, 3.4vw, 46px); margin-top: var(--pair); }
+
 /* ---- 09: the marked list is the dominant ---- */
 .ph-v2-ink { background: var(--ink); color: var(--paper); padding-block: clamp(30px, 3.4vw, 46px); margin-top: var(--pair); }
 /* `.ph-v2-ink .ph-canvas { padding-inline: 0 }` removed 2026-09-07: this band's inner

@@ -962,26 +962,35 @@ export default function PostHarvestPage() {
           DOMINANT: the team's own marked requirement list. The completed band above it is
           typographic, not pictorial, and the handbook page inside it is small. An
           unmarked box records only that the item was not assessed. */}
-      <section className="ph-section ph-v2 ph-section-sunk" id="status">
+      <section className="ph-section ph-v2" id="status">
         {/* `.ph-shell` on all three wrappers below (heading, dark "completed" band, and
             the checklist/why/forward group) -- HALOGRIP's own wide-container pattern
             (`halogrip.css`'s `.shell`), mirrored at HALOGRIP's own numbers; see `--shell`'s
             definition in post-harvest.css for the full history (was `.ph-canvas`, then a
             bespoke `.ph-09-canvas` formula that plateaued too early on very wide screens,
             Sylvia). Section-09-scoped on purpose; do not carry it onto other sections. */}
-        <div className="ph-shell">
-          <Reveal>
-            <div className="ph-v2-head">
-              <p className="ph-chapter-label">{chapterLabel("status")}</p>
-              <h2>{status.heading}</h2>
-            </div>
-          </Reveal>
-        </div>
-
-        <div className="ph-v2-ink">
+        {/* Whole-section background is dark now (`#status{background:var(--ink)}` in
+            post-harvest.css) so there is no light sliver where this section's own top
+            padding meets section 08's blue field above (2026-09-09, Sylvia: "严丝合缝...
+            现在有个白条，换成黑色"). `.ph-v2-dark` still does the actual TEXT re-tinting,
+            scoped to just the heading + the already-dark `.ph-v2-ink` band below (per her
+            earlier "下面部分...也搞成黑色了，不需要": the checklist/why/forward block stays
+            light) -- see `.ph-status-light` further down, which punches a light patch back
+            through this section's now-dark background for that one block. */}
+        <div className="ph-v2-dark">
           <div className="ph-shell">
             <Reveal>
-              <div className="ph-done-v2">
+              <div className="ph-v2-head">
+                <p className="ph-chapter-label">{chapterLabel("status")}</p>
+                <h2>{status.heading}</h2>
+              </div>
+            </Reveal>
+          </div>
+
+          <div className="ph-v2-ink">
+            <div className="ph-shell">
+              <Reveal>
+                <div className="ph-done-v2">
                 <div>
                   <p className="ph-done-label">{status.completed.label}</p>
                   <p className="ph-done-claim">{status.claimSolid}</p>
@@ -1020,7 +1029,13 @@ export default function PostHarvestPage() {
             </Reveal>
           </div>
         </div>
+        </div>
 
+        {/* Light patch (2026-09-09, per Sylvia -- see the comment at this section's own
+            opening tag): punches back through `#status`'s new dark background so the
+            checklist/why/forward block stays on its original light ground, untouched by
+            the heading/completed-band's dark re-tint above. */}
+        <div className="ph-status-light">
         <div className="ph-shell">
           <Reveal>
             <div className="ph-scored-v2">
@@ -1052,6 +1067,7 @@ export default function PostHarvestPage() {
               <p className="ph-forward-action">{status.nextStep.text}</p>
             </div>
           </Reveal>
+        </div>
         </div>
       </section>
       </div>

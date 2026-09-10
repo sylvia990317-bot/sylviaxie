@@ -2020,7 +2020,22 @@ figure { margin: 0; }
    not a descendant), so none of that class's text re-tints apply here; `.ph-lbl`,
    `.ph-body`, `.ph-open-claim`, `.ph-forward`'s border and the checklist's `.ph-svg-body`
    border all just fall back to their ordinary light-mode colours, unchanged. */
-.ph-status-light { background: var(--paper-sunk); color: var(--ink); padding-block: clamp(30px, 3.4vw, 46px); margin-top: var(--pair); }
+/* Bleeds down to the section's own bottom edge (2026-09-09, Sylvia: "这个最下面不要黑色"):
+   `#status`'s dark background above still covers the section's own trailing
+   `padding-block` (var(--section-y)) below this block, same as it does the leading edge
+   at the top on purpose -- so without this, a second unwanted black strip would show
+   between this light patch and section 10. Negative `margin-bottom` pulls this box's own
+   bottom edge down to consume that padding; `padding-bottom` grows by the same amount so
+   the actual CONTENT still sits exactly where it did before, just the light background
+   now extends the rest of the way to the section boundary instead of stopping short of
+   it. */
+.ph-status-light {
+  background: var(--paper-sunk); color: var(--ink);
+  padding-top: clamp(30px, 3.4vw, 46px);
+  padding-bottom: calc(clamp(30px, 3.4vw, 46px) + var(--section-y));
+  margin-top: var(--pair);
+  margin-bottom: calc(-1 * var(--section-y));
+}
 
 /* ---- 09: the marked list is the dominant ---- */
 .ph-v2-ink { background: var(--ink); color: var(--paper); padding-block: clamp(30px, 3.4vw, 46px); margin-top: var(--pair); }

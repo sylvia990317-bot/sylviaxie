@@ -1,0 +1,92 @@
+/* 02.3 CURRENT RESPONSE -> 02.4 DESIGN GAP, merged pinned sequence.
+   Route-scoped: imported only from app/work/halogrip/page.tsx, never from globals.css.
+
+   Every absolutely-positioned overlay element shares one 0-100 left/top coordinate space
+   (the section's own box), so nothing needs px math for positioning — see
+   ./design-gap-sequence.tsx for the shared point tables. Colour tokens come from
+   halogrip.css. `.dgs-bg-stack`'s blur/scale and each `<img>`'s opacity are the only things
+   ./design-gap-sequence.tsx's scroll handler ever touches on the background layer. */
+
+.design-gap-sequence{position:relative;isolation:isolate;overflow:hidden;min-height:100svh;font-family:var(--mono)}
+
+.dgs-bg-stack{position:absolute;inset:0;z-index:-2;will-change:transform}
+.dgs-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 55%;will-change:opacity}
+.dgs-scrim{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(4,4,4,.5) 0%,rgba(4,4,4,.18) 22%,rgba(4,4,4,.12) 55%,rgba(4,4,4,.5) 100%)}
+
+/* State 1 — 02.3 CURRENT RESPONSE. Upper-left copy block, matching this page's other
+   photographic establishing shots (compare .need-heading / the removed .response-scene). */
+.dgs-s1-copy{position:absolute;z-index:5;left:var(--gutter);top:9%;width:calc(100% - 2*var(--gutter));will-change:opacity,transform}
+.dgs-s1-label{color:var(--white);opacity:.85}
+.dgs-s1-headline{margin:14px 0 0;font-family:var(--display);font-weight:700;text-transform:uppercase;line-height:.92;letter-spacing:-.02em;color:#f2e9d6;font-size:clamp(38px,4.6vw,74px);text-shadow:0 4px 26px rgba(0,0,0,.65)}
+.dgs-s1-headline-line{display:block;white-space:nowrap}
+.dgs-s1-para{margin:16px 0 0;max-width:420px;font-size:var(--fs-body);line-height:1.6;color:#d8d4c8;letter-spacing:.01em;text-shadow:0 2px 10px rgba(0,0,0,.75)}
+
+/* Three glass workflow panels, lower-middle, a glance not a diagram. */
+.dgs-graphic{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:2;pointer-events:none}
+.dgs-connector-line{fill:none;stroke:#ff5b46;stroke-width:.12;stroke-linecap:round;opacity:.5}
+.dgs-connector-dot{fill:var(--red);opacity:.75}
+
+.dgs-dust{position:absolute;inset:0;z-index:3;pointer-events:none}
+.dgs-dust-mote{position:absolute;border-radius:50%;background:radial-gradient(circle,#ff9a82,var(--red) 65%,transparent 100%);opacity:0;transform:translate(-50%,-50%)}
+
+.dgs-panel{position:absolute;z-index:3;display:flex;flex-direction:column;padding:12px 13px 14px;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(6,6,6,.6));border:1px solid rgba(199,190,174,.18);border-radius:2px;backdrop-filter:blur(10px);box-shadow:0 14px 28px rgba(0,0,0,.32);will-change:opacity,transform}
+.dgs-panel-head{display:flex;align-items:center;justify-content:space-between}
+.dgs-panel-index{font-family:var(--display);font-weight:400;color:var(--red);font-size:clamp(12px,.9vw,15px)}
+.dgs-panel-icon{width:17px;height:17px;color:rgba(245,245,241,.7)}
+.dgs-panel-icon svg{width:100%;height:100%}
+.dgs-panel h3{margin:12px 0 0;font-family:var(--display);font-weight:400;font-size:clamp(14px,1.15vw,20px);line-height:1.15;letter-spacing:-.01em;text-transform:uppercase;color:var(--white)}
+.dgs-panel p{margin:auto 0 0;padding-top:8px;font-size:var(--fs-caption);letter-spacing:.03em;text-transform:uppercase;color:rgba(245,245,241,.55)}
+
+/* State 3 — 02.4 DESIGN GAP. Centred, upper portion, over the "in car" interior. */
+.dgs-s3-copy{position:absolute;left:0;right:0;top:13%;z-index:6;padding-inline:20%;text-align:center;opacity:0;will-change:opacity,transform}
+.dgs-s3-label{color:var(--white);opacity:.85}
+.dgs-s3-headline{margin:20px 0 0;font-family:var(--display);font-weight:700;line-height:.98;letter-spacing:-.02em;text-transform:uppercase;color:#ece7d8;font-size:clamp(28px,3.6vw,54px);text-shadow:0 3px 26px rgba(0,0,0,.55)}
+.dgs-s3-sub{display:inline-block;margin:20px 0 0;padding:8px 16px;border-radius:2px;background:rgba(8,8,7,.6);backdrop-filter:blur(6px);font-family:var(--mono);font-size:var(--fs-caption);letter-spacing:.08em;text-transform:uppercase;color:var(--red)}
+
+/* Dashboard nodes — a small badge icon per node (see NODE_ICON), not a plain dot.
+
+   Icon sits inside a fixed-height, bottom-aligned slot (`.dgs-node-icon-slot`) rather than
+   being a plain flex child of `.dgs-node` — that's what keeps every label on the same
+   baseline: LOCAL CONTROL's icon can grow inside its own slot without pushing its label any
+   further from NODE_Y than FIRST RESPONDER's or SAFE REPOSITIONING's. */
+.dgs-node{position:absolute;z-index:6;display:flex;flex-direction:column;align-items:center;gap:8px;transform:translate(-50%,-50%);opacity:0;will-change:transform,opacity}
+.dgs-node-icon-slot{position:relative;display:flex;align-items:flex-end;justify-content:center;height:52px}
+.dgs-node-icon{position:relative;z-index:1;width:44px;height:44px;filter:drop-shadow(0 1px 6px rgba(0,0,0,.6))}
+/* LOCAL CONTROL is the section's key conceptual shift, so its icon stays a step larger and
+   carries a static, subtle red ring — a quiet accent, deliberately not a blurred glow (an
+   earlier round of feedback called a soft radial-gradient glow here too much like a UI
+   button). The ring is a plain box-shadow, no blur radius, so it reads as a crisp accent mark
+   rather than an emitting light source. */
+.dgs-node-accent .dgs-node-icon{width:52px;height:52px;box-shadow:0 0 0 1.5px rgba(233,42,42,.55);border-radius:50%;filter:drop-shadow(0 1px 6px rgba(0,0,0,.6))}
+
+/* Connectors span the gap between two icons (see CONNECTOR_GAP_PCT / setConnector in
+   design-gap-sequence.tsx) — `left`/`width` set per frame, always plain horizontal percentages
+   (both endpoints share NODE_Y), so nothing here touches `.dgs-graphic`'s non-uniformly
+   stretched viewBox (preserveAspectRatio="none"). Stopping just short of each icon's own edge
+   (rather than icon-centre to icon-centre) keeps the arrowhead in open space instead of being
+   drawn underneath the next node, while staying tight enough that the icon-arrow-icon-arrow-
+   icon row reads as one connected sequence, not three separate icons with decorative lines
+   floating near them. Shaft stays thin; the arrowhead is sized to be unambiguous at a glance
+   without turning into a UI progress-bar chevron. */
+.dgs-flow-connector{position:absolute;z-index:5;top:0;height:20px;margin-top:-16px;opacity:0;will-change:transform,opacity;pointer-events:none}
+.dgs-flow-shaft{position:absolute;left:0;top:9px;width:100%;height:1.5px;background:var(--red);opacity:.85;border-radius:1px;transform-origin:left center}
+.dgs-flow-head{position:absolute;left:0;top:0;width:20px;height:20px;color:var(--red);filter:drop-shadow(0 1px 4px rgba(0,0,0,.55))}
+.dgs-flow-head svg{width:100%;height:100%}
+.dgs-node-label{font-size:var(--fs-caption);letter-spacing:.08em;text-transform:uppercase;color:rgba(245,245,241,.85);white-space:nowrap;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.dgs-node-accent .dgs-node-label{color:#ffece7}
+
+/* Reduced-motion fallback: no pin, no scrub — two ordinary stacked static sections. */
+.dgs-fallback{display:flex;flex-direction:column}
+.dgs-fb-panel{position:relative;isolation:isolate;overflow:hidden;min-height:100svh;display:flex;align-items:center;background:var(--dark);color:var(--white);font-family:var(--mono)}
+.dgs-fb-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 55%;z-index:-2}
+.dgs-fb-scrim{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(4,4,4,.55) 0%,rgba(4,4,4,.2) 30%,rgba(4,4,4,.6) 100%)}
+.dgs-fb-copy{position:relative;z-index:1;width:100%;padding-inline:var(--gutter)}
+.dgs-fb-copy-center{text-align:center}
+.dgs-fb-label{color:var(--white);opacity:.85}
+.dgs-fb-headline{margin:14px 0 0;font-family:var(--display);font-weight:700;text-transform:uppercase;line-height:.95;letter-spacing:-.02em;color:#f2e9d6;font-size:clamp(34px,5.2vw,68px);text-shadow:0 4px 26px rgba(0,0,0,.65)}
+.dgs-fb-para{margin:16px 0 0;max-width:460px;font-size:var(--fs-body);line-height:1.6;color:#d8d4c8}
+.dgs-fb-sub{display:inline-block;margin:14px auto 0;max-width:460px;padding:8px 16px;border-radius:2px;background:rgba(8,8,7,.6);font-size:var(--fs-caption);letter-spacing:.08em;text-transform:uppercase;color:var(--red)}
+
+/* .dgs-s1-copy / .dgs-panel / .dgs-node etc. never render below 760px — canEnhance()
+   sends narrow viewports to .dgs-fb-* (above) instead, same convention scroll-intro.tsx
+   and every other pinned section on this page uses. */

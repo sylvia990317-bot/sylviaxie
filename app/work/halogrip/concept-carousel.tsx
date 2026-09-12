@@ -1,0 +1,293 @@
+"use client";
+
+/**
+ * 05 / CONCEPT EXPLORATION — a scattered "sketch deck": five overlapping paper sheets, one
+ * large and sharp in the centre, the rest smaller/faded/rotated behind it. Switching which
+ * sketch is centred happens ONLY via the left/right arrow buttons (or Left/Right arrow keys
+ * while the deck has focus) — nothing here reads scroll position, wheel deltas, or drag.
+ *
+ * This is the third structural rebuild of this section (see CLAUDE.md's changelog): first a
+ * scroll-scrubbed filmstrip, then a wheel/drag hero carousel, then a plain click-controlled
+ * gallery (one image + 01-04/SELECTED pagination). This round replaces the gallery's single-
+ * image-at-a-time layout with the overlapping-sheets treatment Sylvia mocked up directly
+ * (`public/media/halogrip图片/other/skets reference.png`) and drops the pagination
+ * boxes/SELECTED button entirely in favour of just the two arrows.
+ *
+ * Assets: back to the "Ideation - Concepts Exploration" sketches from ppt slides 11-15
+ * (`public/media/halogrip图片/05/concept-*`) — Screen+External Device, Detachable/Modular
+ * Steering Device, Touch Screen, HUD+Joystick, converging on the Pull-out Wheel as the
+ * selected direction. An earlier round of this same rebuild switched to the *iteration*
+ * sketches from slides 18-22 instead, extracted directly out of the pptx zip; Sylvia flagged
+ * those as illegible ("草图都不对，全部都看不清晰为什么") even after repeated size increases —
+ * the real problem wasn't card size, it was the source images themselves: white-on-black raw
+ * scans with dense overlapping strokes and huge dead black margins around a small drawing, so
+ * no amount of CSS scaling ever made them read better. The slides 11-15 set was already
+ * sitting in the repo as clean, well-composed, black-on-white line art (this project's very
+ * first "Concepts Exploration" round used it before later rounds drifted away from it) —
+ * switching back to it is a strict legibility fix, not a new content direction.
+ *
+ * Slot layout: each non-active concept is assigned one of four fixed background positions
+ * (upper-left / lower-left / upper-right / lower-right) by its position in CONCEPTS relative
+ * to whichever is active, recomputed on every index change — so the four background sheets
+ * visibly reshuffle into their new slots (or the centre) rather than jumping. GSAP drives the
+ * per-card `xPercent`/`yPercent`/`rotation`/`scale`/`opacity` tween (percent-based so it's
+ * self-relative to each card's own box, independent of the stage's actual measured size — no
+ * ResizeObserver needed here, unlike earlier rounds of this component).
+ */
+
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import gsap from "gsap";
+
+type Concept = {
+  id: string;
+  label: string;
+  conceptNumber: string;
+  image: string;
+  alt: string;
+  selected?: boolean;
+};
+
+const CONCEPTS: Concept[] = [
+  {
+    id: "screen-pedal",
+    label: "Screen + External Device",
+    conceptNumber: "CONCEPT 01",
+    image: encodeURI("/media/halogrip图片/05/concept-1-screen-pedal.jpg"),
+    alt: "Concept sketch 1: a start button integrated into the dashboard with on-screen speed control and a floor pedal for movement",
+  },
+  {
+    id: "modular-device",
+    label: "Detachable Steering Device",
+    conceptNumber: "CONCEPT 03",
+    image: encodeURI("/media/halogrip图片/05/concept-3-modular-device.png"),
+    alt: "Concept sketch 3: a detachable steering device that inserts into a dashboard-mounted dock, authorized by NFC before use",
+  },
+  {
+    id: "touchscreen",
+    label: "Touch Screen",
+    conceptNumber: "CONCEPT 04A",
+    image: encodeURI("/media/halogrip图片/05/concept-4a-touchscreen.png"),
+    alt: "Concept sketch 4a: a fold-out touchscreen mounted on the steering column offering automatic or manual activate-and-freeze control",
+  },
+  {
+    id: "hud-joystick",
+    label: "HUD + Joystick",
+    conceptNumber: "CONCEPT 04B",
+    image: encodeURI("/media/halogrip图片/05/concept-4b-hud-joystick.jpg"),
+    alt: "Concept sketch 4b: a head-up display prompting a left-or-right choice, controlled by a dashboard-mounted joystick with a stop button",
+  },
+  {
+    id: "pullout-wheel",
+    label: "Pull-Out Wheel",
+    conceptNumber: "CONCEPT 02",
+    image: encodeURI("/media/halogrip图片/05/concept-2-pullout-wheel.jpg"),
+    alt: "Concept sketch 2: a steering wheel that pulls out from the dashboard, revealing integrated function controls — the selected direction",
+    selected: true,
+  },
+];
+
+const LAST = CONCEPTS.length - 1;
+const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+
+type SlotName = "center" | "ul" | "ll" | "ur" | "lr";
+const SLOT_ORDER: SlotName[] = ["ul", "ll", "ur", "lr"];
+const SLOT_STYLE: Record<SlotName, { xPercent: number; yPercent: number; rotation: number; scale: number; opacity: number; z: number }> = {
+  center: { xPercent: 0, yPercent: 0, rotation: 0, scale: 1, opacity: 1, z: 10 },
+  // xPercent/yPercent trimmed to ~60% of their original magnitude (was -112/-104/98/92 and
+  // -52/58/-56/60): at the original spread the corner cards' unscaled translate distance (a
+  // GSAP xPercent/yPercent resolves against the card's own untransformed box, not its scaled
+  // render size) pushed them ~110-130px above/below the stage box — enough to visibly overlap
+  // the section heading/intro paragraph above and the SELECTED/counter copy below. Verified via
+  // live getBoundingClientRect() against the reference-matched -112/-52 etc. values before this
+  // change. Kept the same four-corner "fanned sheets" composition, just a tighter fan.
+  //
+  // yPercent trimmed further (was -31/35/-33/36) after enlarging .concept-deck-card from 66%
+  // to 80% of the stage (Sylvia: "section 5 图片太小了看不清") — since xPercent/yPercent resolve
+  // against the card's own (now much bigger) untransformed box, the same percentage produced a
+  // larger absolute pixel offset than before and pushed the ul/ur corner cards back up into the
+  // heading/intro-paragraph area (confirmed live: ul's top edge landed ~33px above the heading's
+  // bottom edge, obscuring the intro line — "Four approaches explored... 这行小字现在被挡住了").
+  // xPercent left alone — the horizontal spread wasn't implicated. Re-verified via live
+  // getBoundingClientRect() after this change: clear gap on both sides again.
+  ul: { xPercent: -68, yPercent: -18, rotation: -7, scale: 0.6, opacity: 0.55, z: 3 },
+  ll: { xPercent: -63, yPercent: 21, rotation: -5, scale: 0.56, opacity: 0.48, z: 2 },
+  ur: { xPercent: 60, yPercent: -20, rotation: 6, scale: 0.6, opacity: 0.55, z: 3 },
+  lr: { xPercent: 56, yPercent: 22, rotation: 5, scale: 0.56, opacity: 0.48, z: 2 },
+};
+
+function slotFor(index: number, active: number): SlotName {
+  if (index === active) return "center";
+  const others = CONCEPTS.map((_, i) => i).filter((i) => i !== active);
+  return SLOT_ORDER[others.indexOf(index)];
+}
+
+const STAGE_RATIO = 1.7;
+const ARROW = 44;
+const ARROW_GAP = 28;
+
+export default function ConceptCarousel() {
+  const [index, setIndex] = useState(0);
+  const [reduced, setReduced] = useState(false);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  // Desktop-only, JS-measured stage size (null = fall back to the CSS class's own sizing,
+  // which is what mobile always uses). Needed because pure CSS couldn't do this reliably:
+  // .concept-deck-stage holds only absolutely-positioned cards, so it has zero in-flow
+  // content — `width:auto` + `aspect-ratio` on a flex-row item with zero intrinsic content
+  // resolved to a 0 width in testing (confirmed via getBoundingClientRect) instead of
+  // deriving width from the stretched height as the aspect-ratio spec intends for ordinary
+  // boxes. A ResizeObserver on the row sidesteps that edge case entirely: measure the row's
+  // real available height/width every time either changes, derive the stage box from
+  // whichever is tighter (height*ratio vs. available width), same "contain, never crop"
+  // math the CSS attempt was going for, just computed in JS instead of relying on a CSS
+  // aspect-ratio resolution path that isn't landing correctly in this nested-flex context.
+  const [stageSize, setStageSize] = useState<{ w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  // useLayoutEffect (not useEffect): runs synchronously before the browser paints, so the
+  // stage never visibly flashes at its 0x0 pre-measurement state on desktop.
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    const desktopQuery = window.matchMedia("(min-width: 761px)");
+
+    function measure() {
+      if (!row || !desktopQuery.matches) {
+        setStageSize(null);
+        return;
+      }
+      const rect = row.getBoundingClientRect();
+      const maxW = Math.max(0, rect.width - 2 * ARROW - 2 * ARROW_GAP);
+      const maxH = rect.height;
+      let w = maxH * STAGE_RATIO;
+      let h = maxH;
+      if (w > maxW) {
+        w = maxW;
+        h = w / STAGE_RATIO;
+      }
+      if (w > 0 && h > 0) setStageSize({ w, h });
+    }
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(row);
+    desktopQuery.addEventListener("change", measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      desktopQuery.removeEventListener("change", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
+  // GSAP must own each card's transform from the very first frame — mixing its xPercent/
+  // yPercent properties with a raw CSS `transform` string set some other way (e.g. React
+  // inline style on first paint) confuses its internal decomposition of the existing matrix
+  // and produces a wrong starting offset (confirmed directly: the "centre" slot rendered
+  // ~290px off-centre until this was switched to `gsap.set()`). This runs once, synchronously
+  // ahead of the index-driven effect below in the same commit, so it always establishes GSAP's
+  // baseline before any `gsap.to()` call touches these elements.
+  useEffect(() => {
+    CONCEPTS.forEach((_, i) => {
+      const card = cardRefs.current[i];
+      if (!card) return;
+      const base = SLOT_STYLE[slotFor(i, 0)];
+      gsap.set(card, { xPercent: base.xPercent, yPercent: base.yPercent, rotation: base.rotation, scale: base.scale, opacity: base.opacity, zIndex: base.z });
+    });
+  }, []);
+
+  useEffect(() => {
+    const onFinal = index === LAST;
+    CONCEPTS.forEach((concept, i) => {
+      const card = cardRefs.current[i];
+      if (!card) return;
+      const slot = slotFor(i, index);
+      const base = SLOT_STYLE[slot];
+      // On the final reveal, every sketch but the selected one fades out completely rather
+      // than settling into its usual background slot.
+      const opacity = onFinal && slot !== "center" ? 0 : base.opacity;
+      gsap.to(card, {
+        xPercent: base.xPercent,
+        yPercent: base.yPercent,
+        rotation: base.rotation,
+        scale: base.scale,
+        opacity,
+        zIndex: base.z,
+        duration: reduced ? 0 : 0.6,
+        overwrite: true,
+        ease: "power2.out",
+      });
+    });
+    const cards = cardRefs.current.filter((card) => card !== null);
+    return () => { gsap.killTweensOf(cards); };
+  }, [index, reduced]);
+
+  function go(delta: number) {
+    setIndex((current) => clamp(current + delta, 0, LAST));
+  }
+
+  const active = CONCEPTS[index];
+
+  return (
+    <div
+      className="concept-deck"
+      tabIndex={0}
+      role="group"
+      aria-label="Concept iteration sketches"
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          go(-1);
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          go(1);
+        }
+      }}
+    >
+      <div className="concept-deck-row" ref={rowRef}>
+        <button type="button" className="concept-deck-arrow concept-deck-arrow-left" onClick={() => go(-1)} disabled={index === 0} aria-label="Previous sketch">
+          &larr;
+        </button>
+
+        <div className="concept-deck-stage" style={stageSize ? { width: stageSize.w, height: stageSize.h } : undefined}>
+          {CONCEPTS.map((concept, i) => (
+            <div
+              key={concept.id}
+              className="concept-deck-card"
+              aria-hidden={i !== index}
+              ref={(el) => {
+                cardRefs.current[i] = el;
+              }}
+            >
+              <img src={concept.image} alt={concept.alt} loading={i === 0 ? "eager" : "lazy"} />
+            </div>
+          ))}
+        </div>
+
+        <button type="button" className="concept-deck-arrow concept-deck-arrow-right" onClick={() => go(1)} disabled={index === LAST} aria-label="Next sketch">
+          &rarr;
+        </button>
+      </div>
+
+      <div className="concept-deck-copy" aria-live="polite" aria-atomic="true">
+        {/* Concept name always shown here (uppercased via CSS, same as the on-card label) so
+            every concept — not just the selected one — gets a name beneath the sketch; the
+            selected card additionally swaps the eyebrow to the red "SELECTED DIRECTION" call-out. */}
+        <span className={active.selected ? "concept-deck-eyebrow concept-deck-eyebrow-selected" : "concept-deck-eyebrow"}>
+          {active.selected ? `SELECTED DIRECTION — ${active.conceptNumber}` : active.conceptNumber}
+        </span>
+        <h3>{active.label}</h3>
+        <span className="concept-deck-counter">
+          {String(index + 1).padStart(2, "0")} / {String(CONCEPTS.length).padStart(2, "0")}
+        </span>
+      </div>
+    </div>
+  );
+}

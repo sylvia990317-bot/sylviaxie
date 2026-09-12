@@ -1,0 +1,173 @@
+{
+  "deck": "Slutpresentation_kandidatarbetet.pptx",
+  "assets": [
+    {
+      "file": "aurora-cab.webp",
+      "source": "image13.png",
+      "origin": "Slide 14: concept video poster",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "life-on-the-road.webp",
+      "source": "image11.jpg",
+      "origin": "Slide 12: Volvo Trucks scene",
+      "width": 1024,
+      "height": 683
+    },
+    {
+      "file": "driver.webp",
+      "source": "image6.png",
+      "origin": "Slide 7: Volvo Trucks driver photograph",
+      "width": 1200,
+      "height": 800
+    },
+    {
+      "file": "young-people.webp",
+      "source": "image7.png",
+      "origin": "Slide 8: young people photograph",
+      "width": 988,
+      "height": 1476
+    },
+    {
+      "file": "mood-northern-lights.webp",
+      "source": "image12.jpg",
+      "origin": "Slide 17: Northern lights cab concept",
+      "width": 2000,
+      "height": 1126
+    },
+    {
+      "file": "mood-fire.webp",
+      "source": "image23.jpg",
+      "origin": "Slide 18: Fire cab concept",
+      "width": 2000,
+      "height": 1126
+    },
+    {
+      "file": "mood-forest.webp",
+      "source": "image25.jpg",
+      "origin": "Slide 19: Forest cab concept",
+      "width": 2000,
+      "height": 1126
+    },
+    {
+      "file": "mood-sea.webp",
+      "source": "image22.jpg",
+      "origin": "Slide 20: Sea cab concept",
+      "width": 2000,
+      "height": 1126
+    },
+    {
+      "file": "mood-sunset.webp",
+      "source": "image28.jpg",
+      "origin": "Slide 21: Sunset cab concept",
+      "width": 2000,
+      "height": 1126
+    },
+    {
+      "file": "nature-northern-lights.webp",
+      "source": "image18.jpg",
+      "origin": "Slide 17: nature reference",
+      "width": 720,
+      "height": 405
+    },
+    {
+      "file": "nature-fire.webp",
+      "source": "image20.png",
+      "origin": "Slide 18: nature reference",
+      "width": 720,
+      "height": 480
+    },
+    {
+      "file": "nature-forest.webp",
+      "source": "image24.jpg",
+      "origin": "Slide 19: nature reference",
+      "width": 720,
+      "height": 480
+    },
+    {
+      "file": "nature-sea.webp",
+      "source": "image26.jpg",
+      "origin": "Slide 20: nature reference",
+      "width": 720,
+      "height": 480
+    },
+    {
+      "file": "nature-sunset.webp",
+      "source": "image27.png",
+      "origin": "Slide 21: nature reference",
+      "width": 720,
+      "height": 540
+    },
+    {
+      "file": "default-morning.webp",
+      "source": "image16.jpg",
+      "origin": "Slide 16: morning lighting concept",
+      "width": 1200,
+      "height": 675
+    },
+    {
+      "file": "default-evening.webp",
+      "source": "image17.jpg",
+      "origin": "Slide 16: evening lighting concept",
+      "width": 1200,
+      "height": 675
+    },
+    {
+      "file": "greeting-poster.webp",
+      "source": "greeting-poster.jpg",
+      "origin": "Slide 22: media7.mp4 at 6.5 seconds",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "file": "research-kj.webp",
+      "source": "Grupp B - Förarmiljöer-för-framtidens-fjärrtransportfordon_Publicering.pdf",
+      "page": 47,
+      "width": 1492,
+      "height": 669
+    },
+    {
+      "file": "concept-lux.webp",
+      "source": "Grupp B - Förarmiljöer-för-framtidens-fjärrtransportfordon_Publicering.pdf",
+      "page": 67,
+      "width": 1107,
+      "height": 761
+    },
+    {
+      "file": "concept-inmotion.webp",
+      "source": "Grupp B - Förarmiljöer-för-framtidens-fjärrtransportfordon_Publicering.pdf",
+      "page": 68,
+      "width": 1143,
+      "height": 783
+    },
+    {
+      "file": "concept-embrace.webp",
+      "source": "Grupp B - Förarmiljöer-för-framtidens-fjärrtransportfordon_Publicering.pdf",
+      "page": 70,
+      "width": 1846,
+      "height": 881
+    },
+    {
+      "file": "aurora-cab.mp4",
+      "source": "media1.mp4",
+      "slide": 14,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "greeting.mp4",
+      "source": "media7.mp4",
+      "slide": 22,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "icon.png",
+      "source": "public/home/avatar.jpg",
+      "origin": "Existing portfolio avatar",
+      "width": 48,
+      "height": 48
+    }
+  ]
+}
